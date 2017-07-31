@@ -3,8 +3,8 @@ HDX Data Freshness Emailer
 
 |Build Status| |Coverage Status|
 
-The implementation of HDX freshness emailer in Python reads the HDX data freshness database and finds datasets whose status has
-changed. It sends emails to system administrators if the change is from overdue to delinquent or to maintainers if from due to overdue.
+The HDX freshness emailer in Python reads the HDX data freshness database and finds datasets whose status has changed.
+It sends emails to system administrators if the change is from overdue to delinquent or to maintainers if from due to overdue.
 
 Usage
 ~~~~~
