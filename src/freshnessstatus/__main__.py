@@ -67,7 +67,7 @@ def main(hdx_key, hdx_site, db_url, email_server):
     freshness.send_delinquent_email(site_url=site_url)
 #    freshness.send_overdue_emails(site_url=site_url)
     freshness.close()
-
+    logger.info('Freshness emailer completed!')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data Freshness Emailer')
