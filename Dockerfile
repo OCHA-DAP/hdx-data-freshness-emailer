@@ -1,4 +1,4 @@
-FROM mcarans/hdx-python-api
+FROM mcarans/hdx-data-freshness
 
 MAINTAINER Michael Rans <rans@email.com>
 
