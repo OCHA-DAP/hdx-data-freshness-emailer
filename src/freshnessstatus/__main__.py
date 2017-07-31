@@ -25,9 +25,9 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-def main(hdx_site, db_url, email_server):
+def main(hdx_key, hdx_site, db_url, email_server):
     project_config_yaml = script_dir_plus_file('project_configuration.yml', main)
-    site_url = Configuration.create(hdx_site=hdx_site,
+    site_url = Configuration.create(hdx_key=hdx_key, hdx_site=hdx_site,
                                     project_config_yaml=project_config_yaml)
     logger.info('--------------------------------------------------')
     logger.info('> HDX Site: %s' % site_url)
@@ -71,10 +71,14 @@ def main(hdx_site, db_url, email_server):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data Freshness Emailer')
+    parser.add_argument('-hk', '--hdx_key', default=None, help='HDX api key')
     parser.add_argument('-hs', '--hdx_site', default=None, help='HDX site to use')
     parser.add_argument('-db', '--db_url', default=None, help='Database connection string')
     parser.add_argument('-es', '--email_server', default=None, help='Email server to use')
     args = parser.parse_args()
+    hdx_key = args.hdx_key
+    if hdx_key is None:
+        hdx_key = os.getenv('HDX_KEY')
     hdx_site = args.hdx_site
     if hdx_site is None:
         hdx_site = os.getenv('HDX_SITE', 'prod')
@@ -86,4 +90,4 @@ if __name__ == '__main__':
     email_server = args.email_server
     if email_server is None:
         email_server = os.getenv('EMAIL_SERVER')
-    main(hdx_site, db_url, email_server)
+    main(hdx_key, hdx_site, db_url, email_server)
