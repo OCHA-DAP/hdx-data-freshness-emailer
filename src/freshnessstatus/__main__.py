@@ -65,7 +65,7 @@ def main(hdx_site, db_url, email_server):
         db_url = 'sqlite:///freshness.db'
     freshness = DataFreshnessStatus(db_url=db_url)
     freshness.send_delinquent_email(site_url=site_url)
-    freshness.send_overdue_emails(site_url=site_url)
+#    freshness.send_overdue_emails(site_url=site_url)
     freshness.close()
 
 
