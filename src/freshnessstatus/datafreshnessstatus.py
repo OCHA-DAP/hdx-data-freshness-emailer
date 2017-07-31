@@ -90,7 +90,7 @@ class DataFreshnessStatus:
 
     @staticmethod
     def get_user_name(user):
-        user_name = user['display_name']
+        user_name = user.get('display_name')
         if not user_name:
             user_name = user['fullname']
             if not user_name:
