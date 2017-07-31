@@ -1,0 +1,5 @@
+# Collector specific configuration
+ignore_sysadmin_emails:
+  - "telford@un.org"
+  - "hdx@un.org"
+  - "hdx.feedback@gmail.com"
