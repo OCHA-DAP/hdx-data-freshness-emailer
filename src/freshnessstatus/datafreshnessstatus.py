@@ -97,7 +97,7 @@ class DataFreshnessStatus:
                 user_name = user['name']
         return user_name
 
-    def create_dataset_string(self, site_url, dataset, startmsg=''):
+    def create_dataset_string(self, site_url, dataset, startmsg='', sendto=None):
         users_to_email = list()
         url = '%sdataset/%s' % (site_url, dataset['name'])
         update_frequency = Dataset.transform_update_frequency('%d' % dataset['update_frequency'])
@@ -122,6 +122,8 @@ class DataFreshnessStatus:
             if startmsg:
                 msg[0] %= 'organization administrator'
         msg.append(' with update frequency: %s\n' % update_frequency)
+        if sendto is not None:
+            users_to_email = sendto
         return ''.join(msg), users_to_email
 
     def send_delinquent_email(self, site_url, userclass=User):
@@ -137,13 +139,13 @@ class DataFreshnessStatus:
         userclass.email_users(self.sysadmins, 'Delinquent datasets', output)
         logger.info(output)
 
-    def send_overdue_emails(self, site_url, userclass=User):
+    def send_overdue_emails(self, site_url, userclass=User, sendto=None):
         startmsg = 'Dear %s,\n\nThe following dataset is now overdue for update:\n\n'
         datasets = self.get_status(2)
         if len(datasets) == 0:
             return
         for dataset in datasets:
-            output, users_to_email = self.create_dataset_string(site_url, dataset, startmsg)
+            output, users_to_email = self.create_dataset_string(site_url, dataset, startmsg, sendto)
             userclass.email_users(users_to_email, 'Overdue datasets', output)
             logger.info(output)
 

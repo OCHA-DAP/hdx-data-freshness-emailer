@@ -65,7 +65,8 @@ def main(hdx_key, hdx_site, db_url, email_server):
         db_url = 'sqlite:///freshness.db'
     freshness = DataFreshnessStatus(db_url=db_url)
     freshness.send_delinquent_email(site_url=site_url)
-#    freshness.send_overdue_emails(site_url=site_url)
+    # temporarily send just to me
+    freshness.send_overdue_emails(site_url=site_url, sendto=[{'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'}])
     freshness.close()
     logger.info('Freshness emailer completed!')
 
