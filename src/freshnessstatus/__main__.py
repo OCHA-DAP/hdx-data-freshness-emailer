@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 import psycopg2
 import time
 
+from hdx.data.user import User
 from hdx.hdx_configuration import Configuration
 from hdx.hdx_logging import setup_logging
 from hdx.utilities.path import script_dir_plus_file
@@ -66,7 +67,8 @@ def main(hdx_key, hdx_site, db_url, email_server):
     freshness = DataFreshnessStatus(db_url=db_url)
     freshness.send_delinquent_email(site_url=site_url)
     # temporarily send just to me
-    freshness.send_overdue_emails(site_url=site_url, sendto=[{'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'}])
+    user = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
+    freshness.send_overdue_emails(site_url=site_url, sendto=[user])
     freshness.close()
     logger.info('Freshness emailer completed!')
 

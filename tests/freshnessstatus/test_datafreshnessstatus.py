@@ -8,6 +8,7 @@ import shutil
 from os.path import join
 
 import pytest
+from hdx.data.user import User
 
 from freshnessstatus.datafreshnessstatus import DataFreshnessStatus
 
@@ -59,7 +60,9 @@ class TestDataFreshnessStatus:
                {'sysadmin': False, 'email': 'blah5@blah.com', 'name': 'blah5', 'fullname': 'blah5full'}],
               'Overdue datasets', 'Dear organization administrator,\n\nThe following dataset is now overdue for update:\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) from OCHA Yemen with missing maintainer and organization administrators blah4disp (blah4@blah.com),blah5full (blah5@blah.com) with update frequency: Every year\n')]
         TestDataFreshnessStatus.email_users_result = list()
-        freshness.send_overdue_emails(site_url=site_url, userclass=TestDataFreshnessStatus.TestUser, sendto=[users[0], users[1]])
+        user0 = User(users[0])
+        user1 = User(users[1])
+        freshness.send_overdue_emails(site_url=site_url, userclass=TestDataFreshnessStatus.TestUser, sendto=[user0, user1])
         assert TestDataFreshnessStatus.email_users_result == \
             [([{'sysadmin': False, 'email': 'blah@blah.com', 'display_name': 'blahdisp', 'name': 'blah', 'fullname': 'blahfull'},
                {'sysadmin': True, 'email': 'blah2@blah.com', 'name': 'blah2', 'fullname': 'blah2full'}],
