@@ -3,3 +3,4 @@ ignore_sysadmin_emails:
   - "telford@un.org"
   - "hdx@un.org"
   - "hdx.feedback@gmail.com"
+  - "fake@gmail.com"
