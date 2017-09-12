@@ -46,9 +46,22 @@ class DataFreshnessStatus:
                     self.sysadmins.append(user)
         self.orgadmins = dict()
 
-    def get_status(self, status):
+    def get_runs(self):
+        return self.session.query(DBRun.run_number).distinct().order_by(DBRun.run_number.desc()).limit(2).all()
+
+    def check_number_datasets(self, run_numbers, userclass=User):
+        datasets_today = self.session.query(DBDataset.id).filter(DBDataset.run_number == run_numbers[0][0]).count()
+        datasets_previous = self.session.query(DBDataset.id).filter(DBDataset.run_number == run_numbers[1][0]).count()
+        diff_datasets = datasets_previous - datasets_today
+        percentage_diff = diff_datasets / datasets_previous
+        if percentage_diff > 0.02:
+            output = 'Dear system administrator,\n\nThere are %d (%d%%) fewer datasets today than yesterday on HDX!' % \
+                     (diff_datasets, percentage_diff * 100)
+            userclass.email_users(self.sysadmins, 'Fewer datasets today!', output)
+            logger.info(output)
+
+    def get_status(self, run_numbers, status):
         datasets = list()
-        run_numbers = self.session.query(DBRun.run_number).distinct().order_by(DBRun.run_number.desc()).limit(2).all()
         no_runs = len(run_numbers)
         if no_runs == 0:
             return datasets
@@ -118,9 +131,9 @@ class DataFreshnessStatus:
         msg.append(' with update frequency: %s\n' % update_frequency)
         return ''.join(msg), users_to_email
 
-    def send_delinquent_email(self, site_url, userclass=User):
+    def send_delinquent_email(self, site_url, run_numbers, userclass=User):
         msg = ['Dear system administrator,\n\nThe following datasets have just become delinquent:\n\n']
-        datasets = self.get_status(3)
+        datasets = self.get_status(run_numbers, 3)
         if len(datasets) == 0:
             return
         for dataset in datasets:
@@ -130,9 +143,9 @@ class DataFreshnessStatus:
         userclass.email_users(self.sysadmins, 'Delinquent datasets', output)
         logger.info(output)
 
-    def send_overdue_emails(self, site_url, userclass=User, sendto=None):
+    def send_overdue_emails(self, site_url, run_numbers, userclass=User, sendto=None):
         startmsg = 'Dear %s,\n\nThe following datasets are now overdue for update:\n\n'
-        datasets = self.get_status(2)
+        datasets = self.get_status(run_numbers, 2)
         if len(datasets) == 0:
             return
         all_users_to_email = dict()
