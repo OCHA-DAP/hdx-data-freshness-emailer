@@ -45,7 +45,6 @@ class TestDataFreshnessStatus:
         run_numbers = freshness.get_runs()
         TestDataFreshnessStatus.email_users_result = list()
         freshness.check_number_datasets(run_numbers=run_numbers, userclass=TestDataFreshnessStatus.TestUser)
-        print (TestDataFreshnessStatus.email_users_result)
         assert TestDataFreshnessStatus.email_users_result == [([{'id': 'blah2', 'sysadmin': True, 'email': 'blah2@blah.com', 'name': 'blah2name', 'fullname': 'blah2full'},
                                                                 {'id': 'blah4', 'sysadmin': True, 'fullname': 'blah4full', 'name': 'blah4name', 'email': 'blah4@blah.com', 'display_name': 'blah4disp'}],
                                                                'Fewer datasets today!', 'Dear system administrator,\n\nThere are 1 (16%) fewer datasets today than yesterday on HDX!')]
