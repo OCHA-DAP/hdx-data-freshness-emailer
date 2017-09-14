@@ -12,6 +12,7 @@ from hdx.data.user import User
 
 from freshnessstatus.datafreshnessstatus import DataFreshnessStatus
 
+
 class TestDataFreshnessStatus:
     email_users_result = list()
 
@@ -62,8 +63,8 @@ class TestDataFreshnessStatus:
         assert TestDataFreshnessStatus.email_users_result == \
                [([{'id': 'blah', 'sysadmin': False, 'fullname': 'blahfull', 'name': 'blahname', 'email': 'blah@blah.com',
                    'display_name': 'blahdisp'}], 'Overdue datasets',
-                 'Dear blahdisp,\n\nThe following datasets are now overdue for update:\n\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) from OCHA Somalia maintained by blahdisp (blah@blah.com) with update frequency: Every six months\n'
-                 'Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) from OCHA Colombia maintained by blahdisp (blah@blah.com) with update frequency: Every six months\n'),
+                 'Dear blahdisp,\n\nThe following datasets are now overdue for update:\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) from OCHA Colombia maintained by blahdisp (blah@blah.com) with update frequency: Every six months\n'
+                 'Projected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) from OCHA Somalia maintained by blahdisp (blah@blah.com) with update frequency: Every six months\n'),
                 ([{'id': 'blah4', 'sysadmin': True, 'fullname': 'blah4full', 'name': 'blah4name',
                    'email': 'blah4@blah.com', 'display_name': 'blah4disp'}], 'Overdue datasets',
                  'Dear blah4disp,\n\nThe following datasets are now overdue for update:\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) from OCHA Yemen with missing maintainer and organization administrators blah4disp (blah4@blah.com),blah5full (blah5@blah.com) with update frequency: Every year\n'),
@@ -75,14 +76,13 @@ class TestDataFreshnessStatus:
         user0 = User(users[0])
         user1 = User(users[1])
         freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers, userclass=TestDataFreshnessStatus.TestUser, sendto=[user0, user1])
-        print(TestDataFreshnessStatus.email_users_result)
         assert TestDataFreshnessStatus.email_users_result == \
                [([{'name': 'blahname', 'id': 'blah', 'email': 'blah@blah.com', 'display_name': 'blahdisp',
                    'sysadmin': False, 'fullname': 'blahfull'},
                   {'email': 'blah2@blah.com', 'name': 'blah2name', 'sysadmin': True, 'id': 'blah2',
                    'fullname': 'blah2full'}], 'Overdue datasets',
-                 'Dear blahdisp,\n\nThe following datasets are now overdue for update:\n\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) from OCHA Somalia maintained by blahdisp (blah@blah.com) with update frequency: Every six months\n'
-                 'Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) from OCHA Colombia maintained by blahdisp (blah@blah.com) with update frequency: Every six months\n'),
+                 'Dear blahdisp,\n\nThe following datasets are now overdue for update:\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) from OCHA Colombia maintained by blahdisp (blah@blah.com) with update frequency: Every six months\n'
+                 'Projected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) from OCHA Somalia maintained by blahdisp (blah@blah.com) with update frequency: Every six months\n'),
                 ([{'name': 'blahname', 'id': 'blah', 'email': 'blah@blah.com', 'display_name': 'blahdisp',
                    'sysadmin': False, 'fullname': 'blahfull'},
                   {'email': 'blah2@blah.com', 'name': 'blah2name', 'sysadmin': True, 'id': 'blah2',

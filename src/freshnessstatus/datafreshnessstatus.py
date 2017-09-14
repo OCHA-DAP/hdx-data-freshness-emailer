@@ -136,7 +136,7 @@ class DataFreshnessStatus:
         datasets = self.get_status(run_numbers, 3)
         if len(datasets) == 0:
             return
-        for dataset in datasets:
+        for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
             dataset_string, _ = self.create_dataset_string(site_url, dataset)
             msg.append(dataset_string)
         output = ''.join(msg)
@@ -149,7 +149,7 @@ class DataFreshnessStatus:
         if len(datasets) == 0:
             return
         all_users_to_email = dict()
-        for dataset in datasets:
+        for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
             dataset_string, users_to_email = self.create_dataset_string(site_url, dataset)
             for user in users_to_email:
                 id = user['id']
