@@ -115,7 +115,6 @@ class DataFreshnessStatus:
     def create_dataset_string(self, site_url, dataset, sysadmin=False):
         users_to_email = list()
         url = '%sdataset/%s' % (site_url, dataset['name'])
-        update_frequency = Dataset.transform_update_frequency('%d' % dataset['update_frequency']).lower()
         msg = list()
         htmlmsg = list()
         msg.append('%s (%s)' % (dataset['title'], url))
@@ -147,6 +146,7 @@ class DataFreshnessStatus:
             if sysadmin:
                 msg.append(', '.join(usermsg))
                 htmlmsg.append(', '.join(userhtmlmsg))
+        update_frequency = Dataset.transform_update_frequency('%d' % dataset['update_frequency']).lower()
         msg.append(' with expected update frequency: %s\n' % update_frequency)
         htmlmsg.append(' with expected update frequency: %s<br>' % update_frequency)
         return ''.join(msg), ''.join(htmlmsg), users_to_email
