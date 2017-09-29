@@ -69,8 +69,9 @@ def main(hdx_key, hdx_site, db_url, email_server):
     freshness.check_number_datasets(run_numbers=run_numbers)
     freshness.send_delinquent_email(site_url=site_url, run_numbers=run_numbers)
     # temporarily send just to me
-    user = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
-    freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers, sendto=[user])
+    # user = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
+    # freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers, sendto=[user])
+    freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers)
     freshness.close()
     logger.info('Freshness emailer completed!')
 
