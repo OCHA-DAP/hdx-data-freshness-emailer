@@ -124,7 +124,7 @@ class DataFreshnessStatus:
         if maintainer is not None:
             maintainer_name = self.get_user_name(maintainer)
             msg.append('maintained by %s (%s)' % (maintainer_name, maintainer['email']))
-            htmlmsg.append('maintained by <a href="%s">%s</a>' % (maintainer['email'], maintainer_name))
+            htmlmsg.append('maintained by <a href="mailto:%s">%s</a>' % (maintainer['email'], maintainer_name))
             users_to_email.append(maintainer)
         else:
             missing_maintainer = 'with missing maintainer and organization administrators '
@@ -136,7 +136,7 @@ class DataFreshnessStatus:
             for orgadmin in self.get_org_admins(dataset):
                 username = self.get_user_name(orgadmin)
                 usermsg.append('%s (%s)' % (username, orgadmin['email']))
-                userhtmlmsg.append('<a href="%s">%s</a>' % (orgadmin['email'], username))
+                userhtmlmsg.append('<a href="mailto:%s">%s</a>' % (orgadmin['email'], username))
                 users_to_email.append(orgadmin)
             msg.append(', '.join(usermsg))
             htmlmsg.append(', '.join(userhtmlmsg))
