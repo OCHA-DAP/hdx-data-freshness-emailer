@@ -59,7 +59,7 @@ class DataFreshnessStatus:
                      (diff_datasets, percentage_diff * 100)
             htmlmsg = self.html_start(self.htmlify(msg))
             output, htmloutput = self.msg_close(msg, htmlmsg)
-            userclass.email_users(self.sysadmins, 'Fewer datasets today!', output, html_body=htmloutput)
+            userclass.email_users(self.sysadmins, 'Fall in datasets on HDX today!', output, html_body=htmloutput)
             logger.info(output)
 
     def get_status(self, run_numbers, status):
@@ -112,24 +112,30 @@ class DataFreshnessStatus:
                 user_name = user['name']
         return user_name
 
-    def create_dataset_string(self, site_url, dataset):
+    def create_dataset_string(self, site_url, dataset, sysadmin=False):
         users_to_email = list()
         url = '%sdataset/%s' % (site_url, dataset['name'])
         update_frequency = Dataset.transform_update_frequency('%d' % dataset['update_frequency'])
         msg = list()
         htmlmsg = list()
-        msg.append('%s (%s) from %s ' % (dataset['title'], url, dataset['organization_title']))
-        htmlmsg.append('<a href="%s">%s</a> from %s ' % (url, dataset['title'], dataset['organization_title']))
+        msg.append('%s (%s)' % (dataset['title'], url))
+        htmlmsg.append('<a href="%s">%s</a>' % (url, dataset['title']))
+        if sysadmin:
+            orgmsg = ' from %s' % dataset['organization_title']
+            msg.append(orgmsg)
+            htmlmsg.append(orgmsg)
         maintainer = self.get_maintainer(dataset)
         if maintainer is not None:
-            maintainer_name = self.get_user_name(maintainer)
-            msg.append('maintained by %s (%s)' % (maintainer_name, maintainer['email']))
-            htmlmsg.append('maintained by <a href="mailto:%s">%s</a>' % (maintainer['email'], maintainer_name))
+            if sysadmin:
+                maintainer_name = self.get_user_name(maintainer)
+                msg.append(' maintained by %s (%s)' % (maintainer_name, maintainer['email']))
+                htmlmsg.append(' maintained by <a href="mailto:%s">%s</a>' % (maintainer['email'], maintainer_name))
             users_to_email.append(maintainer)
         else:
-            missing_maintainer = 'with missing maintainer and organization administrators '
-            msg.append(missing_maintainer)
-            htmlmsg.append(missing_maintainer)
+            if sysadmin:
+                missing_maintainer = ' with missing maintainer and organization administrators '
+                msg.append(missing_maintainer)
+                htmlmsg.append(missing_maintainer)
 
             usermsg = list()
             userhtmlmsg = list()
@@ -138,17 +144,19 @@ class DataFreshnessStatus:
                 usermsg.append('%s (%s)' % (username, orgadmin['email']))
                 userhtmlmsg.append('<a href="mailto:%s">%s</a>' % (orgadmin['email'], username))
                 users_to_email.append(orgadmin)
-            msg.append(', '.join(usermsg))
-            htmlmsg.append(', '.join(userhtmlmsg))
-        msg.append(' with update frequency: %s\n' % update_frequency)
-        htmlmsg.append(' with update frequency: %s<br>' % update_frequency)
+            if sysadmin:
+                msg.append(', '.join(usermsg))
+                htmlmsg.append(', '.join(userhtmlmsg))
+        msg.append(' with expected update frequency: %s\n' % update_frequency)
+        htmlmsg.append(' with expected update frequency: %s<br>' % update_frequency)
         return ''.join(msg), ''.join(htmlmsg), users_to_email
 
     @staticmethod
-    def msg_close(msg, htmlmsg):
-        endmsg = '\nBest wishes,\nHDX Team'
-        output = '%s%s' % (''.join(msg), endmsg)
-        htmloutput = DataFreshnessStatus.html_end('%s%s' % (''.join(htmlmsg), DataFreshnessStatus.htmlify(endmsg)))
+    def msg_close(msg, htmlmsg, endmsg=''):
+        closure = '\nBest wishes,\nHDX Team'
+        output = '%s%s%s' % (''.join(msg), endmsg, closure)
+        htmloutput = DataFreshnessStatus.html_end('%s%s%s' % (''.join(htmlmsg), DataFreshnessStatus.htmlify(endmsg),
+                                                              DataFreshnessStatus.htmlify(closure)))
         return output, htmloutput
 
     @staticmethod
@@ -188,7 +196,7 @@ class DataFreshnessStatus:
         if len(datasets) == 0:
             return
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
-            dataset_string, dataset_html_string, _ = self.create_dataset_string(site_url, dataset)
+            dataset_string, dataset_html_string, _ = self.create_dataset_string(site_url, dataset, sysadmin=True)
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
         output, htmloutput = self.msg_close(msg, htmlmsg)
@@ -196,7 +204,7 @@ class DataFreshnessStatus:
         logger.info(output)
 
     def send_overdue_emails(self, site_url, run_numbers, userclass=User, sendto=None):
-        startmsg = 'Dear %s,\n\nThe following datasets are now overdue for update:\n\n'
+        startmsg = 'Dear %s,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\n'
         starthtmlmsg = self.html_start(self.htmlify(startmsg))
         datasets = self.get_status(run_numbers, 2)
         if len(datasets) == 0:
@@ -218,12 +226,13 @@ class DataFreshnessStatus:
             for dataset_string, dataset_html_string in all_users_to_email[id]:
                 msg.append(dataset_string)
                 htmlmsg.append(dataset_html_string)
-            output, htmloutput = self.msg_close(msg, htmlmsg)
+            endmsg = '\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n'
+            output, htmloutput = self.msg_close(msg, htmlmsg, endmsg)
             if sendto is None:
                 users_to_email = [user]
             else:
                 users_to_email = sendto
-            userclass.email_users(users_to_email, 'Overdue datasets', output, html_body=htmloutput)
+            userclass.email_users(users_to_email, 'Time to update your datasets on HDX', output, html_body=htmloutput)
             logger.info(output)
 
     def close(self):
