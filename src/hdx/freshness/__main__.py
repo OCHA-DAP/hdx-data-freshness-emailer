@@ -10,17 +10,15 @@ Caller script. Designed to call all other functions.
 import argparse
 import logging
 import os
+import time
 from urllib.parse import urlparse
 
 import psycopg2
-import time
-
-from hdx.data.user import User
 from hdx.hdx_configuration import Configuration
 from hdx.hdx_logging import setup_logging
 from hdx.utilities.path import script_dir_plus_file
 
-from freshnessstatus.datafreshnessstatus import DataFreshnessStatus
+from hdx.freshness.datafreshnessstatus import DataFreshnessStatus
 
 setup_logging()
 logger = logging.getLogger(__name__)

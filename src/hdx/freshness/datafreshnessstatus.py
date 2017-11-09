@@ -9,11 +9,6 @@ changed from overdue to delinquent or from due to overdue.
 '''
 import logging
 
-from freshness.database.base import Base
-from freshness.database.dbinfodataset import DBInfoDataset
-from freshness.database.dborganization import DBOrganization
-from freshness.database.dbrun import DBRun
-from freshness.database.dbdataset import DBDataset
 from hdx.data.dataset import Dataset
 from hdx.data.organization import Organization
 from hdx.data.user import User
@@ -22,6 +17,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, aliased
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.elements import and_
+
+from hdx.freshness.database.dbdataset import DBDataset
+from hdx.freshness.database.dbinfodataset import DBInfoDataset
+from hdx.freshness.database.dborganization import DBOrganization
+from hdx.freshness.database.dbrun import DBRun
+from hdx.freshness.database.base import Base
 
 logger = logging.getLogger(__name__)
 
