@@ -14,6 +14,7 @@ import time
 from urllib.parse import urlparse
 
 import psycopg2
+from hdx.data.user import User
 from hdx.hdx_configuration import Configuration
 from hdx.hdx_logging import setup_logging
 from hdx.utilities.path import script_dir_plus_file
@@ -64,11 +65,13 @@ def main(hdx_key, hdx_site, db_url, email_server):
         db_url = 'sqlite:///freshness.db'
     freshness = DataFreshnessStatus(db_url=db_url)
     run_numbers = freshness.get_runs()
-    freshness.check_number_datasets(run_numbers=run_numbers)
+    # Send failure messages to Serban and Mike only
+    mikeuser = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
+    serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True, 'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
+    freshness.check_number_datasets(run_numbers=run_numbers, send_failures=[mikeuser, serbanuser])
     freshness.send_delinquent_email(site_url=site_url, run_numbers=run_numbers)
     # temporarily send just to me
-    # user = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
-    # freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers, sendto=[user])
+    # freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers, sendto=[mikeuser])
     freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers)
     freshness.close()
     logger.info('Freshness emailer completed!')

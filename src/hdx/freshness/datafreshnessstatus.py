@@ -50,17 +50,24 @@ class DataFreshnessStatus:
     def get_runs(self):
         return self.session.query(DBRun.run_number).distinct().order_by(DBRun.run_number.desc()).limit(2).all()
 
-    def check_number_datasets(self, run_numbers, userclass=User):
+    def check_number_datasets(self, run_numbers, send_failures=None, userclass=User):
         datasets_today = self.session.query(DBDataset.id).filter(DBDataset.run_number == run_numbers[0][0]).count()
         datasets_previous = self.session.query(DBDataset.id).filter(DBDataset.run_number == run_numbers[1][0]).count()
         diff_datasets = datasets_previous - datasets_today
         percentage_diff = diff_datasets / datasets_previous
         if percentage_diff > 0.02:
-            msg = 'Dear system administrator,\n\nThere are %d (%d%%) fewer datasets today than yesterday on HDX!\n' % \
-                     (diff_datasets, percentage_diff * 100)
+            if percentage_diff == 1.0:
+                title = 'FAILURE: No datasets today!'
+                msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
+                send_to = send_failures
+            else:
+                title = 'WARNING: Fall in datasets on HDX today!'
+                msg = 'Dear system administrator,\n\nThere are %d (%d%%) fewer datasets today than yesterday on HDX!\n' % \
+                         (diff_datasets, percentage_diff * 100)
+                send_to = self.sysadmins
             htmlmsg = self.html_start(self.htmlify(msg))
             output, htmloutput = self.msg_close(msg, htmlmsg)
-            userclass.email_users(self.sysadmins, 'Fall in datasets on HDX today!', output, html_body=htmloutput)
+            userclass.email_users(send_to, title, output, html_body=htmloutput)
             logger.info(output)
 
     def get_status(self, run_numbers, status):
