@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 import psycopg2
 from hdx.data.user import User
 from hdx.hdx_configuration import Configuration
-from hdx.hdx_logging import setup_logging
+from hdx.utilities.easy_logging import setup_logging
 from hdx.utilities.path import script_dir_plus_file
 
 from hdx.freshness.datafreshnessstatus import DataFreshnessStatus
