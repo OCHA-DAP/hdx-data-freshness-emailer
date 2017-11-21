@@ -10,7 +10,7 @@ from os.path import join
 import pytest
 from hdx.data.user import User
 
-from hdx.freshness.datafreshnessstatus import DataFreshnessStatus
+from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
 
 
 class TestDataFreshnessStatus:
