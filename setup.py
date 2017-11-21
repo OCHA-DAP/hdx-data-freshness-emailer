@@ -43,8 +43,8 @@ def get_readme():
     readme_file = open(script_dir_plus_file('README.rst', get_readme), encoding='utf-8')
     return readme_file.read()
 
-requirements = ['hdx-data-freshness'
-                ]
+
+requirements = ['hdx-data-freshness>=0.99.3']
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -63,7 +63,7 @@ setup(
     description='HDX Data Freshness Emailer',
     license='MIT',
     url='https://github.com/OCHA-DAP/hdx-data-freshness',
-    version='0.25',
+    version='0.26',
     author='Michael Rans',
     author_email='rans@email.com',
     keywords=['HDX', 'fresh', 'freshness', 'data freshness'],
