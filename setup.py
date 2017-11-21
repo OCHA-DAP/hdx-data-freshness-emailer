@@ -44,7 +44,7 @@ def get_readme():
     return readme_file.read()
 
 
-requirements = ['hdx-data-freshness>=0.99.3']
+requirements = ['hdx-data-freshness>=0.99.4']
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
