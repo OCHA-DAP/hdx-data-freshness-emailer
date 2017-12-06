@@ -197,7 +197,10 @@ class DataFreshnessStatus:
             if sysadmin:
                 msg.append(', '.join(usermsg))
                 htmlmsg.append(', '.join(userhtmlmsg))
-        update_frequency = Dataset.transform_update_frequency('%d' % dataset['update_frequency']).lower()
+        if dataset['update_frequency'] is None:
+            update_frequency = 'NOT SET'
+        else:
+            update_frequency = Dataset.transform_update_frequency('%d' % dataset['update_frequency']).lower()
         msg.append(' with expected update frequency: %s\n' % update_frequency)
         htmlmsg.append(' with expected update frequency: %s<br>' % update_frequency)
         return ''.join(msg), ''.join(htmlmsg), users_to_email
