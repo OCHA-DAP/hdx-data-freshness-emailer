@@ -64,11 +64,12 @@ def main(hdx_key, hdx_site, db_url, email_server):
     else:
         db_url = 'sqlite:///freshness.db'
     freshness = DataFreshnessStatus(db_url=db_url)
-    run_numbers = freshness.get_runs()
+    run_numbers = freshness.get_last_3_runs()
     # Send failure messages to Serban and Mike only
     mikeuser = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
     serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True, 'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
     freshness.check_number_datasets(run_numbers=run_numbers, send_failures=[mikeuser, serbanuser])
+    freshness.send_broken_email(site_url=site_url, run_numbers=run_numbers, sendto=[mikeuser])
     freshness.send_delinquent_email(site_url=site_url, run_numbers=run_numbers)
     # temporarily send just to me
     # freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers, sendto=[mikeuser])

@@ -30,8 +30,8 @@ class TestDataFreshnessStatus:
                 {'email': 'blah5@blah.com', 'id': 'blah5', 'name': 'blah5name', 'sysadmin': False, 'fullname': 'blah5full'}]
 
     @pytest.fixture(scope='function')
-    def database(self):
-        dbfile = 'test_freshness.db'
+    def database_broken(self):
+        dbfile = 'test_freshness_broken.db'
         dbpath = join('tests', dbfile)
         try:
             os.remove(dbpath)
@@ -41,7 +41,18 @@ class TestDataFreshnessStatus:
         return 'sqlite:///%s' % dbpath
 
     @pytest.fixture(scope='function')
-    def databasefailure(self):
+    def database_status(self):
+        dbfile = 'test_freshness_status.db'
+        dbpath = join('tests', dbfile)
+        try:
+            os.remove(dbpath)
+        except FileNotFoundError:
+            pass
+        shutil.copyfile(join('tests', 'fixtures', dbfile), dbpath)
+        return 'sqlite:///%s' % dbpath
+
+    @pytest.fixture(scope='function')
+    def database_failure(self):
         dbfile = 'test_freshness_failure.db'
         dbpath = join('tests', dbfile)
         try:
@@ -51,11 +62,40 @@ class TestDataFreshnessStatus:
         shutil.copyfile(join('tests', 'fixtures', dbfile), dbpath)
         return 'sqlite:///%s' % dbpath
 
-    def test_freshnessstatus(self, configuration, database, users):
+    def test_freshnessbroken(self, configuration, database_broken, users):
+        site_url = 'http://lala/'
+        ignore_sysadmin_emails = ['blah2@blah.com']
+        freshness = DataFreshnessStatus(db_url=database_broken, users=users, ignore_sysadmin_emails=ignore_sysadmin_emails)
+        freshness.orgadmins = {'cdcb3c1f-b8d5-4154-a356-c7021bb1ffbd': [users[3], users[4]],
+                               'dc65f72e-ba98-40aa-ad32-bec0ed1e10a2': [users[2], users[3], users[4]]}
+        run_numbers = freshness.get_last_3_runs()
+        TestDataFreshnessStatus.email_users_result = list()
+        freshness.send_broken_email(site_url=site_url, run_numbers=run_numbers, userclass=TestDataFreshnessStatus.TestUser)
+        assert TestDataFreshnessStatus.email_users_result == \
+               [([{'email': 'blah3@blah.com', 'name': 'blah3name', 'sysadmin': True, 'id': 'blah3',
+                   'fullname': 'blah3full', 'display_name': 'blah3disp'},
+                  {'email': 'blah4@blah.com', 'name': 'blah4name', 'sysadmin': True, 'id': 'blah4',
+                   'fullname': 'blah4full', 'display_name': 'blah4disp'}], 'Broken datasets',
+                 'Dear system administrator,\n\nThe following datasets have broken resources:\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) from OCHA Colombia maintained by blahdisp (blah@blah.com) with expected update frequency: every six months\n    Resource 160304Tendencias_Humanitarias_2016_I.xlsx (256d8b17-5975-4be6-8985-5df18dda061e) has error Fail!\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) from OCHA Somalia maintained by blahdisp (blah@blah.com) with expected update frequency: every six months\n    Resource Rural-Urban-and-IDP-Projected-Population-February-June-2016[1].xlsx (93a361c6-ace7-4cea-8407-ffd2c30d0853) has error Fail!\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) from OCHA Yemen with missing maintainer and organization administrators blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n    Resource Admin-0.zip (2ade2886-2990-41d0-a89b-33c5d1de6e3a) has error Fail!\n    Resource Admin-1.zip (69146e1e-62c7-4e7f-8f6c-2dacffe02283) has error Fail!\n    Resource Admin-2.zip (f60035dc-624a-49cf-95de-9d489c07d3b9) has error Fail!\nAirports in Mayotte (http://lala/dataset/ourairports-myt) from OurAirports maintained by blah5full (blah5@blah.com) with expected update frequency: every year\n    Resource List of airports in Mayotte (HXL tags) (89a99c0a-4cbf-4717-9cde-987042bc435f) has error Fail!\n    Resource List of airports in Mayotte (no HXL tags) (a5797320-ce50-4b3a-99a5-76aabd0633d9) has error Fail!\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n    Resource List of airports in Samoa (HXL tags) (c721dd5b-37a3-4e61-a472-8ef0995ff0a0) has error Fail!\n    Resource List of airports in Samoa (no HXL tags) (e97413fe-ffe9-495d-96d3-7982c7f314e5) has error Fail!\n\nBest wishes,\nHDX Team',
+                 '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The following datasets have broken resources:<br><br><a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> from OCHA Colombia maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months<br>    Resource 160304Tendencias_Humanitarias_2016_I.xlsx (256d8b17-5975-4be6-8985-5df18dda061e) has error Fail!<br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> from OCHA Somalia maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months<br>    Resource Rural-Urban-and-IDP-Projected-Population-February-June-2016[1].xlsx (93a361c6-ace7-4cea-8407-ffd2c30d0853) has error Fail!<br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> from OCHA Yemen with missing maintainer and organization administrators <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br>    Resource Admin-0.zip (2ade2886-2990-41d0-a89b-33c5d1de6e3a) has error Fail!<br>    Resource Admin-1.zip (69146e1e-62c7-4e7f-8f6c-2dacffe02283) has error Fail!<br>    Resource Admin-2.zip (f60035dc-624a-49cf-95de-9d489c07d3b9) has error Fail!<br><a href="http://lala/dataset/ourairports-myt">Airports in Mayotte</a> from OurAirports maintained by <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br>    Resource List of airports in Mayotte (HXL tags) (89a99c0a-4cbf-4717-9cde-987042bc435f) has error Fail!<br>    Resource List of airports in Mayotte (no HXL tags) (a5797320-ce50-4b3a-99a5-76aabd0633d9) has error Fail!<br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br>    Resource List of airports in Samoa (HXL tags) (c721dd5b-37a3-4e61-a472-8ef0995ff0a0) has error Fail!<br>    Resource List of airports in Samoa (no HXL tags) (e97413fe-ffe9-495d-96d3-7982c7f314e5) has error Fail!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+        user0 = User(users[0])
+        user1 = User(users[4])
+        TestDataFreshnessStatus.email_users_result = list()
+        freshness.send_broken_email(site_url=site_url, run_numbers=run_numbers, userclass=TestDataFreshnessStatus.TestUser, sendto=[user0, user1])
+        assert TestDataFreshnessStatus.email_users_result == \
+               [([{'email': 'blah@blah.com', 'display_name': 'blahdisp', 'fullname': 'blahfull', 'sysadmin': False,
+                   'name': 'blahname', 'id': 'blah'},
+                  {'email': 'blah5@blah.com', 'sysadmin': False, 'id': 'blah5', 'fullname': 'blah5full',
+                   'name': 'blah5name'}], 'Broken datasets',
+                 'Dear system administrator,\n\nThe following datasets have broken resources:\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) from OCHA Colombia maintained by blahdisp (blah@blah.com) with expected update frequency: every six months\n    Resource 160304Tendencias_Humanitarias_2016_I.xlsx (256d8b17-5975-4be6-8985-5df18dda061e) has error Fail!\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) from OCHA Somalia maintained by blahdisp (blah@blah.com) with expected update frequency: every six months\n    Resource Rural-Urban-and-IDP-Projected-Population-February-June-2016[1].xlsx (93a361c6-ace7-4cea-8407-ffd2c30d0853) has error Fail!\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) from OCHA Yemen with missing maintainer and organization administrators blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n    Resource Admin-0.zip (2ade2886-2990-41d0-a89b-33c5d1de6e3a) has error Fail!\n    Resource Admin-1.zip (69146e1e-62c7-4e7f-8f6c-2dacffe02283) has error Fail!\n    Resource Admin-2.zip (f60035dc-624a-49cf-95de-9d489c07d3b9) has error Fail!\nAirports in Mayotte (http://lala/dataset/ourairports-myt) from OurAirports maintained by blah5full (blah5@blah.com) with expected update frequency: every year\n    Resource List of airports in Mayotte (HXL tags) (89a99c0a-4cbf-4717-9cde-987042bc435f) has error Fail!\n    Resource List of airports in Mayotte (no HXL tags) (a5797320-ce50-4b3a-99a5-76aabd0633d9) has error Fail!\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n    Resource List of airports in Samoa (HXL tags) (c721dd5b-37a3-4e61-a472-8ef0995ff0a0) has error Fail!\n    Resource List of airports in Samoa (no HXL tags) (e97413fe-ffe9-495d-96d3-7982c7f314e5) has error Fail!\n\nBest wishes,\nHDX Team',
+                 '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The following datasets have broken resources:<br><br><a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> from OCHA Colombia maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months<br>    Resource 160304Tendencias_Humanitarias_2016_I.xlsx (256d8b17-5975-4be6-8985-5df18dda061e) has error Fail!<br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> from OCHA Somalia maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months<br>    Resource Rural-Urban-and-IDP-Projected-Population-February-June-2016[1].xlsx (93a361c6-ace7-4cea-8407-ffd2c30d0853) has error Fail!<br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> from OCHA Yemen with missing maintainer and organization administrators <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br>    Resource Admin-0.zip (2ade2886-2990-41d0-a89b-33c5d1de6e3a) has error Fail!<br>    Resource Admin-1.zip (69146e1e-62c7-4e7f-8f6c-2dacffe02283) has error Fail!<br>    Resource Admin-2.zip (f60035dc-624a-49cf-95de-9d489c07d3b9) has error Fail!<br><a href="http://lala/dataset/ourairports-myt">Airports in Mayotte</a> from OurAirports maintained by <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br>    Resource List of airports in Mayotte (HXL tags) (89a99c0a-4cbf-4717-9cde-987042bc435f) has error Fail!<br>    Resource List of airports in Mayotte (no HXL tags) (a5797320-ce50-4b3a-99a5-76aabd0633d9) has error Fail!<br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br>    Resource List of airports in Samoa (HXL tags) (c721dd5b-37a3-4e61-a472-8ef0995ff0a0) has error Fail!<br>    Resource List of airports in Samoa (no HXL tags) (e97413fe-ffe9-495d-96d3-7982c7f314e5) has error Fail!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+        freshness.close()
+
+    def test_freshnessstatus(self, configuration, database_status, users):
         site_url = 'http://lala/'
         ignore_sysadmin_emails = ['blah3@blah.com']
-        freshness = DataFreshnessStatus(db_url=database, users=users, ignore_sysadmin_emails=ignore_sysadmin_emails)
-        run_numbers = freshness.get_runs()
+        freshness = DataFreshnessStatus(db_url=database_status, users=users, ignore_sysadmin_emails=ignore_sysadmin_emails)
+        run_numbers = freshness.get_last_3_runs()
         TestDataFreshnessStatus.email_users_result = list()
         freshness.check_number_datasets(run_numbers=run_numbers, userclass=TestDataFreshnessStatus.TestUser)
         assert TestDataFreshnessStatus.email_users_result == [([{'fullname': 'blah2full', 'sysadmin': True, 'email': 'blah2@blah.com', 'name': 'blah2name', 'id': 'blah2'},
@@ -115,9 +155,9 @@ class TestDataFreshnessStatus:
                  '<html>\n  <head></head>\n  <body>\n    <span>Dear blah5full,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
         freshness.close()
 
-    def test_freshnessfailure(self, configuration, databasefailure, users):
-        freshness = DataFreshnessStatus(db_url=databasefailure, users=users)
-        run_numbers = freshness.get_runs()
+    def test_freshnessfailure(self, configuration, database_failure, users):
+        freshness = DataFreshnessStatus(db_url=database_failure, users=users)
+        run_numbers = freshness.get_last_3_runs()
         TestDataFreshnessStatus.email_users_result = list()
         mikeuser = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
         serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True, 'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
