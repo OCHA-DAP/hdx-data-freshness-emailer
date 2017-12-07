@@ -90,9 +90,10 @@ class DataFreshnessStatus:
                    DBResource.run_number == run_numbers[0][0], DBResource2.run_number == run_numbers[1][0],
                    DBResource3.run_number == run_numbers[2][0],
                    DBResource.id == DBResource2.id, DBResource.id == DBResource3.id,
-                   DBResource.error is not None, DBResource2.error is not None, DBResource3.error is not None]
+                   DBResource.error != None, DBResource2.error != None, DBResource3.error != None]
 
-        results = self.session.query(*columns).filter(and_(*filters)).all()
+        query = self.session.query(*columns).filter(and_(*filters))
+        results = query.all()
         for result in results:
             row = dict()
             for i, column in enumerate(columns):
@@ -257,10 +258,10 @@ class DataFreshnessStatus:
                 msg.append(dataset_string)
                 htmlmsg.append(dataset_html_string)
                 for resource in sorted(dataset['resources'], key=lambda d: d['name']):
-                    resource_string = '    Resource %s (%s) has error %s!\n' % \
+                    resource_string = 'Resource %s (%s) has error: %s!' % \
                                       (resource['name'], resource['id'], resource['error'])
-                    msg.append(resource_string)
-                    htmlmsg.append(self.htmlify(resource_string))
+                    msg.append('    %s\n' % resource_string)
+                    htmlmsg.append('&nbsp&nbsp&nbsp&nbsp%s<br>' % resource_string)
         output, htmloutput = self.msg_close(msg, htmlmsg)
         if sendto is None:
             users_to_email = self.sysadmins
