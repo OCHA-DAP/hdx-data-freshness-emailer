@@ -7,6 +7,7 @@ Reads the HDX data freshness database and finds datasets whose status has
 changed from overdue to delinquent or from due to overdue.
 
 '''
+import datetime
 import logging
 
 from hdx.data.dataset import Dataset
@@ -14,7 +15,7 @@ from hdx.data.organization import Organization
 from hdx.data.user import User
 from hdx.freshness.database.dbresource import DBResource
 from hdx.hdx_configuration import Configuration
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, aliased
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.elements import and_
@@ -47,9 +48,10 @@ class DataFreshnessStatus:
                 if user['email'] not in ignore_sysadmin_emails:
                     self.sysadmins.append(user)
         self.orgadmins = dict()
+        self.yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
 
-    def get_last_3_runs(self):
-        return self.session.query(DBRun.run_number).distinct().order_by(DBRun.run_number.desc()).limit(3).all()
+    def get_cur_prev_runs(self):
+        return self.session.query(DBRun.run_number, DBRun.run_date).distinct().order_by(DBRun.run_number.desc()).limit(2).all()
 
     def check_number_datasets(self, run_numbers, send_failures=None, userclass=User):
         datasets_today = self.session.query(DBDataset.id).filter(DBDataset.run_number == run_numbers[0][0]).count()
@@ -73,13 +75,24 @@ class DataFreshnessStatus:
 
     def get_broken(self, run_numbers):
         datasets = dict()
-        no_runs = len(run_numbers)
-        if no_runs < 3:
-            return datasets
-        # select a.* from dbresources a, dbresources b, dbresources c where a.run_number = (select MAX(run_number) from dbresources) and a.error is not null and b.run_number = a.run_number-1 and a.id=b.id and b.error is not null and c.run_number = a.run_number-2 and a.id=c.id and c.error is not null;
-        # how to group by datasets?
-        DBResource2 = aliased(DBResource)
-        DBResource3 = aliased(DBResource)
+        # select id from dbresources WHERE run_number = (select max(run_number) from dbruns) and date(when_hashed) = date((select max(run_date) from dbruns);
+        # Get resource ids that were hashed overnight
+        query = self.session.query(DBResource.id).filter(DBResource.run_number == run_numbers[0][0]).filter(DBResource.error != None).filter(func.date(DBResource.when_hashed) == func.date(run_numbers[0][1]))
+        hashed_resource_ids = query.all()
+        resource_ids = list()
+        for hashed_resource_id in hashed_resource_ids:
+            resource_id = hashed_resource_id[0]
+            query = self.session.query(DBResource.error).filter(DBResource.id == resource_id).\
+                filter(DBResource.run_number == DBRun.run_number).filter(func.date(DBResource.when_hashed) == func.date(DBRun.run_date)).order_by(DBResource.run_number).limit(3)
+            resource_states = query.all()
+            allerror = True
+            for resource_state in resource_states:
+                if resource_state[0] is None:
+                    allerror = False
+                    break
+            if allerror:
+                resource_ids.append(resource_id)
+
         columns = [DBResource.id.label('resource_id'), DBResource.name.label('resource_name'),
                    DBResource.dataset_id.label('id'), DBResource.error, DBInfoDataset.name, DBInfoDataset.title,
                    DBInfoDataset.maintainer, DBOrganization.id.label('organization_id'),
@@ -87,11 +100,8 @@ class DataFreshnessStatus:
                    DBDataset.what_updated]
         filters = [DBResource.dataset_id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
                    DBResource.dataset_id == DBDataset.id, DBDataset.run_number == run_numbers[0][0],
-                   DBResource.run_number == run_numbers[0][0], DBResource2.run_number == run_numbers[1][0],
-                   DBResource3.run_number == run_numbers[2][0],
-                   DBResource.id == DBResource2.id, DBResource.id == DBResource3.id,
-                   DBResource.error != None, DBResource2.error != None, DBResource3.error != None]
-
+                   DBResource.run_number == run_numbers[0][0],
+                   DBResource.id.in_(resource_ids)]
         query = self.session.query(*columns).filter(and_(*filters))
         results = query.all()
         for result in results:
@@ -103,7 +113,7 @@ class DataFreshnessStatus:
             dataset_name = row['name']
             dataset = org.get(dataset_name, dict())
             resources = dataset.get('resources', list())
-            resource = {'id' : row['resource_id'], 'name': row['resource_name'], 'error': row['error']}
+            resource = {'id': row['resource_id'], 'name': row['resource_name'], 'error': row['error']}
             resources.append(resource)
             dataset['resources'] = resources
             del row['resource_id']

@@ -64,7 +64,7 @@ def main(hdx_key, hdx_site, db_url, email_server):
     else:
         db_url = 'sqlite:///freshness.db'
     freshness = DataFreshnessStatus(db_url=db_url)
-    run_numbers = freshness.get_last_3_runs()
+    run_numbers = freshness.get_cur_prev_runs()
     # Send failure messages to Serban and Mike only
     mikeuser = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
     serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True, 'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
