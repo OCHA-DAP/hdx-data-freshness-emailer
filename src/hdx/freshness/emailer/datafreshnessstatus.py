@@ -75,24 +75,6 @@ class DataFreshnessStatus:
 
     def get_broken(self, run_numbers):
         datasets = dict()
-        # select id from dbresources WHERE run_number = (select max(run_number) from dbruns) and date(when_hashed) = date((select max(run_date) from dbruns);
-        # Get resource ids that were hashed overnight
-        query = self.session.query(DBResource.id).filter(DBResource.run_number == run_numbers[0][0]).filter(DBResource.error != None).filter(func.date(DBResource.when_hashed) == func.date(run_numbers[0][1]))
-        hashed_resource_ids = query.all()
-        resource_ids = list()
-        for hashed_resource_id in hashed_resource_ids:
-            resource_id = hashed_resource_id[0]
-            query = self.session.query(DBResource.error).filter(DBResource.id == resource_id).\
-                filter(DBResource.run_number == DBRun.run_number).filter(func.date(DBResource.when_hashed) == func.date(DBRun.run_date)).order_by(DBResource.run_number.desc()).limit(3)
-            resource_states = query.all()
-            allerror = True
-            for resource_state in resource_states:
-                if resource_state[0] is None:
-                    allerror = False
-                    break
-            if allerror:
-                resource_ids.append(resource_id)
-
         columns = [DBResource.id.label('resource_id'), DBResource.name.label('resource_name'),
                    DBResource.dataset_id.label('id'), DBResource.error, DBInfoDataset.name, DBInfoDataset.title,
                    DBInfoDataset.maintainer, DBOrganization.id.label('organization_id'),
@@ -100,8 +82,8 @@ class DataFreshnessStatus:
                    DBDataset.what_updated]
         filters = [DBResource.dataset_id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
                    DBResource.dataset_id == DBDataset.id, DBDataset.run_number == run_numbers[0][0],
-                   DBResource.run_number == run_numbers[0][0],
-                   DBResource.id.in_(resource_ids)]
+                   DBResource.run_number == DBDataset.run_number, DBResource.error != None,
+                   func.date(DBResource.when_hashed) == func.date(run_numbers[0][1])]
         query = self.session.query(*columns).filter(and_(*filters))
         results = query.all()
         for result in results:
