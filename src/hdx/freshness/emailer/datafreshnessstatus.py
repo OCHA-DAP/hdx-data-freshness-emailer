@@ -83,7 +83,7 @@ class DataFreshnessStatus:
         for hashed_resource_id in hashed_resource_ids:
             resource_id = hashed_resource_id[0]
             query = self.session.query(DBResource.error).filter(DBResource.id == resource_id).\
-                filter(DBResource.run_number == DBRun.run_number).filter(func.date(DBResource.when_hashed) == func.date(DBRun.run_date)).order_by(DBResource.run_number).limit(3)
+                filter(DBResource.run_number == DBRun.run_number).filter(func.date(DBResource.when_hashed) == func.date(DBRun.run_date)).order_by(DBResource.run_number.desc()).limit(3)
             resource_states = query.all()
             allerror = True
             for resource_state in resource_states:
