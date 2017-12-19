@@ -83,10 +83,9 @@ class DataFreshnessStatus:
         filters = [DBResource.dataset_id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
                    DBResource.dataset_id == DBDataset.id, DBDataset.run_number == run_numbers[0][0],
                    DBResource.run_number == DBDataset.run_number, DBResource.error != None,
-                   func.date(DBResource.when_hashed) == func.date(run_numbers[0][1])]
+                   func.date(DBResource.when_checked) == func.date(run_numbers[0][1])]
         query = self.session.query(*columns).filter(and_(*filters))
-        results = query.all()
-        for result in results:
+        for result in query:
             row = dict()
             for i, column in enumerate(columns):
                 row[column.key] = result[i]
@@ -123,8 +122,8 @@ class DataFreshnessStatus:
             columns.append(DBDataset2.what_updated.label('prev_what_updated'))
             filters.extend([DBDataset.id == DBDataset2.id, DBDataset2.fresh == status - 1,
                             DBDataset2.run_number == run_numbers[1][0]])
-        results = self.session.query(*columns).filter(and_(*filters)).all()
-        for result in results:
+        query = self.session.query(*columns).filter(and_(*filters))
+        for result in query:
             dataset = dict()
             for i, column in enumerate(columns):
                 dataset[column.key] = result[i]
