@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 class DataFreshnessStatus:
     freshness_status = {0: 'Fresh', 1: 'Due', 2: 'Overdue', 3: 'Delinquent'}
+    object_output_limit = 2
 
     def __init__(self, db_url='sqlite:///freshness.db', users=None, ignore_sysadmin_emails=None):
         ''''''
@@ -267,7 +268,7 @@ class DataFreshnessStatus:
             htmlmsg.append(dataset_html_string)
             newline = False
             for i, resource in enumerate(sorted(ds['resources'], key=lambda d: d['name'])):
-                if i > 1:
+                if i >= self.object_output_limit:
                     newline = True
                     msg.append('    %s (%s)' % (resource['name'], resource['id']))
                     htmlmsg.append('&nbsp&nbsp&nbsp&nbsp%s (%s)' % (resource['name'], resource['id']))
@@ -292,19 +293,22 @@ class DataFreshnessStatus:
                 create_broken_dataset_string(site_url, dataset)
 
         for org_title in sorted(datasets):
-            output_org(org_title)
             org = datasets[org_title]
             priority_org = priority_errors.get(org_title, list())
             newline = False
+            org_outputted = False
             for i, dataset_name in enumerate(sorted(org)):
                 if dataset_name in priority_org:
                     continue
+                if not org_outputted:
+                    output_org(org_title)
+                    org_outputted = True
                 dataset = org[dataset_name]
-                if i > 1:
+                if i >= self.object_output_limit:
                     newline = True
                     url = self.get_dataset_url(site_url, dataset)
-                    msg.append('%s (%s)' % (dataset['title'], url))
-                    htmlmsg.append('<a href="%s">%s</a>' % (url, dataset['title']))
+                    msg.append('%s (%s)    ' % (dataset['title'], url))
+                    htmlmsg.append('<a href="%s">%s</a>&nbsp&nbsp&nbsp&nbsp' % (url, dataset['title']))
                     continue
                 create_broken_dataset_string(site_url, dataset)
             if newline:
