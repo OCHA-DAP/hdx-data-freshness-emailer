@@ -15,6 +15,7 @@ from hdx.data.organization import Organization
 from hdx.data.user import User
 from hdx.freshness.database.dbresource import DBResource
 from hdx.hdx_configuration import Configuration
+from hdx.utilities.dictandlist import dict_of_lists_add
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, aliased
 from sqlalchemy.pool import NullPool
@@ -30,6 +31,8 @@ logger = logging.getLogger(__name__)
 
 
 class DataFreshnessStatus:
+    freshness_status = {0: 'Fresh', 1: 'Due', 2: 'Overdue', 3: 'Delinquent'}
+
     def __init__(self, db_url='sqlite:///freshness.db', users=None, ignore_sysadmin_emails=None):
         ''''''
         engine = create_engine(db_url, poolclass=NullPool, echo=False)
@@ -74,12 +77,13 @@ class DataFreshnessStatus:
             logger.info(output)
 
     def get_broken(self, run_numbers):
+        priority_errors = dict()
         datasets = dict()
         columns = [DBResource.id.label('resource_id'), DBResource.name.label('resource_name'),
                    DBResource.dataset_id.label('id'), DBResource.error, DBInfoDataset.name, DBInfoDataset.title,
                    DBInfoDataset.maintainer, DBOrganization.id.label('organization_id'),
                    DBOrganization.title.label('organization_title'), DBDataset.update_frequency, DBDataset.last_modified,
-                   DBDataset.what_updated]
+                   DBDataset.what_updated, DBDataset.fresh]
         filters = [DBResource.dataset_id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
                    DBResource.dataset_id == DBDataset.id, DBDataset.run_number == run_numbers[0][0],
                    DBResource.run_number == DBDataset.run_number, DBResource.error != None,
@@ -94,7 +98,10 @@ class DataFreshnessStatus:
             dataset_name = row['name']
             dataset = org.get(dataset_name, dict())
             resources = dataset.get('resources', list())
-            resource = {'id': row['resource_id'], 'name': row['resource_name'], 'error': row['error']}
+            error = row['error']
+            resource = {'id': row['resource_id'], 'name': row['resource_name'], 'error': error}
+            if error[:6] == 'code=4':
+                dict_of_lists_add(priority_errors, org_title, dataset_name)
             resources.append(resource)
             dataset['resources'] = resources
             del row['resource_id']
@@ -103,7 +110,7 @@ class DataFreshnessStatus:
             dataset.update(row)
             org[dataset_name] = dataset
             datasets[org_title] = org
-        return datasets
+        return datasets, priority_errors
 
     def get_status(self, run_numbers, status):
         datasets = list()
@@ -155,14 +162,18 @@ class DataFreshnessStatus:
                 user_name = user['name']
         return user_name
 
-    def create_dataset_string(self, site_url, dataset, sysadmin=False):
+    @staticmethod
+    def get_dataset_url(site_url, dataset):
+        return '%sdataset/%s' % (site_url, dataset['name'])
+
+    def create_dataset_string(self, site_url, dataset, sysadmin=False, include_org=True, include_freshness=False):
         users_to_email = list()
-        url = '%sdataset/%s' % (site_url, dataset['name'])
+        url = self.get_dataset_url(site_url, dataset)
         msg = list()
         htmlmsg = list()
         msg.append('%s (%s)' % (dataset['title'], url))
         htmlmsg.append('<a href="%s">%s</a>' % (url, dataset['title']))
-        if sysadmin:
+        if sysadmin and include_org:
             orgmsg = ' from %s' % dataset['organization_title']
             msg.append(orgmsg)
             htmlmsg.append(orgmsg)
@@ -193,8 +204,15 @@ class DataFreshnessStatus:
             update_frequency = 'NOT SET'
         else:
             update_frequency = Dataset.transform_update_frequency('%d' % dataset['update_frequency']).lower()
-        msg.append(' with expected update frequency: %s\n' % update_frequency)
-        htmlmsg.append(' with expected update frequency: %s<br>' % update_frequency)
+        msg.append(' with expected update frequency: %s' % update_frequency)
+        htmlmsg.append(' with expected update frequency: %s' % update_frequency)
+        if include_freshness:
+            fresh = self.freshness_status.get(dataset['fresh'], 'None')
+            msg.append(' and freshness: %s' % fresh)
+            htmlmsg.append(' and freshness: %s' % fresh)
+        msg.append('\n')
+        htmlmsg.append('<br>')
+
         return ''.join(msg), ''.join(htmlmsg), users_to_email
 
     @staticmethod
@@ -235,24 +253,64 @@ class DataFreshnessStatus:
 ''' % msg
 
     def send_broken_email(self, site_url, run_numbers, userclass=User, sendto=None):
-        datasets = self.get_broken(run_numbers)
+        datasets, priority_errors = self.get_broken(run_numbers)
         if len(datasets) == 0:
             return
         startmsg = 'Dear system administrator,\n\nThe following datasets have broken resources:\n\n'
         msg = [startmsg]
         htmlmsg = [self.html_start(self.htmlify(startmsg))]
+
+        def create_broken_dataset_string(url, ds):
+            dataset_string, dataset_html_string, _ = \
+                self.create_dataset_string(url, ds, sysadmin=True, include_org=False, include_freshness=True)
+            msg.append(dataset_string)
+            htmlmsg.append(dataset_html_string)
+            newline = False
+            for i, resource in enumerate(sorted(ds['resources'], key=lambda d: d['name'])):
+                if i > 1:
+                    newline = True
+                    msg.append('    %s (%s)' % (resource['name'], resource['id']))
+                    htmlmsg.append('&nbsp&nbsp&nbsp&nbsp%s (%s)' % (resource['name'], resource['id']))
+                    continue
+                resource_string = 'Resource %s (%s) has error: %s!' % \
+                                  (resource['name'], resource['id'], resource['error'])
+                msg.append('    %s\n' % resource_string)
+                htmlmsg.append('&nbsp&nbsp&nbsp&nbsp%s<br>' % resource_string)
+            if newline:
+                msg.append('\n')
+                htmlmsg.append('<br>')
+
+        def output_org(title):
+            msg.append('%s\n' % title)
+            htmlmsg.append('<b>%s</b><br>' % title)
+
+        for org_title in sorted(priority_errors):
+            output_org(org_title)
+            org = priority_errors[org_title]
+            for dataset_name in sorted(org):
+                dataset = datasets[org_title][dataset_name]
+                create_broken_dataset_string(site_url, dataset)
+
         for org_title in sorted(datasets):
-            orgs = datasets[org_title]
-            for dataset_name in sorted(orgs):
-                dataset = orgs[dataset_name]
-                dataset_string, dataset_html_string, _ = self.create_dataset_string(site_url, dataset, sysadmin=True)
-                msg.append(dataset_string)
-                htmlmsg.append(dataset_html_string)
-                for resource in sorted(dataset['resources'], key=lambda d: d['name']):
-                    resource_string = 'Resource %s (%s) has error: %s!' % \
-                                      (resource['name'], resource['id'], resource['error'])
-                    msg.append('    %s\n' % resource_string)
-                    htmlmsg.append('&nbsp&nbsp&nbsp&nbsp%s<br>' % resource_string)
+            output_org(org_title)
+            org = datasets[org_title]
+            priority_org = priority_errors.get(org_title, list())
+            newline = False
+            for i, dataset_name in enumerate(sorted(org)):
+                if dataset_name in priority_org:
+                    continue
+                dataset = org[dataset_name]
+                if i > 1:
+                    newline = True
+                    url = self.get_dataset_url(site_url, dataset)
+                    msg.append('%s (%s)' % (dataset['title'], url))
+                    htmlmsg.append('<a href="%s">%s</a>' % (url, dataset['title']))
+                    continue
+                create_broken_dataset_string(site_url, dataset)
+            if newline:
+                msg.append('\n')
+                htmlmsg.append('<br>')
+
         output, htmloutput = self.msg_close(msg, htmlmsg)
         if sendto is None:
             users_to_email = self.sysadmins
