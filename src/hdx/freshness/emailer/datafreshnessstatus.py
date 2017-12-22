@@ -52,17 +52,27 @@ class DataFreshnessStatus:
                 if user['email'] not in ignore_sysadmin_emails:
                     self.sysadmins.append(user)
         self.orgadmins = dict()
-        self.yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
 
     def get_cur_prev_runs(self):
         return self.session.query(DBRun.run_number, DBRun.run_date).distinct().order_by(DBRun.run_number.desc()).limit(2).all()
 
-    def check_number_datasets(self, run_numbers, send_failures=None, userclass=User):
-        datasets_today = self.session.query(DBDataset.id).filter(DBDataset.run_number == run_numbers[0][0]).count()
-        datasets_previous = self.session.query(DBDataset.id).filter(DBDataset.run_number == run_numbers[1][0]).count()
-        diff_datasets = datasets_previous - datasets_today
-        percentage_diff = diff_datasets / datasets_previous
-        if percentage_diff > 0.02:
+    def check_number_datasets(self, run_numbers, send_failures=None, today=datetime.datetime.utcnow(), userclass=User):
+        run_date = run_numbers[0][1]
+        if today < run_date:
+            title = 'FAILURE: Future run date!'
+            msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
+            send_to = send_failures
+        elif today - run_date > datetime.timedelta(days=1):
+            title = 'FAILURE: No run today!'
+            msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
+            send_to = send_failures
+        else:
+            datasets_today = self.session.query(DBDataset.id).filter(DBDataset.run_number == run_numbers[0][0]).count()
+            datasets_previous = self.session.query(DBDataset.id).filter(DBDataset.run_number == run_numbers[1][0]).count()
+            diff_datasets = datasets_previous - datasets_today
+            percentage_diff = diff_datasets / datasets_previous
+            if percentage_diff <= 0.02:
+                return
             if percentage_diff == 1.0:
                 title = 'FAILURE: No datasets today!'
                 msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
@@ -72,10 +82,10 @@ class DataFreshnessStatus:
                 msg = 'Dear system administrator,\n\nThere are %d (%d%%) fewer datasets today than yesterday on HDX!\n' % \
                          (diff_datasets, percentage_diff * 100)
                 send_to = self.sysadmins
-            htmlmsg = self.html_start(self.htmlify(msg))
-            output, htmloutput = self.msg_close(msg, htmlmsg)
-            userclass.email_users(send_to, title, output, html_body=htmloutput)
-            logger.info(output)
+        htmlmsg = self.html_start(self.htmlify(msg))
+        output, htmloutput = self.msg_close(msg, htmlmsg)
+        userclass.email_users(send_to, title, output, html_body=htmloutput)
+        logger.info(output)
 
     def get_broken(self, run_numbers):
         priority_errors = dict()

@@ -6,6 +6,7 @@ Unit tests for the data freshness status code.
 import os
 import shutil
 from os.path import join
+from dateutil import parser
 
 import pytest
 from hdx.data.user import User
@@ -99,7 +100,8 @@ class TestDataFreshnessStatus:
         freshness = DataFreshnessStatus(db_url=database_status, users=users, ignore_sysadmin_emails=ignore_sysadmin_emails)
         run_numbers = freshness.get_cur_prev_runs()
         TestDataFreshnessStatus.email_users_result = list()
-        freshness.check_number_datasets(run_numbers=run_numbers, userclass=TestDataFreshnessStatus.TestUser)
+        today = parser.parse('2017-02-02 19:07:30.333492')
+        freshness.check_number_datasets(run_numbers=run_numbers, today=today, userclass=TestDataFreshnessStatus.TestUser)
         assert TestDataFreshnessStatus.email_users_result == [([{'fullname': 'blah2full', 'sysadmin': True, 'email': 'blah2@blah.com', 'name': 'blah2name', 'id': 'blah2'},
                                                                 {'name': 'blah4name', 'fullname': 'blah4full', 'email': 'blah4@blah.com', 'sysadmin': True, 'id': 'blah4', 'display_name': 'blah4disp'}],
                                                                'WARNING: Fall in datasets on HDX today!', 'Dear system administrator,\n\nThere are 1 (16%) fewer datasets today than yesterday on HDX!\n\nBest wishes,\nHDX Team',
@@ -163,6 +165,19 @@ class TestDataFreshnessStatus:
         TestDataFreshnessStatus.email_users_result = list()
         mikeuser = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
         serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True, 'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
-        freshness.check_number_datasets(run_numbers=run_numbers, send_failures=[mikeuser, serbanuser], userclass=TestDataFreshnessStatus.TestUser)
-        assert TestDataFreshnessStatus.email_users_result == [([{'display_name': 'Michael Rans', 'sysadmin': True, 'name': 'mcarans', 'fullname': 'Michael Rans', 'email': 'mcarans@yahoo.co.uk'}, {'display_name': 'Serban Teodorescu', 'sysadmin': True, 'name': 'serban', 'fullname': 'Serban Teodorescu', 'email': 'teodorescu.serban@gmail.com'}],
+        today = parser.parse('2017-02-03 19:07:30.333492')
+        freshness.check_number_datasets(run_numbers=run_numbers, send_failures=[mikeuser, serbanuser], today=today, userclass=TestDataFreshnessStatus.TestUser)
+        assert TestDataFreshnessStatus.email_users_result == [([{'name': 'mcarans', 'sysadmin': True, 'display_name': 'Michael Rans', 'email': 'mcarans@yahoo.co.uk', 'fullname': 'Michael Rans'}, {'name': 'serban', 'sysadmin': True, 'display_name': 'Serban Teodorescu', 'email': 'teodorescu.serban@gmail.com', 'fullname': 'Serban Teodorescu'}],
                                                                'FAILURE: No datasets today!', 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n\nBest wishes,\nHDX Team', '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>It is highly probable that data freshness has failed!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+        TestDataFreshnessStatus.email_users_result = list()
+        today = parser.parse('2017-02-02 19:07:30.333492')
+        freshness.check_number_datasets(run_numbers=run_numbers, send_failures=[mikeuser, serbanuser], today=today, userclass=TestDataFreshnessStatus.TestUser)
+        assert TestDataFreshnessStatus.email_users_result == [([{'name': 'mcarans', 'sysadmin': True, 'display_name': 'Michael Rans', 'email': 'mcarans@yahoo.co.uk', 'fullname': 'Michael Rans'}, {'name': 'serban', 'sysadmin': True, 'display_name': 'Serban Teodorescu', 'email': 'teodorescu.serban@gmail.com', 'fullname': 'Serban Teodorescu'}],
+                                                               'FAILURE: Future run date!', 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n\nBest wishes,\nHDX Team', '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>It is highly probable that data freshness has failed!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+        TestDataFreshnessStatus.email_users_result = list()
+        today = parser.parse('2017-02-04 19:07:30.333492')
+        freshness.check_number_datasets(run_numbers=run_numbers, send_failures=[mikeuser, serbanuser], today=today, userclass=TestDataFreshnessStatus.TestUser)
+        assert TestDataFreshnessStatus.email_users_result == [([{'name': 'mcarans', 'sysadmin': True, 'display_name': 'Michael Rans', 'email': 'mcarans@yahoo.co.uk', 'fullname': 'Michael Rans'}, {'name': 'serban', 'sysadmin': True, 'display_name': 'Serban Teodorescu', 'email': 'teodorescu.serban@gmail.com', 'fullname': 'Serban Teodorescu'}],
+                                                               'FAILURE: No run today!', 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n\nBest wishes,\nHDX Team', '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>It is highly probable that data freshness has failed!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+
+
