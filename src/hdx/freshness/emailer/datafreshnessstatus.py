@@ -9,6 +9,7 @@ changed from overdue to delinquent or from due to overdue.
 '''
 import datetime
 import logging
+import re
 
 from hdx.data.dataset import Dataset
 from hdx.data.organization import Organization
@@ -88,7 +89,7 @@ class DataFreshnessStatus:
         logger.info(output)
 
     def get_broken(self, run_numbers):
-        priority_errors = dict()
+        client_errors = dict()
         datasets = dict()
         columns = [DBResource.id.label('resource_id'), DBResource.name.label('resource_name'),
                    DBResource.dataset_id.label('id'), DBResource.error, DBInfoDataset.name, DBInfoDataset.title,
@@ -111,8 +112,13 @@ class DataFreshnessStatus:
             resources = dataset.get('resources', list())
             error = row['error']
             resource = {'id': row['resource_id'], 'name': row['resource_name'], 'error': error}
-            if error[:6] == 'code=4':
-                dict_of_sets_add(priority_errors, org_title, dataset_name)
+            regex = '.Client(.*)Error '
+            search_exception = re.search(regex, error)
+            if search_exception:
+                exception_string = search_exception.group(0)[1:-1]
+                dict_objs = client_errors.get(exception_string, dict())
+                dict_of_sets_add(dict_objs, org_title, dataset_name)
+                client_errors[exception_string] = dict_objs
             resources.append(resource)
             dataset['resources'] = resources
             del row['resource_id']
@@ -121,7 +127,7 @@ class DataFreshnessStatus:
             dataset.update(row)
             org[dataset_name] = dataset
             datasets[org_title] = org
-        return datasets, priority_errors
+        return datasets, client_errors
 
     def get_status(self, run_numbers, status):
         datasets = list()
@@ -264,7 +270,7 @@ class DataFreshnessStatus:
 ''' % msg
 
     def send_broken_email(self, site_url, run_numbers, userclass=User, sendto=None):
-        datasets, priority_errors = self.get_broken(run_numbers)
+        datasets, client_errors = self.get_broken(run_numbers)
         if len(datasets) == 0:
             return
         startmsg = 'Dear system administrator,\n\nThe following datasets have broken resources:\n\n'
@@ -280,31 +286,42 @@ class DataFreshnessStatus:
             for i, resource in enumerate(sorted(ds['resources'], key=lambda d: d['name'])):
                 if i >= self.object_output_limit:
                     newline = True
-                    msg.append('    %s (%s)' % (resource['name'], resource['id']))
-                    htmlmsg.append('&nbsp&nbsp&nbsp&nbsp%s (%s)' % (resource['name'], resource['id']))
+                    msg.append('        %s (%s)' % (resource['name'], resource['id']))
+                    htmlmsg.append('&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp%s (%s)' % (resource['name'], resource['id']))
                     continue
                 resource_string = 'Resource %s (%s) has error: %s!' % \
                                   (resource['name'], resource['id'], resource['error'])
-                msg.append('    %s\n' % resource_string)
-                htmlmsg.append('&nbsp&nbsp&nbsp&nbsp%s<br>' % resource_string)
+                msg.append('        %s\n' % resource_string)
+                htmlmsg.append('&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp%s<br>' % resource_string)
             if newline:
                 msg.append('\n')
                 htmlmsg.append('<br>')
 
+        def output_error(error):
+            msg.append('%s\n' % error)
+            htmlmsg.append('<b><i>%s</i></b><br>' % error)
+
         def output_org(title):
-            msg.append('%s\n' % title)
-            htmlmsg.append('<b>%s</b><br>' % title)
+            msg.append('    %s\n' % title)
+            htmlmsg.append('    <b>%s</b><br>' % title)
 
-        for org_title in sorted(priority_errors):
-            output_org(org_title)
-            org = priority_errors[org_title]
-            for dataset_name in sorted(org):
-                dataset = datasets[org_title][dataset_name]
-                create_broken_dataset_string(site_url, dataset)
+        for client_error in sorted(client_errors):
+            output_error(client_error)
+            orgs = client_errors[client_error]
+            for org_title in sorted(orgs):
+                output_org(org_title)
+                org = orgs[org_title]
+                for dataset_name in sorted(org):
+                    dataset = datasets[org_title][dataset_name]
+                    create_broken_dataset_string(site_url, dataset)
 
+        output_error('Server Error')
         for org_title in sorted(datasets):
             org = datasets[org_title]
-            priority_org = priority_errors.get(org_title, list())
+            priority_org = list()
+            for error in client_errors:
+                for dataset_name in client_errors[error].get(org_title, list()):
+                    priority_org.append(dataset_name)
             newline = False
             org_outputted = False
             for i, dataset_name in enumerate(sorted(org)):
