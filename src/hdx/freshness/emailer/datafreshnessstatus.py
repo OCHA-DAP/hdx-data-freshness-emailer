@@ -281,32 +281,53 @@ class DataFreshnessStatus:
         msg = [startmsg]
         htmlmsg = [self.html_start(self.htmlify(startmsg))]
 
+        def output_tabs(n=1):
+            for i in range(n):
+                msg.append('  ')
+                htmlmsg.append('&nbsp&nbsp')
+
         def create_broken_dataset_string(url, ds):
             dataset_string, dataset_html_string, _ = \
                 self.create_dataset_string(url, ds, sysadmin=True, include_org=False, include_freshness=True)
+            output_tabs(2)
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
             newline = False
             for i, resource in enumerate(sorted(ds['resources'], key=lambda d: d['name'])):
+                if i == self.object_output_limit:
+                    output_tabs(3)
                 if i >= self.object_output_limit:
                     newline = True
-                    msg.append('        %s (%s)' % (resource['name'], resource['id']))
-                    htmlmsg.append('&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp%s (%s)' % (resource['name'], resource['id']))
+                    output_tabs(1)
+                    msg.append('%s (%s)' % (resource['name'], resource['id']))
+                    htmlmsg.append('%s (%s)' % (resource['name'], resource['id']))
                     continue
                 resource_string = 'Resource %s (%s) has error: %s!' % \
                                   (resource['name'], resource['id'], resource['error'])
-                msg.append('        %s\n' % resource_string)
-                htmlmsg.append('&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp%s<br>' % resource_string)
+                output_tabs(4)
+                msg.append('%s\n' % resource_string)
+                htmlmsg.append('%s<br>' % resource_string)
             if newline:
                 self.output_newline(msg, htmlmsg)
 
+        def create_cut_down_broken_dataset_string(i, su, ds):
+            if i == self.object_output_limit:
+                output_tabs(1)
+            if i >= self.object_output_limit:
+                url = self.get_dataset_url(su, ds)
+                output_tabs(1)
+                msg.append('%s (%s)' % (ds['title'], url))
+                htmlmsg.append('<a href="%s">%s</a>' % (url, ds['title']))
+                return True
+            return False
+
         def output_error(error):
             msg.append('%s\n' % error)
-            htmlmsg.append('<b><i>%s</i></b><br>' % error)
+            htmlmsg.append('<b>%s</b><br>' % error)
 
         def output_org(title):
-            msg.append('    %s\n' % title)
-            htmlmsg.append('    <b>%s</b><br>' % title)
+            msg.append('%s\n' % title)
+            htmlmsg.append('<b><i>%s</i></b><br>' % title)
 
         for client_error in sorted(client_errors):
             output_error(client_error)
@@ -314,9 +335,11 @@ class DataFreshnessStatus:
             for org_title in sorted(orgs):
                 output_org(org_title)
                 org = orgs[org_title]
-                for dataset_name in sorted(org):
+                for i, dataset_name in enumerate(sorted(org)):
                     dataset = datasets[org_title][dataset_name]
-                    create_broken_dataset_string(site_url, dataset)
+                    cut_down = create_cut_down_broken_dataset_string(i, site_url, dataset)
+                    if not cut_down:
+                        create_broken_dataset_string(site_url, dataset)
             self.output_newline(msg, htmlmsg)
 
         output_error('Server Error')
@@ -335,13 +358,11 @@ class DataFreshnessStatus:
                     output_org(org_title)
                     org_outputted = True
                 dataset = org[dataset_name]
-                if i >= self.object_output_limit:
+                cut_down = create_cut_down_broken_dataset_string(i, site_url, dataset)
+                if cut_down:
                     newline = True
-                    url = self.get_dataset_url(site_url, dataset)
-                    msg.append('%s (%s)    ' % (dataset['title'], url))
-                    htmlmsg.append('<a href="%s">%s</a>&nbsp&nbsp&nbsp&nbsp' % (url, dataset['title']))
-                    continue
-                create_broken_dataset_string(site_url, dataset)
+                else:
+                    create_broken_dataset_string(site_url, dataset)
             if newline:
                 msg.append('\n')
                 htmlmsg.append('<br>')
