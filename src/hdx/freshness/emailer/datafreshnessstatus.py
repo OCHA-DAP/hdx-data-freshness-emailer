@@ -183,6 +183,11 @@ class DataFreshnessStatus:
     def get_dataset_url(site_url, dataset):
         return '%sdataset/%s' % (site_url, dataset['name'])
 
+    @staticmethod
+    def output_newline(msg, htmlmsg):
+        msg.append('\n')
+        htmlmsg.append('<br>')
+
     def create_dataset_string(self, site_url, dataset, sysadmin=False, include_org=True, include_freshness=False):
         users_to_email = list()
         url = self.get_dataset_url(site_url, dataset)
@@ -227,8 +232,7 @@ class DataFreshnessStatus:
             fresh = self.freshness_status.get(dataset['fresh'], 'None')
             msg.append(' and freshness: %s' % fresh)
             htmlmsg.append(' and freshness: %s' % fresh)
-        msg.append('\n')
-        htmlmsg.append('<br>')
+        self.output_newline(msg, htmlmsg)
 
         return ''.join(msg), ''.join(htmlmsg), users_to_email
 
@@ -294,8 +298,7 @@ class DataFreshnessStatus:
                 msg.append('        %s\n' % resource_string)
                 htmlmsg.append('&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp%s<br>' % resource_string)
             if newline:
-                msg.append('\n')
-                htmlmsg.append('<br>')
+                self.output_newline(msg, htmlmsg)
 
         def output_error(error):
             msg.append('%s\n' % error)
@@ -314,6 +317,7 @@ class DataFreshnessStatus:
                 for dataset_name in sorted(org):
                     dataset = datasets[org_title][dataset_name]
                     create_broken_dataset_string(site_url, dataset)
+            self.output_newline(msg, htmlmsg)
 
         output_error('Server Error')
         for org_title in sorted(datasets):
