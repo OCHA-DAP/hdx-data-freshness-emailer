@@ -16,7 +16,6 @@ from hdx.data.organization import Organization
 from hdx.data.user import User
 from hdx.freshness.database.dbresource import DBResource
 from hdx.hdx_configuration import Configuration
-from hdx.utilities.dictandlist import dict_of_sets_add
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, aliased
 from sqlalchemy.pool import NullPool
