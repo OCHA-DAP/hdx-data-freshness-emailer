@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 class DataFreshnessStatus:
     freshness_status = {0: 'Fresh', 1: 'Due', 2: 'Overdue', 3: 'Delinquent'}
     object_output_limit = 2
+    other_error_msg = 'Server Error (may be temporary)'
 
     def __init__(self, db_url='sqlite:///freshness.db', users=None, ignore_sysadmin_emails=None):
         ''''''
@@ -89,7 +90,6 @@ class DataFreshnessStatus:
         logger.info(output)
 
     def get_broken(self, run_numbers):
-        client_errors = dict()
         datasets = dict()
         columns = [DBResource.id.label('resource_id'), DBResource.name.label('resource_name'),
                    DBResource.dataset_id.label('id'), DBResource.error, DBInfoDataset.name, DBInfoDataset.title,
@@ -105,29 +105,35 @@ class DataFreshnessStatus:
             row = dict()
             for i, column in enumerate(columns):
                 row[column.key] = result[i]
-            org_title = row['organization_title']
-            org = datasets.get(org_title, dict())
-            dataset_name = row['name']
-            dataset = org.get(dataset_name, dict())
-            resources = dataset.get('resources', list())
-            error = row['error']
-            resource = {'id': row['resource_id'], 'name': row['resource_name'], 'error': error}
             regex = '.Client(.*)Error '
+            error = row['error']
             search_exception = re.search(regex, error)
             if search_exception:
                 exception_string = search_exception.group(0)[1:-1]
-                dict_objs = client_errors.get(exception_string, dict())
-                dict_of_sets_add(dict_objs, org_title, dataset_name)
-                client_errors[exception_string] = dict_objs
-            resources.append(resource)
+            else:
+                exception_string = self.other_error_msg
+            datasets_error = datasets.get(exception_string, dict())
+            datasets[exception_string] = datasets_error
+
+            org_title = row['organization_title']
+            org = datasets_error.get(org_title, dict())
+            datasets_error[org_title] = org
+            
+            dataset_name = row['name']
+            dataset = org.get(dataset_name, dict())
+            org[dataset_name] = dataset
+
+            resources = dataset.get('resources', list())
             dataset['resources'] = resources
+
+            resource = {'id': row['resource_id'], 'name': row['resource_name'], 'error': error}
+            resources.append(resource)
             del row['resource_id']
             del row['resource_name']
             del row['error']
             dataset.update(row)
-            org[dataset_name] = dataset
-            datasets[org_title] = org
-        return datasets, client_errors
+
+        return datasets
 
     def get_status(self, run_numbers, status):
         datasets = list()
@@ -274,7 +280,7 @@ class DataFreshnessStatus:
 ''' % msg
 
     def send_broken_email(self, site_url, run_numbers, userclass=User, sendto=None):
-        datasets, client_errors = self.get_broken(run_numbers)
+        datasets = self.get_broken(run_numbers)
         if len(datasets) == 0:
             return
         startmsg = 'Dear system administrator,\n\nThe following datasets have broken resources:\n\n'
@@ -322,50 +328,32 @@ class DataFreshnessStatus:
             return False
 
         def output_error(error):
-            msg.append('%s\n' % error)
-            htmlmsg.append('<b>%s</b><br>' % error)
-
-        def output_org(title):
-            msg.append('%s\n' % title)
-            htmlmsg.append('<b><i>%s</i></b><br>' % title)
-
-        for client_error in sorted(client_errors):
-            output_error(client_error)
-            orgs = client_errors[client_error]
-            for org_title in sorted(orgs):
-                output_org(org_title)
-                org = orgs[org_title]
-                for i, dataset_name in enumerate(sorted(org)):
-                    dataset = datasets[org_title][dataset_name]
-                    cut_down = create_cut_down_broken_dataset_string(i, site_url, dataset)
-                    if not cut_down:
-                        create_broken_dataset_string(site_url, dataset)
+            msg.append(error)
+            htmlmsg.append('<b>%s</b>' % error)
             self.output_newline(msg, htmlmsg)
 
-        output_error('Server Error')
-        for org_title in sorted(datasets):
-            org = datasets[org_title]
-            priority_org = list()
-            for error in client_errors:
-                for dataset_name in client_errors[error].get(org_title, list()):
-                    priority_org.append(dataset_name)
-            newline = False
-            org_outputted = False
-            for i, dataset_name in enumerate(sorted(org)):
-                if dataset_name in priority_org:
-                    continue
-                if not org_outputted:
-                    output_org(org_title)
-                    org_outputted = True
-                dataset = org[dataset_name]
-                cut_down = create_cut_down_broken_dataset_string(i, site_url, dataset)
-                if cut_down:
-                    newline = True
-                else:
-                    create_broken_dataset_string(site_url, dataset)
-            if newline:
-                msg.append('\n')
-                htmlmsg.append('<br>')
+        def output_org(title):
+            msg.append(title)
+            htmlmsg.append('<b><i>%s</i></b>' % title)
+            self.output_newline(msg, htmlmsg)
+
+        for error in sorted(datasets):
+            output_error(error)
+            datasets_error = datasets[error]
+            for org_title in sorted(datasets_error):
+                output_org(org_title)
+                org = datasets_error[org_title]
+                newline = False
+                for i, dataset_name in enumerate(sorted(org)):
+                    dataset = org[dataset_name]
+                    cut_down = create_cut_down_broken_dataset_string(i, site_url, dataset)
+                    if cut_down:
+                        newline = True
+                    else:
+                        create_broken_dataset_string(site_url, dataset)
+                if newline:
+                    self.output_newline(msg, htmlmsg)
+            self.output_newline(msg, htmlmsg)
 
         output, htmloutput = self.msg_close(msg, htmlmsg)
         if sendto is None:
