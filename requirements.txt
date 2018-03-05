@@ -1,1 +1,1 @@
-hdx-data-freshness==1.0.4
+hdx-data-freshness==1.0.5
