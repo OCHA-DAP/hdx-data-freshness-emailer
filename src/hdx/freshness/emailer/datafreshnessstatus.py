@@ -16,6 +16,7 @@ from hdx.data.organization import Organization
 from hdx.data.user import User
 from hdx.freshness.database.dbresource import DBResource
 from hdx.hdx_configuration import Configuration
+from pygsheets import WorksheetNotFound
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, aliased
 from sqlalchemy.pool import NullPool
@@ -35,7 +36,7 @@ class DataFreshnessStatus:
     object_output_limit = 2
     other_error_msg = 'Server Error (may be temporary)'
 
-    def __init__(self, db_url='sqlite:///freshness.db', users=None, ignore_sysadmin_emails=None):
+    def __init__(self, db_url='sqlite:///freshness.db', users=None, ignore_sysadmin_emails=None, now=None):
         ''''''
         engine = create_engine(db_url, poolclass=NullPool, echo=False)
         Session = sessionmaker(bind=engine)
@@ -53,17 +54,21 @@ class DataFreshnessStatus:
                 if user['email'] not in ignore_sysadmin_emails:
                     self.sysadmins.append(user)
         self.orgadmins = dict()
+        if now is None:
+            self.now = datetime.datetime.utcnow()
+        else:
+            self.now = now
 
     def get_cur_prev_runs(self):
         return self.session.query(DBRun.run_number, DBRun.run_date).distinct().order_by(DBRun.run_number.desc()).limit(2).all()
 
-    def check_number_datasets(self, run_numbers, send_failures=None, today=datetime.datetime.utcnow(), userclass=User):
+    def check_number_datasets(self, run_numbers, send_failures=None, userclass=User):
         run_date = run_numbers[0][1]
-        if today < run_date:
+        if self.now < run_date:
             title = 'FAILURE: Future run date!'
             msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
             send_to = send_failures
-        elif today - run_date > datetime.timedelta(days=1):
+        elif self.now - run_date > datetime.timedelta(days=1):
             title = 'FAILURE: No run today!'
             msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
             send_to = send_failures
@@ -175,6 +180,28 @@ class DataFreshnessStatus:
             self.orgadmins[organization_id] = orgadmins
         return orgadmins
 
+    def get_maintainer_orgadmins(self, dataset):
+        users_to_email = list()
+        maintainer = self.get_maintainer(dataset)
+        if maintainer is not None:
+            users_to_email.append(maintainer)
+            maintainer_name = self.get_user_name(maintainer)
+            maintainer = (maintainer_name, maintainer['email'])
+        orgadmins = list()
+        for orgadmin in self.get_org_admins(dataset):
+            if maintainer is None:
+                users_to_email.append(orgadmin)
+            username = self.get_user_name(orgadmin)
+            orgadmins.append((username, orgadmin['email']))
+        return maintainer, orgadmins, users_to_email
+
+    @staticmethod
+    def get_update_frequency(dataset):
+        if dataset['update_frequency'] is None:
+            return 'NOT SET'
+        else:
+            return Dataset.transform_update_frequency('%d' % dataset['update_frequency']).lower()
+
     @staticmethod
     def get_user_name(user):
         user_name = user.get('display_name')
@@ -193,8 +220,7 @@ class DataFreshnessStatus:
         msg.append('\n')
         htmlmsg.append('<br>')
 
-    def create_dataset_string(self, site_url, dataset, sysadmin=False, include_org=True, include_freshness=False):
-        users_to_email = list()
+    def create_dataset_string(self, site_url, dataset, maintainer, orgadmins, sysadmin=False, include_org=True, include_freshness=False):
         url = self.get_dataset_url(site_url, dataset)
         msg = list()
         htmlmsg = list()
@@ -204,13 +230,11 @@ class DataFreshnessStatus:
             orgmsg = ' from %s' % dataset['organization_title']
             msg.append(orgmsg)
             htmlmsg.append(orgmsg)
-        maintainer = self.get_maintainer(dataset)
         if maintainer is not None:
             if sysadmin:
-                maintainer_name = self.get_user_name(maintainer)
-                msg.append(' maintained by %s (%s)' % (maintainer_name, maintainer['email']))
-                htmlmsg.append(' maintained by <a href="mailto:%s">%s</a>' % (maintainer['email'], maintainer_name))
-            users_to_email.append(maintainer)
+                user_name, user_email = maintainer
+                msg.append(' maintained by %s (%s)' % (user_name, user_email))
+                htmlmsg.append(' maintained by <a href="mailto:%s">%s</a>' % (user_email, user_name))
         else:
             if sysadmin:
                 missing_maintainer = ' with missing maintainer and organization administrators '
@@ -219,18 +243,14 @@ class DataFreshnessStatus:
 
             usermsg = list()
             userhtmlmsg = list()
-            for orgadmin in self.get_org_admins(dataset):
-                username = self.get_user_name(orgadmin)
-                usermsg.append('%s (%s)' % (username, orgadmin['email']))
-                userhtmlmsg.append('<a href="mailto:%s">%s</a>' % (orgadmin['email'], username))
-                users_to_email.append(orgadmin)
+            for orgadmin in orgadmins:
+                user_name, user_email = orgadmin
+                usermsg.append('%s (%s)' % (user_name, user_email))
+                userhtmlmsg.append('<a href="mailto:%s">%s</a>' % (user_email, user_name))
             if sysadmin:
                 msg.append(', '.join(usermsg))
                 htmlmsg.append(', '.join(userhtmlmsg))
-        if dataset['update_frequency'] is None:
-            update_frequency = 'NOT SET'
-        else:
-            update_frequency = Dataset.transform_update_frequency('%d' % dataset['update_frequency']).lower()
+        update_frequency = self.get_update_frequency(dataset)
         msg.append(' with expected update frequency: %s' % update_frequency)
         htmlmsg.append(' with expected update frequency: %s' % update_frequency)
         if include_freshness:
@@ -239,7 +259,7 @@ class DataFreshnessStatus:
             htmlmsg.append(' and freshness: %s' % fresh)
         self.output_newline(msg, htmlmsg)
 
-        return ''.join(msg), ''.join(htmlmsg), users_to_email
+        return ''.join(msg), ''.join(htmlmsg)
 
     @staticmethod
     def msg_close(msg, htmlmsg, endmsg=''):
@@ -279,9 +299,10 @@ class DataFreshnessStatus:
 ''' % msg
 
     def send_broken_email(self, site_url, run_numbers, userclass=User, sendto=None):
+        datasets_flat = list()
         datasets = self.get_broken(run_numbers)
         if len(datasets) == 0:
-            return
+            return datasets_flat
         startmsg = 'Dear system administrator,\n\nThe following datasets have broken resources:\n\n'
         msg = [startmsg]
         htmlmsg = [self.html_start(self.htmlify(startmsg))]
@@ -291,9 +312,9 @@ class DataFreshnessStatus:
                 msg.append('  ')
                 htmlmsg.append('&nbsp&nbsp')
 
-        def create_broken_dataset_string(url, ds):
-            dataset_string, dataset_html_string, _ = \
-                self.create_dataset_string(url, ds, sysadmin=True, include_org=False, include_freshness=True)
+        def create_broken_dataset_string(url, ds, ma, oa):
+            dataset_string, dataset_html_string = \
+                self.create_dataset_string(url, ds, ma, oa, sysadmin=True, include_org=False, include_freshness=True)
             output_tabs(2)
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
@@ -336,20 +357,43 @@ class DataFreshnessStatus:
             htmlmsg.append('<b><i>%s</i></b>' % title)
             self.output_newline(msg, htmlmsg)
 
-        for error in sorted(datasets):
-            output_error(error)
-            datasets_error = datasets[error]
+        for error_type in sorted(datasets):
+            output_error(error_type)
+            datasets_error = datasets[error_type]
             for org_title in sorted(datasets_error):
                 output_org(org_title)
                 org = datasets_error[org_title]
                 newline = False
                 for i, dataset_name in enumerate(sorted(org)):
                     dataset = org[dataset_name]
+                    maintainer, orgadmins, _ = self.get_maintainer_orgadmins(dataset)
                     cut_down = create_cut_down_broken_dataset_string(i, site_url, dataset)
                     if cut_down:
                         newline = True
                     else:
-                        create_broken_dataset_string(site_url, dataset)
+                        create_broken_dataset_string(site_url, dataset, maintainer, orgadmins)
+                    url = self.get_dataset_url(site_url, dataset)
+                    if maintainer:
+                        maintainer_name, maintainer_email = maintainer
+                    else:
+                        maintainer_name, maintainer_email = '', ''
+                    title = dataset['title']
+                    orgadmin_names = ','.join([x[0] for x in orgadmins])
+                    orgadmin_emails = ','.join([x[1] for x in orgadmins])
+                    update_freq = self.get_update_frequency(dataset)
+                    last_modified = dataset['last_modified'].isoformat()
+                    fresh = self.freshness_status.get(dataset['fresh'], 'None')
+                    error = list()
+                    for resource in sorted(dataset['resources'], key=lambda d: d['name']):
+                        error.append('%s:%s' % (resource['name'], resource['error']))
+                    # Date Added    URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins
+                    # Org Admin Emails	Update Frequency    Last Modified	Freshness	Error Type	Error
+                    row = {'URL': url, 'Title': title, 'Organisation': org_title,
+                           'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
+                           'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
+                           'Update Frequency': update_freq, 'Last Modified': last_modified, 'Freshness': fresh,
+                           'Error Type': error_type, 'Error': '\n'.join(error)}
+                    datasets_flat.append(row)
                 if newline:
                     self.output_newline(msg, htmlmsg)
             self.output_newline(msg, htmlmsg)
@@ -361,6 +405,44 @@ class DataFreshnessStatus:
             users_to_email = sendto
         userclass.email_users(users_to_email, 'Broken datasets', output, html_body=htmloutput)
         logger.info(output)
+        return datasets_flat
+
+    def update_sheet(self, sheet, datasets):
+        if sheet is None:
+            return
+        current_values = sheet.get_all_values(returnas='matrix')
+        keys = current_values[0]
+        url_ind = keys.index('URL')
+        dateadded_ind = keys.index('Date Added')
+        no_times_ind = keys.index('No. Times')
+        assigned_ind = keys.index('Assigned')
+        status_ind = keys.index('Status')
+        urls = [x[url_ind] for i, x in enumerate(current_values) if i != 0]
+        for dataset in datasets:
+            url = dataset['URL']
+            new_row = [dataset.get(key, '') for key in keys]
+            try:
+                rowno = urls.index(url) + 1
+                current_row = current_values[rowno]
+                new_row[dateadded_ind] = current_row[dateadded_ind]
+                no_times = current_row[no_times_ind]
+                new_row[no_times_ind] = int(no_times) + 1
+                new_row[assigned_ind] = current_row[assigned_ind]
+                new_row[status_ind] = current_row[status_ind]
+                current_values[rowno] = new_row
+            except ValueError:
+                new_row[dateadded_ind] = self.now.isoformat()
+                new_row[no_times_ind] = 0
+                current_values.append(new_row)
+        sheet.update_cells('A1', current_values)
+
+    def process_broken(self, site_url, run_numbers, userclass=User, sendto=None, spreadsheet=None):
+        datasets = self.send_broken_email(site_url, run_numbers, userclass=userclass, sendto=sendto)
+        if spreadsheet is None:
+            return
+        # sheet must have been set up!
+        sheet = spreadsheet.worksheet_by_title('Broken')
+        self.update_sheet(sheet, datasets)
 
     def send_delinquent_email(self, site_url, run_numbers, userclass=User):
         datasets = self.get_status(run_numbers, 3)
@@ -370,7 +452,8 @@ class DataFreshnessStatus:
         msg = [startmsg]
         htmlmsg = [self.html_start(self.htmlify(startmsg))]
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
-            dataset_string, dataset_html_string, _ = self.create_dataset_string(site_url, dataset, sysadmin=True)
+            maintainer, orgadmins, _ = self.get_maintainer_orgadmins(dataset)
+            dataset_string, dataset_html_string = self.create_dataset_string(site_url, dataset, maintainer, orgadmins, sysadmin=True)
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
         output, htmloutput = self.msg_close(msg, htmlmsg)
@@ -385,7 +468,8 @@ class DataFreshnessStatus:
         starthtmlmsg = self.html_start(self.htmlify(startmsg))
         all_users_to_email = dict()
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
-            dataset_string, dataset_html_string, users_to_email = self.create_dataset_string(site_url, dataset)
+            maintainer, orgadmins, users_to_email = self.get_maintainer_orgadmins(dataset)
+            dataset_string, dataset_html_string = self.create_dataset_string(site_url, dataset, maintainer, orgadmins)
             for user in users_to_email:
                 id = user['id']
                 output_list = all_users_to_email.get(id)

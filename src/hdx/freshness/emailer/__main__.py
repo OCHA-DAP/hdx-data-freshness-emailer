@@ -14,10 +14,12 @@ import time
 from urllib.parse import urlparse
 
 import psycopg2
+import pygsheets
 from hdx.data.user import User
 from hdx.hdx_configuration import Configuration
 from hdx.utilities.easy_logging import setup_logging
 from hdx.utilities.path import script_dir_plus_file
+from oauth2client.client import Credentials
 
 from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
 
@@ -25,7 +27,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server):
+def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_auth):
     project_config_yaml = script_dir_plus_file('project_configuration.yml', main)
     site_url = Configuration.create(hdx_key=hdx_key, hdx_site=hdx_site,
                                     user_agent=user_agent, preprefix=preprefix,
@@ -64,15 +66,18 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server):
                     time.sleep(1)
     else:
         db_url = 'sqlite:///freshness.db'
+    logger.info('> GSheet Credentials: %s' % gsheet_auth)
+    gc = pygsheets.authorize(credentials=Credentials.new_from_json(gsheet_auth))
+    spreadsheet = gc.open_by_url('https://docs.google.com/spreadsheets/d/15Q6fZaQ4ZSe7XYme-fDifnVRyhwaDovrEQTi41txgko/edit#gid=1180690314')
     freshness = DataFreshnessStatus(db_url=db_url)
     run_numbers = freshness.get_cur_prev_runs()
     # Send failure messages to Serban and Mike only
     mikeuser = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
     serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True, 'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
     freshness.check_number_datasets(run_numbers=run_numbers, send_failures=[mikeuser, serbanuser])
-    freshness.send_broken_email(site_url=site_url, run_numbers=run_numbers)
+#    freshness.process_broken(site_url=site_url, run_numbers=run_numbers, spreadsheet=spreadsheet)
     # temporarily send just to me
-    #    freshness.send_broken_email(site_url=site_url, run_numbers=run_numbers, sendto=[mikeuser])
+    freshness.process_broken(site_url=site_url, run_numbers=run_numbers, sendto=[mikeuser], spreadsheet=spreadsheet)
     freshness.send_delinquent_email(site_url=site_url, run_numbers=run_numbers)
     # temporarily send just to me
     # freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers, sendto=[mikeuser])
@@ -89,6 +94,7 @@ if __name__ == '__main__':
     parser.add_argument('-hs', '--hdx_site', default=None, help='HDX site to use')
     parser.add_argument('-db', '--db_url', default=None, help='Database connection string')
     parser.add_argument('-es', '--email_server', default=None, help='Email server to use')
+    parser.add_argument('-gs', '--gsheet_auth', default=None, help='Credentials for accessing Google Sheets')
     args = parser.parse_args()
     hdx_key = args.hdx_key
     if hdx_key is None:
@@ -112,4 +118,7 @@ if __name__ == '__main__':
     email_server = args.email_server
     if email_server is None:
         email_server = os.getenv('EMAIL_SERVER')
-    main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server)
+    gsheet_auth = args.gsheet_auth
+    if gsheet_auth is None:
+        gsheet_auth = os.getenv('GSHEET_AUTH')
+    main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_auth)
