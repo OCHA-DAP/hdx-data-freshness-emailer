@@ -69,19 +69,22 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_
     logger.info('> GSheet Credentials: %s' % gsheet_auth)
     gc = pygsheets.authorize(credentials=Credentials.new_from_json(gsheet_auth))
     spreadsheet = gc.open_by_url('https://docs.google.com/spreadsheets/d/15Q6fZaQ4ZSe7XYme-fDifnVRyhwaDovrEQTi41txgko/edit#gid=1180690314')
-    freshness = DataFreshnessStatus(db_url=db_url)
+    freshness = DataFreshnessStatus(db_url=db_url) #  , send_emails=False)
     run_numbers = freshness.get_cur_prev_runs()
     # Send failure messages to Serban and Mike only
     mikeuser = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
     serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True, 'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
     freshness.check_number_datasets(run_numbers=run_numbers, send_failures=[mikeuser, serbanuser])
-#    freshness.process_broken(site_url=site_url, run_numbers=run_numbers, spreadsheet=spreadsheet)
+    freshness.process_broken(site_url=site_url, run_numbers=run_numbers, spreadsheet=spreadsheet)
     # temporarily send just to me
-    freshness.process_broken(site_url=site_url, run_numbers=run_numbers, sendto=[mikeuser], spreadsheet=spreadsheet)
-    freshness.send_delinquent_email(site_url=site_url, run_numbers=run_numbers)
+    # freshness.process_broken(site_url=site_url, run_numbers=run_numbers, sendto=[mikeuser], spreadsheet=spreadsheet)
+
+    freshness.process_delinquent(site_url=site_url, run_numbers=run_numbers, spreadsheet=spreadsheet)
+
     # temporarily send just to me
-    # freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers, sendto=[mikeuser])
-    freshness.send_overdue_emails(site_url=site_url, run_numbers=run_numbers)
+    # freshness.process_overdue(site_url=site_url, run_numbers=run_numbers, sendto=[mikeuser], spreadsheet=spreadsheet)
+    freshness.process_overdue(site_url=site_url, run_numbers=run_numbers, spreadsheet=spreadsheet)
+
     freshness.close()
     logger.info('Freshness emailer completed!')
 
