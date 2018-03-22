@@ -1,1 +1,2 @@
-hdx-data-freshness==1.0.7
+pygsheets==1.1.4
+hdx-data-freshness==1.0.8
