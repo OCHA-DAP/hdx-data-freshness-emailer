@@ -8,7 +8,7 @@ Caller script. Designed to call all other functions.
 
 '''
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import os
 import time
@@ -78,13 +78,13 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_
         dutyroster = downloader.download_tabular_cols_as_dicts(configuration['duty_roster_url'], headers=2)
         dutyofficers = key_value_convert(dutyroster['Duty Officer'], keyfn=get_date)
 
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=db_url, send_emails=False)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=db_url)  #, send_emails=False)
 
         logger.info('> GSheet Credentials: %s' % gsheet_auth)
         gc = pygsheets.authorize(credentials=Credentials.new_from_json(gsheet_auth))
         freshness.spreadsheet = gc.open_by_url(configuration['issues_spreadsheet_url'])
 
-        closest_week = min(dutyofficers.keys(), key=lambda x: abs(x - freshness.now))
+        closest_week = next(x for x in sorted(dutyofficers.keys(), reverse=True) if x <= freshness.now)
         freshness.dutyofficer = dutyofficers[closest_week]
 
         # Send failure messages to Serban and Mike only

@@ -65,7 +65,15 @@ class DataFreshnessStatus:
         self.dutyofficer = None
 
     def get_cur_prev_runs(self):
-        return self.session.query(DBRun.run_number, DBRun.run_date).distinct().order_by(DBRun.run_number.desc()).limit(2).all()
+        all_run_numbers = self.session.query(DBRun.run_number, DBRun.run_date).distinct().order_by(DBRun.run_number.desc()).all()
+        last_ind = len(all_run_numbers) - 1
+        for i, run_number in enumerate(all_run_numbers):
+            if run_number[1] < self.now:
+                if i == last_ind:
+                    return [run_number]
+                else:
+                    return [run_number, all_run_numbers[i+1]]
+        return list()
 
     def check_number_datasets(self, send_failures=None, userclass=User):
         run_date = self.run_numbers[0][1]
@@ -77,7 +85,7 @@ class DataFreshnessStatus:
             title = 'FAILURE: No run today!'
             msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
             send_to = send_failures
-        else:
+        elif len(self.run_numbers) == 2:
             datasets_today = self.session.query(DBDataset.id).filter(DBDataset.run_number == self.run_numbers[0][0]).count()
             datasets_previous = self.session.query(DBDataset.id).filter(DBDataset.run_number == self.run_numbers[1][0]).count()
             diff_datasets = datasets_previous - datasets_today
@@ -93,6 +101,8 @@ class DataFreshnessStatus:
                 msg = 'Dear system administrator,\n\nThere are %d (%d%%) fewer datasets today than yesterday on HDX!\n' % \
                          (diff_datasets, percentage_diff * 100)
                 send_to = self.sysadmins
+        else:
+            return
         htmlmsg = self.html_start(self.htmlify(msg))
         output, htmloutput = self.msg_close(msg, htmlmsg)
         if self.send_emails:
@@ -101,6 +111,8 @@ class DataFreshnessStatus:
 
     def get_broken(self):
         datasets = dict()
+        if len(self.run_numbers) == 0:
+            return datasets
         columns = [DBResource.id.label('resource_id'), DBResource.name.label('resource_name'),
                    DBResource.dataset_id.label('id'), DBResource.error, DBInfoDataset.name, DBInfoDataset.title,
                    DBInfoDataset.maintainer, DBOrganization.id.label('organization_id'),
