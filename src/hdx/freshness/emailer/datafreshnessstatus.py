@@ -14,18 +14,18 @@ import re
 from hdx.data.dataset import Dataset
 from hdx.data.organization import Organization
 from hdx.data.user import User
+from hdx.freshness.database.base import Base
+from hdx.freshness.database.dbdataset import DBDataset
+from hdx.freshness.database.dbinfodataset import DBInfoDataset
+from hdx.freshness.database.dborganization import DBOrganization
 from hdx.freshness.database.dbresource import DBResource
+from hdx.freshness.database.dbrun import DBRun
 from hdx.hdx_configuration import Configuration
+from hdx.utilities.dictandlist import dict_of_lists_add
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker, aliased
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql.elements import and_
-
-from hdx.freshness.database.dbdataset import DBDataset
-from hdx.freshness.database.dbinfodataset import DBInfoDataset
-from hdx.freshness.database.dborganization import DBOrganization
-from hdx.freshness.database.dbrun import DBRun
-from hdx.freshness.database.base import Base
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +35,8 @@ class DataFreshnessStatus:
     object_output_limit = 2
     other_error_msg = 'Server Error (may be temporary)'
 
-    def __init__(self, site_url, db_url='sqlite:///freshness.db', users=None, ignore_sysadmin_emails=None, now=None,
-                 send_emails=True):
+    def __init__(self, site_url, db_url='sqlite:///freshness.db', users=None, organizations=None,
+                 ignore_sysadmin_emails=None, now=None, send_emails=True):
         ''''''
         self.site_url = site_url
         engine = create_engine(db_url, poolclass=NullPool, echo=False)
@@ -45,6 +45,8 @@ class DataFreshnessStatus:
         self.session = Session()
         if users is None:  # pragma: no cover
             users = User.get_all_users()
+        if organizations is None:  # pragma: no cover
+            organizations = Organization.get_all_organization_names(all_fields=True, include_users=True)
         if ignore_sysadmin_emails is None:  # pragma: no cover
             ignore_sysadmin_emails = Configuration.read()['ignore_sysadmin_emails']
         self.sysadmins = list()
@@ -54,7 +56,12 @@ class DataFreshnessStatus:
             if user['sysadmin'] and user['fullname']:
                 if user['email'] not in ignore_sysadmin_emails:
                     self.sysadmins.append(user)
-        self.orgadmins = dict()
+        self.organizations = dict()
+        for organization in organizations:
+            users_per_capacity = dict()
+            for user in organization['users']:
+                dict_of_lists_add(users_per_capacity, user['capacity'], user['id'])
+            self.organizations[organization['id']] = users_per_capacity
         if now is None:
             self.now = datetime.datetime.utcnow()
         else:
@@ -185,17 +192,43 @@ class DataFreshnessStatus:
             datasets.append(dataset)
         return datasets
 
+    def get_invalid_maintainer(self):
+        datasets = list()
+        no_runs = len(self.run_numbers)
+        if no_runs == 0:
+            return datasets
+        columns = [DBInfoDataset.id, DBInfoDataset.name, DBInfoDataset.title, DBInfoDataset.maintainer,
+                   DBOrganization.id.label('organization_id'), DBOrganization.title.label('organization_title'),
+                   DBDataset.update_frequency, DBDataset.last_modified, DBDataset.what_updated]
+        filters = [DBDataset.id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
+                   DBDataset.run_number == self.run_numbers[0][0]]
+        query = self.session.query(*columns).filter(and_(*filters))
+        for result in query:
+            dataset = dict()
+            for i, column in enumerate(columns):
+                dataset[column.key] = result[i]
+            maintainer = dataset['maintainer']
+            organization_id = dataset['organization_id']
+            organization = self.organizations[organization_id]
+            admins = organization.get('admin', [])
+            if maintainer in admins:
+                continue
+            editors = organization.get('editor', [])
+            if maintainer in editors:
+                continue
+            datasets.append(dataset)
+        return datasets
+
     def get_maintainer(self, dataset):
         maintainer = dataset['maintainer']
         return self.users.get(maintainer)
 
     def get_org_admins(self, dataset):
         organization_id = dataset['organization_id']
-        orgadmins = self.orgadmins.get(organization_id)
-        if orgadmins is None:
-            organization = Organization.read_from_hdx(organization_id)
-            orgadmins = organization.get_users(capacity='admin')
-            self.orgadmins[organization_id] = orgadmins
+        orgadmins = list()
+        for userid in self.organizations[organization_id]['admin']:
+            user = self.users[userid]
+            orgadmins.append(user)
         return orgadmins
 
     def get_maintainer_orgadmins(self, dataset):
@@ -315,6 +348,42 @@ class DataFreshnessStatus:
 </html>
 ''' % msg
 
+    def update_sheet(self, sheet, datasets):
+        if sheet is None:
+            return
+        current_values = sheet.get_all_values(returnas='matrix')
+        keys = current_values[0]
+        url_ind = keys.index('URL')
+        dateadded_ind = keys.index('Date Added')
+        no_times_ind = keys.index('No. Times')
+        assigned_ind = keys.index('Assigned')
+        status_ind = keys.index('Status')
+        urls = [x[url_ind] for i, x in enumerate(current_values) if i != 0]
+        updated_notimes = set()
+        for dataset in datasets:
+            url = dataset['URL']
+            new_row = [dataset.get(key, '') for key in keys]
+            try:
+                rowno = urls.index(url) + 1
+                current_row = current_values[rowno]
+                new_row[dateadded_ind] = current_row[dateadded_ind]
+                no_times = current_row[no_times_ind]
+                new_row[no_times_ind] = int(no_times)
+                if url not in updated_notimes:
+                    updated_notimes.add(url)
+                    new_row[no_times_ind] += 1
+                new_row[assigned_ind] = current_row[assigned_ind]
+                new_row[status_ind] = current_row[status_ind]
+                current_values[rowno] = new_row
+            except ValueError:
+                new_row[dateadded_ind] = self.now.isoformat()
+                new_row[no_times_ind] = 1
+                new_row[assigned_ind] = self.dutyofficer
+                current_values.append(new_row)
+                urls.append(url)
+                updated_notimes.add(url)
+        sheet.update_cells('A1', current_values)
+
     def send_broken_email(self, userclass=User, sendto=None):
         datasets_flat = list()
         datasets = self.get_broken()
@@ -425,42 +494,6 @@ class DataFreshnessStatus:
         logger.info(output)
         return datasets_flat
 
-    def update_sheet(self, sheet, datasets):
-        if sheet is None:
-            return
-        current_values = sheet.get_all_values(returnas='matrix')
-        keys = current_values[0]
-        url_ind = keys.index('URL')
-        dateadded_ind = keys.index('Date Added')
-        no_times_ind = keys.index('No. Times')
-        assigned_ind = keys.index('Assigned')
-        status_ind = keys.index('Status')
-        urls = [x[url_ind] for i, x in enumerate(current_values) if i != 0]
-        updated_notimes = set()
-        for dataset in datasets:
-            url = dataset['URL']
-            new_row = [dataset.get(key, '') for key in keys]
-            try:
-                rowno = urls.index(url) + 1
-                current_row = current_values[rowno]
-                new_row[dateadded_ind] = current_row[dateadded_ind]
-                no_times = current_row[no_times_ind]
-                new_row[no_times_ind] = int(no_times)
-                if url not in updated_notimes:
-                    updated_notimes.add(url)
-                    new_row[no_times_ind] += 1
-                new_row[assigned_ind] = current_row[assigned_ind]
-                new_row[status_ind] = current_row[status_ind]
-                current_values[rowno] = new_row
-            except ValueError:
-                new_row[dateadded_ind] = self.now.isoformat()
-                new_row[no_times_ind] = 1
-                new_row[assigned_ind] = self.dutyofficer
-                current_values.append(new_row)
-                urls.append(url)
-                updated_notimes.add(url)
-        sheet.update_cells('A1', current_values)
-
     def process_broken(self, userclass=User, sendto=None):
         datasets = self.send_broken_email(userclass=userclass, sendto=sendto)
         if self.spreadsheet is None or self.dutyofficer is None:
@@ -550,6 +583,52 @@ class DataFreshnessStatus:
 
     def process_overdue(self, userclass=User, sendto=None):
         self.send_overdue_emails(userclass=userclass, sendto=sendto)
+
+    def send_maintainer_email(self, userclass=User):
+        datasets_flat = list()
+        datasets = self.get_invalid_maintainer()
+        if len(datasets) == 0:
+            return datasets_flat
+        startmsg = 'Dear system administrator,\n\nThe following datasets have an invalid maintainer:\n\n'
+        msg = [startmsg]
+        htmlmsg = [self.html_start(self.htmlify(startmsg))]
+        for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
+            maintainer, orgadmins, _ = self.get_maintainer_orgadmins(dataset)
+            dataset_string, dataset_html_string = self.create_dataset_string(dataset, maintainer, orgadmins,
+                                                                             sysadmin=True)
+            msg.append(dataset_string)
+            htmlmsg.append(dataset_html_string)
+            url = self.get_dataset_url(dataset)
+            title = dataset['title']
+            org_title = dataset['organization_title']
+            if maintainer:
+                maintainer_name, maintainer_email = maintainer
+            else:
+                maintainer_name, maintainer_email = '', ''
+            orgadmin_names = ','.join([x[0] for x in orgadmins])
+            orgadmin_emails = ','.join([x[1] for x in orgadmins])
+            update_freq = self.get_update_frequency(dataset)
+            last_modified = dataset['last_modified'].isoformat()
+            # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
+            # Update Frequency	Last Modified
+            row = {'URL': url, 'Title': title, 'Organisation': org_title,
+                   'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
+                   'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
+                   'Update Frequency': update_freq, 'Last Modified': last_modified}
+            datasets_flat.append(row)
+        output, htmloutput = self.msg_close(msg, htmlmsg)
+        if self.send_emails:
+            userclass.email_users(self.sysadmins, 'Datasets with invalid maintainer', output, html_body=htmloutput)
+        logger.info(output)
+        return datasets_flat
+
+    def process_maintainer(self, userclass=User):
+        datasets = self.send_maintainer_email(userclass=userclass)
+        if self.spreadsheet is None or self.dutyofficer is None:
+            return
+        # sheet must have been set up!
+        sheet = self.spreadsheet.worksheet_by_title('Maintainer')
+        self.update_sheet(sheet, datasets)
 
     def close(self):
         self.session.close()

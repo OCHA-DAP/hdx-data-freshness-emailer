@@ -3,13 +3,13 @@
 Unit tests for the data freshness status code.
 
 '''
+import copy
 import os
 import shutil
 from os.path import join
 
-from dateutil import parser
-
 import pytest
+from dateutil import parser
 from hdx.data.user import User
 
 from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
@@ -65,6 +65,26 @@ class TestDataFreshnessStatus:
                     TestDataFreshnessStatus.cells_result = cells
             return TestWorksheet
 
+    class TestSpreadsheet_Maintainer:
+        @staticmethod
+        def worksheet_by_title(_):
+            class TestWorksheet:
+                @staticmethod
+                def get_all_values(returnas):
+                    return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
+                             'Org Admin Emails', 'Update Frequency', 'Last Modified', 'Date Added', 'No. Times',
+                             'Assigned', 'Status'],
+                            ['http://lala/dataset/ourairports-myt', 'Airports in Mayotte', 'OurAirports', 'blah5full',
+                             'blah5@blah.com', 'blah3disp,blah4disp,blah5full',
+                             'blah3@blah.com,blah4@blah.com,blah5@blah.com', 'every year', '2015-11-24T23:32:32.025059',
+                             '2017-02-02T19:07:30.333492', 2, 'Aaron', 'Done']]
+
+                @staticmethod
+                def update_cells(_, cells):
+                    TestDataFreshnessStatus.cells_result = cells
+
+            return TestWorksheet
+
     @pytest.fixture(scope='class')
     def users(self):
         return [{'email': 'blah@blah.com', 'id': 'blah', 'name': 'blahname', 'sysadmin': False, 'fullname': 'blahfull', 'display_name': 'blahdisp'},
@@ -72,6 +92,41 @@ class TestDataFreshnessStatus:
                 {'email': 'blah3@blah.com', 'id': 'blah3', 'name': 'blah3name', 'sysadmin': True, 'fullname': 'blah3full', 'display_name': 'blah3disp'},
                 {'email': 'blah4@blah.com', 'id': 'blah4', 'name': 'blah4name', 'sysadmin': True, 'fullname': 'blah4full', 'display_name': 'blah4disp'},
                 {'email': 'blah5@blah.com', 'id': 'blah5', 'name': 'blah5name', 'sysadmin': False, 'fullname': 'blah5full'}]
+
+    @pytest.fixture(scope='class')
+    def organizations(self, users):
+        orgusers = list()
+        for user in users:
+            orguser = {'capacity': 'admin'}
+            orguser.update(user)
+            del orguser['email']
+            orgusers.append(orguser)
+        return [
+            {'display_name': 'OCHA Colombia', 'description': 'OCHA Colombia', 'image_display_url': '',
+             'package_count': 147, 'created': '2014-04-28T17:50:16.250998', 'name': 'ocha-colombia',
+             'is_organization': True, 'state': 'active', 'image_url': '', 'type': 'organization',
+             'title': 'OCHA Colombia', 'revision_id': '7b70966b-c614-47e2-99d7-fafce4cbd2fa', 'num_followers': 0,
+             'id': '15942bd7-524a-40d6-8a60-09bd78110d2d', 'approval_status': 'approved',
+             'users': [orgusers[2], orgusers[4]]},
+            {'display_name': 'OCHA Somalia', 'description': 'OCHA Somalia', 'image_display_url': '',
+             'package_count': 27, 'created': '2014-11-06T17:35:37.390084', 'name': 'ocha-somalia',
+             'is_organization': True, 'state': 'active', 'image_url': '', 'type': 'organization',
+             'title': 'OCHA Somalia', 'revision_id': '6eb690cc-7821-45e1-99a0-6094894a04d7', 'num_followers': 0,
+             'id': '68aa2b4d-ea41-4b79-8e37-ac03cbe9ddca', 'approval_status': 'approved',
+             'users': [orgusers[2], orgusers[3]]},
+            {'display_name': 'OCHA Yemen', 'description': 'OCHA Yemen.', 'image_display_url': '', 'package_count': 40,
+             'created': '2014-04-28T17:47:48.530487', 'name': 'ocha-yemen', 'is_organization': True, 'state': 'active',
+             'image_url': '', 'type': 'organization', 'title': 'OCHA Yemen',
+             'revision_id': 'd0f65677-e8ef-46a5-a28f-6c8ab3acf05e', 'num_followers': 0,
+             'id': 'cdcb3c1f-b8d5-4154-a356-c7021bb1ffbd', 'approval_status': 'approved',
+             'users': [orgusers[3], orgusers[4]]},
+            {'display_name': 'OurAirports', 'description': 'http://ourairports.com', 'image_display_url': '',
+             'package_count': 238, 'created': '2014-04-24T22:00:54.948536', 'name': 'ourairports',
+             'is_organization': True, 'state': 'active', 'image_url': '', 'type': 'organization',
+             'title': 'OurAirports', 'revision_id': '720eae06-2877-4d13-8af4-30061f6a72a5', 'num_followers': 0,
+             'id': 'dc65f72e-ba98-40aa-ad32-bec0ed1e10a2', 'approval_status': 'approved',
+             'users': [orgusers[2], orgusers[3], orgusers[4]]},
+        ]
 
     @pytest.fixture(scope='function')
     def database_broken(self):
@@ -96,6 +151,17 @@ class TestDataFreshnessStatus:
         return 'sqlite:///%s' % dbpath
 
     @pytest.fixture(scope='function')
+    def database_maintainer(self):
+        dbfile = 'test_freshness_maintainer.db'
+        dbpath = join('tests', dbfile)
+        try:
+            os.remove(dbpath)
+        except FileNotFoundError:
+            pass
+        shutil.copyfile(join('tests', 'fixtures', dbfile), dbpath)
+        return 'sqlite:///%s' % dbpath
+
+    @pytest.fixture(scope='function')
     def database_failure(self):
         dbfile = 'test_freshness_failure.db'
         dbpath = join('tests', dbfile)
@@ -106,32 +172,32 @@ class TestDataFreshnessStatus:
         shutil.copyfile(join('tests', 'fixtures', dbfile), dbpath)
         return 'sqlite:///%s' % dbpath
 
-    def test_get_cur_prev_runs(self, configuration, database_failure, users):
+    def test_get_cur_prev_runs(self, configuration, database_failure, users, organizations):
         site_url = None
         now = parser.parse('2017-02-01 19:07:30.333492')
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users, now=now)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users,
+                                        organizations=organizations, now=now)
         run_numbers = freshness.get_cur_prev_runs()
         assert run_numbers == [(0, parser.parse('2017-02-01 09:07:30.333492'))]
         now = parser.parse('2017-02-02 19:07:30.333492')
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users, now=now)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users,
+                                        organizations=organizations, now=now)
         run_numbers = freshness.get_cur_prev_runs()
         assert run_numbers == [(1, parser.parse('2017-02-02 09:07:30.333492')), (0, parser.parse('2017-02-01 09:07:30.333492'))]
         now = parser.parse('2017-01-31 19:07:30.333492')
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users, now=now)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users,
+                                        organizations=organizations, now=now)
         run_numbers = freshness.get_cur_prev_runs()
         assert run_numbers == list()
         freshness.close()
 
-    def test_freshnessbroken(self, configuration, database_broken, users):
+    def test_freshnessbroken(self, configuration, database_broken, users, organizations):
         site_url = 'http://lala/'
         ignore_sysadmin_emails = ['blah2@blah.com']
         now = parser.parse('2017-02-03 19:07:30.333492')
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_broken, users=users, ignore_sysadmin_emails=ignore_sysadmin_emails, now=now)
-        freshness.orgadmins = {'15942bd7-524a-40d6-8a60-09bd78110d2d': [users[2], users[4]],
-                               '68aa2b4d-ea41-4b79-8e37-ac03cbe9ddca': [users[2], users[3]],
-                               'cdcb3c1f-b8d5-4154-a356-c7021bb1ffbd': [users[3], users[4]],
-                               'dc65f72e-ba98-40aa-ad32-bec0ed1e10a2': [users[2], users[3], users[4]],
-                               }
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_broken, users=users,
+                                        organizations=organizations, ignore_sysadmin_emails=ignore_sysadmin_emails,
+                                        now=now)
 
         freshness.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken1
         freshness.dutyofficer = 'Peter'
@@ -166,12 +232,9 @@ class TestDataFreshnessStatus:
         now = parser.parse('2017-01-31 19:07:30.333492')
         TestDataFreshnessStatus.email_users_result = list()
         TestDataFreshnessStatus.cells_result = None
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_broken, users=users, ignore_sysadmin_emails=ignore_sysadmin_emails, now=now)
-        freshness.orgadmins = {'15942bd7-524a-40d6-8a60-09bd78110d2d': [users[2], users[4]],
-                               '68aa2b4d-ea41-4b79-8e37-ac03cbe9ddca': [users[2], users[3]],
-                               'cdcb3c1f-b8d5-4154-a356-c7021bb1ffbd': [users[3], users[4]],
-                               'dc65f72e-ba98-40aa-ad32-bec0ed1e10a2': [users[2], users[3], users[4]],
-                               }
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_broken, users=users,
+                                        organizations=organizations, ignore_sysadmin_emails=ignore_sysadmin_emails,
+                                        now=now)
 
         freshness.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken1
         freshness.dutyofficer = 'Peter'
@@ -182,11 +245,13 @@ class TestDataFreshnessStatus:
         assert TestDataFreshnessStatus.cells_result == [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails', 'Update Frequency', 'Last Modified', 'Freshness', 'Error Type', 'Error', 'Date Added', 'No. Times', 'Assigned', 'Status'], ['http://lala/dataset/yemen-admin-boundaries', 'Yemen - Administrative Boundaries', 'OCHA Yemen', '', '', 'blah4disp,blah5full', 'blah4@blah.com,blah5@blah.com', 'every year', '2015-12-28T06:39:20.134647', 'Delinquent', 'Server Error (may be temporary)', 'Admin-0.zip:Fail\nAdmin-3.zip:Fail', '2017-02-03T19:07:30.333492', 3, 'Andrew', 'Contacted Maintainer']]
         freshness.close()
 
-    def test_freshnessstatus(self, configuration, database_status, users):
+    def test_freshnessstatus(self, configuration, database_status, users, organizations):
         site_url = 'http://lala/'
         ignore_sysadmin_emails = ['blah3@blah.com']
         now = parser.parse('2017-02-02 19:07:30.333492')
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_status, users=users, ignore_sysadmin_emails=ignore_sysadmin_emails, now=now)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_status, users=users,
+                                        organizations=organizations, ignore_sysadmin_emails=ignore_sysadmin_emails,
+                                        now=now)
         freshness.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Delinquent
         freshness.dutyofficer = 'Sharon'
 
@@ -196,12 +261,6 @@ class TestDataFreshnessStatus:
                                                                 {'name': 'blah4name', 'fullname': 'blah4full', 'email': 'blah4@blah.com', 'sysadmin': True, 'id': 'blah4', 'display_name': 'blah4disp'}],
                                                                'WARNING: Fall in datasets on HDX today!', 'Dear system administrator,\n\nThere are 1 (16%) fewer datasets today than yesterday on HDX!\n\nBest wishes,\nHDX Team',
                                                                '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>There are 1 (16%) fewer datasets today than yesterday on HDX!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
-
-        freshness.orgadmins = {'15942bd7-524a-40d6-8a60-09bd78110d2d': [users[2], users[4]],
-                               '68aa2b4d-ea41-4b79-8e37-ac03cbe9ddca': [users[2], users[3]],
-                               'cdcb3c1f-b8d5-4154-a356-c7021bb1ffbd': [users[3], users[4]],
-                               'dc65f72e-ba98-40aa-ad32-bec0ed1e10a2': [users[2], users[3], users[4]],
-                               }
 
         TestDataFreshnessStatus.email_users_result = list()
         TestDataFreshnessStatus.cells_result = None
@@ -255,14 +314,11 @@ class TestDataFreshnessStatus:
                  '<html>\n  <head></head>\n  <body>\n    <span>Dear blah5full,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
 
         now = parser.parse('2017-01-31 19:07:30.333492')
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_status, users=users, ignore_sysadmin_emails=ignore_sysadmin_emails, now=now)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_status, users=users,
+                                        organizations=organizations, ignore_sysadmin_emails=ignore_sysadmin_emails,
+                                        now=now)
         freshness.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Delinquent
         freshness.dutyofficer = 'Sharon'
-        freshness.orgadmins = {'15942bd7-524a-40d6-8a60-09bd78110d2d': [users[2], users[4]],
-                               '68aa2b4d-ea41-4b79-8e37-ac03cbe9ddca': [users[2], users[3]],
-                               'cdcb3c1f-b8d5-4154-a356-c7021bb1ffbd': [users[3], users[4]],
-                               'dc65f72e-ba98-40aa-ad32-bec0ed1e10a2': [users[2], users[3], users[4]],
-                               }
 
         TestDataFreshnessStatus.email_users_result = list()
         TestDataFreshnessStatus.cells_result = None
@@ -274,26 +330,102 @@ class TestDataFreshnessStatus:
         assert TestDataFreshnessStatus.email_users_result == list()
         freshness.close()
 
-    def test_freshnessfailure(self, configuration, database_failure, users):
+    def test_freshnessmaintainer(self, configuration, database_maintainer, users, organizations):
+        site_url = 'http://lala/'
+        ignore_sysadmin_emails = ['blah3@blah.com']
+        now = parser.parse('2017-02-02 19:07:30.333492')
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_maintainer, users=users,
+                                        organizations=organizations, ignore_sysadmin_emails=ignore_sysadmin_emails,
+                                        now=now)
+        freshness.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Maintainer
+        freshness.dutyofficer = 'Aaron'
+
+        TestDataFreshnessStatus.email_users_result = list()
+        TestDataFreshnessStatus.cells_result = None
+        freshness.process_maintainer(userclass=TestDataFreshnessStatus.TestUser)
+        assert TestDataFreshnessStatus.email_users_result == \
+               [([{'email': 'blah2@blah.com', 'id': 'blah2', 'sysadmin': True, 'fullname': 'blah2full',
+                   'name': 'blah2name'},
+                  {'id': 'blah4', 'display_name': 'blah4disp', 'name': 'blah4name', 'email': 'blah4@blah.com',
+                   'sysadmin': True, 'fullname': 'blah4full'}], 'Datasets with invalid maintainer',
+                 'Dear system administrator,\n\nThe following datasets have an invalid maintainer:\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) from OCHA Colombia maintained by blahdisp (blah@blah.com) with expected update frequency: every six months\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) from OCHA Somalia maintained by blahdisp (blah@blah.com) with expected update frequency: every six months\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) from OCHA Yemen with missing maintainer and organization administrators blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
+                 '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The following datasets have an invalid maintainer:<br><br><a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> from OCHA Colombia maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months<br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> from OCHA Somalia maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months<br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> from OCHA Yemen with missing maintainer and organization administrators <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+        assert TestDataFreshnessStatus.cells_result == [
+            ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',
+             'Update Frequency', 'Last Modified', 'Date Added', 'No. Times', 'Assigned', 'Status'],
+            ['http://lala/dataset/ourairports-myt', 'Airports in Mayotte', 'OurAirports', 'blah5full', 'blah5@blah.com',
+             'blah3disp,blah4disp,blah5full', 'blah3@blah.com,blah4@blah.com,blah5@blah.com', 'every year',
+             '2015-11-24T23:32:32.025059', '2017-02-02T19:07:30.333492', 2, 'Aaron', 'Done'],
+            ['http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015',
+             'Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015', 'OCHA Colombia', 'blahdisp', 'blah@blah.com',
+             'blah3disp,blah5full', 'blah3@blah.com,blah5@blah.com', 'every six months', '2016-07-17T10:25:57.626518',
+             '2017-02-02T19:07:30.333492', 1, 'Aaron', ''],
+            ['http://lala/dataset/projected-ipc-population-estimates-february-june-2016',
+             'Projected IPC population Estimates February - June 2016', 'OCHA Somalia', 'blahdisp', 'blah@blah.com',
+             'blah3disp,blah4disp', 'blah3@blah.com,blah4@blah.com', 'every six months', '2016-07-17T10:13:34.099517',
+             '2017-02-02T19:07:30.333492', 1, 'Aaron', ''],
+            ['http://lala/dataset/yemen-admin-boundaries', 'Yemen - Administrative Boundaries', 'OCHA Yemen', '', '',
+             'blah4disp,blah5full', 'blah4@blah.com,blah5@blah.com', 'every year', '2015-12-28T06:39:20.134647',
+             '2017-02-02T19:07:30.333492', 1, 'Aaron', ''],
+            ['http://lala/dataset/ourairports-wsm', 'Airports in Samoa', 'OurAirports', '', '',
+             'blah3disp,blah4disp,blah5full', 'blah3@blah.com,blah4@blah.com,blah5@blah.com', 'every year',
+             '2015-11-24T23:32:30.661408', '2017-02-02T19:07:30.333492', 1, 'Aaron', '']]
+
+        neworgs = copy.deepcopy(organizations)
+        neworgs[0]['users'].append(
+            {'capacity': 'editor', 'id': 'blah', 'name': 'blahname', 'sysadmin': False, 'fullname': 'blahfull',
+             'display_name': 'blahdisp'})
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_maintainer, users=users,
+                                        organizations=neworgs, ignore_sysadmin_emails=ignore_sysadmin_emails, now=now)
+        TestDataFreshnessStatus.email_users_result = list()
+        freshness.process_maintainer(userclass=TestDataFreshnessStatus.TestUser)
+        assert TestDataFreshnessStatus.email_users_result == \
+               [([{'email': 'blah2@blah.com', 'id': 'blah2', 'sysadmin': True, 'fullname': 'blah2full',
+                   'name': 'blah2name'},
+                  {'id': 'blah4', 'display_name': 'blah4disp', 'name': 'blah4name', 'email': 'blah4@blah.com',
+                   'sysadmin': True, 'fullname': 'blah4full'}], 'Datasets with invalid maintainer',
+                 'Dear system administrator,\n\nThe following datasets have an invalid maintainer:\n\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) from OCHA Somalia maintained by blahdisp (blah@blah.com) with expected update frequency: every six months\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) from OCHA Yemen with missing maintainer and organization administrators blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
+                 '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The following datasets have an invalid maintainer:<br><br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> from OCHA Somalia maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months<br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> from OCHA Yemen with missing maintainer and organization administrators <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+        neworgs = copy.deepcopy(organizations)
+        neworgs[0]['users'].append(
+            {'capacity': 'member', 'id': 'blah', 'name': 'blahname', 'sysadmin': False, 'fullname': 'blahfull',
+             'display_name': 'blahdisp'})
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_maintainer, users=users,
+                                        organizations=neworgs, ignore_sysadmin_emails=ignore_sysadmin_emails, now=now)
+        TestDataFreshnessStatus.email_users_result = list()
+        freshness.process_maintainer(userclass=TestDataFreshnessStatus.TestUser)
+        assert TestDataFreshnessStatus.email_users_result == \
+               [([{'email': 'blah2@blah.com', 'id': 'blah2', 'sysadmin': True, 'fullname': 'blah2full',
+                   'name': 'blah2name'},
+                  {'id': 'blah4', 'display_name': 'blah4disp', 'name': 'blah4name', 'email': 'blah4@blah.com',
+                   'sysadmin': True, 'fullname': 'blah4full'}], 'Datasets with invalid maintainer',
+                 'Dear system administrator,\n\nThe following datasets have an invalid maintainer:\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) from OCHA Colombia maintained by blahdisp (blah@blah.com) with expected update frequency: every six months\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) from OCHA Somalia maintained by blahdisp (blah@blah.com) with expected update frequency: every six months\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) from OCHA Yemen with missing maintainer and organization administrators blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
+                 '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The following datasets have an invalid maintainer:<br><br><a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> from OCHA Colombia maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months<br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> from OCHA Somalia maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months<br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> from OCHA Yemen with missing maintainer and organization administrators <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+        freshness.close()
+
+    def test_freshnessfailure(self, configuration, database_failure, users, organizations):
         site_url = None
         TestDataFreshnessStatus.email_users_result = list()
         mikeuser = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
         serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True, 'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
         now = parser.parse('2017-02-03 19:07:30.333492')
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users, now=now)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users,
+                                        organizations=organizations, now=now)
         freshness.check_number_datasets(send_failures=[mikeuser, serbanuser], userclass=TestDataFreshnessStatus.TestUser)
         assert TestDataFreshnessStatus.email_users_result == [([{'name': 'mcarans', 'sysadmin': True, 'display_name': 'Michael Rans', 'email': 'mcarans@yahoo.co.uk', 'fullname': 'Michael Rans'}, {'name': 'serban', 'sysadmin': True, 'display_name': 'Serban Teodorescu', 'email': 'teodorescu.serban@gmail.com', 'fullname': 'Serban Teodorescu'}],
                                                                'FAILURE: No datasets today!', 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n\nBest wishes,\nHDX Team', '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>It is highly probable that data freshness has failed!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
         TestDataFreshnessStatus.email_users_result = list()
         now = parser.parse('2017-02-02 19:07:30.333492')
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users, now=now)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users,
+                                        organizations=organizations, now=now)
         freshness.now = parser.parse('2017-02-01 19:07:30.333492')
         freshness.check_number_datasets(send_failures=[mikeuser, serbanuser], userclass=TestDataFreshnessStatus.TestUser)
         assert TestDataFreshnessStatus.email_users_result == [([{'name': 'mcarans', 'sysadmin': True, 'display_name': 'Michael Rans', 'email': 'mcarans@yahoo.co.uk', 'fullname': 'Michael Rans'}, {'name': 'serban', 'sysadmin': True, 'display_name': 'Serban Teodorescu', 'email': 'teodorescu.serban@gmail.com', 'fullname': 'Serban Teodorescu'}],
                                                                'FAILURE: Future run date!', 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n\nBest wishes,\nHDX Team', '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>It is highly probable that data freshness has failed!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
         TestDataFreshnessStatus.email_users_result = list()
         now = parser.parse('2017-02-04 19:07:30.333492')
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users, now=now)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_failure, users=users,
+                                        organizations=organizations, now=now)
         freshness.check_number_datasets(send_failures=[mikeuser, serbanuser], userclass=TestDataFreshnessStatus.TestUser)
         assert TestDataFreshnessStatus.email_users_result == [([{'name': 'mcarans', 'sysadmin': True, 'display_name': 'Michael Rans', 'email': 'mcarans@yahoo.co.uk', 'fullname': 'Michael Rans'}, {'name': 'serban', 'sysadmin': True, 'display_name': 'Serban Teodorescu', 'email': 'teodorescu.serban@gmail.com', 'fullname': 'Serban Teodorescu'}],
                                                                'FAILURE: No run today!', 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n\nBest wishes,\nHDX Team', '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>It is highly probable that data freshness has failed!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
