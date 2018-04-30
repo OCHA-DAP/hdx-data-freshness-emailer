@@ -49,13 +49,16 @@ class DataFreshnessStatus:
             organizations = Organization.get_all_organization_names(all_fields=True, include_users=True)
         if ignore_sysadmin_emails is None:  # pragma: no cover
             ignore_sysadmin_emails = Configuration.read()['ignore_sysadmin_emails']
-        self.sysadmins = list()
         self.users = dict()
+        self.sysadmins = dict()
+        self.sysadmins_to_email = list()
         for user in users:
-            self.users[user['id']] = user
-            if user['sysadmin'] and user['fullname']:
-                if user['email'] not in ignore_sysadmin_emails:
-                    self.sysadmins.append(user)
+            userid = user['id']
+            self.users[userid] = user
+            if user['sysadmin']:
+                self.sysadmins[userid] = user
+                if user['fullname'] and user['email'] not in ignore_sysadmin_emails:
+                    self.sysadmins_to_email.append(user)
         self.organizations = dict()
         for organization in organizations:
             users_per_capacity = dict()
@@ -107,7 +110,7 @@ class DataFreshnessStatus:
                 title = 'WARNING: Fall in datasets on HDX today!'
                 msg = 'Dear system administrator,\n\nThere are %d (%d%%) fewer datasets today than yesterday on HDX!\n' % \
                          (diff_datasets, percentage_diff * 100)
-                send_to = self.sysadmins
+                send_to = self.sysadmins_to_email
         else:
             return
         htmlmsg = self.html_start(self.htmlify(msg))
@@ -192,13 +195,15 @@ class DataFreshnessStatus:
             datasets.append(dataset)
         return datasets
 
-    def get_invalid_maintainer(self):
-        datasets = list()
+    def get_invalid_maintainer_orgadmins(self):
+        invalid_maintainers = list()
+        invalid_orgadmins = dict()
         no_runs = len(self.run_numbers)
         if no_runs == 0:
-            return datasets
+            return invalid_maintainers, invalid_orgadmins
         columns = [DBInfoDataset.id, DBInfoDataset.name, DBInfoDataset.title, DBInfoDataset.maintainer,
-                   DBOrganization.id.label('organization_id'), DBOrganization.title.label('organization_title'),
+                   DBOrganization.id.label('organization_id'), DBOrganization.name.label('organization_name'),
+                   DBOrganization.title.label('organization_title'),
                    DBDataset.update_frequency, DBDataset.last_modified, DBDataset.what_updated]
         filters = [DBDataset.id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
                    DBDataset.run_number == self.run_numbers[0][0]]
@@ -207,17 +212,43 @@ class DataFreshnessStatus:
             dataset = dict()
             for i, column in enumerate(columns):
                 dataset[column.key] = result[i]
-            maintainer = dataset['maintainer']
+            maintainer_id = dataset['maintainer']
             organization_id = dataset['organization_id']
+            organization_name = dataset['organization_name']
             organization = self.organizations[organization_id]
-            admins = organization.get('admin', [])
-            if maintainer in admins:
-                continue
+            admins = organization.get('admin')
+
+            def get_orginfo(error):
+                return {'id': organization_id, 'name': organization_name,
+                        'title': dataset['organization_title'],
+                        'error': error}
+
+            if admins:
+                all_sysadmins = True
+                nonexistantids = list()
+                for adminid in admins:
+                    admin = self.users.get(adminid)
+                    if not admin:
+                        nonexistantids.append(adminid)
+                    else:
+                        if admin['sysadmin'] is False:
+                            all_sysadmins = False
+                if nonexistantids:
+                    invalid_orgadmins[organization_name] = \
+                        get_orginfo('The following org admins do not exist: %s!' % ', '.join(nonexistantids))
+                elif all_sysadmins:
+                    invalid_orgadmins[organization_name] = get_orginfo('All org admins are sysadmins!')
+                if maintainer_id in admins:
+                    continue
+            else:
+                invalid_orgadmins[organization_name] = get_orginfo('No org admins defined!')
             editors = organization.get('editor', [])
-            if maintainer in editors:
+            if maintainer_id in editors:
                 continue
-            datasets.append(dataset)
-        return datasets
+            if maintainer_id in self.sysadmins:
+                continue
+            invalid_maintainers.append(dataset)
+        return invalid_maintainers, invalid_orgadmins
 
     def get_maintainer(self, dataset):
         maintainer = dataset['maintainer']
@@ -226,9 +257,12 @@ class DataFreshnessStatus:
     def get_org_admins(self, dataset):
         organization_id = dataset['organization_id']
         orgadmins = list()
-        for userid in self.organizations[organization_id]['admin']:
-            user = self.users[userid]
-            orgadmins.append(user)
+        organization = self.organizations[organization_id]
+        if 'admin' in organization:
+            for userid in self.organizations[organization_id]['admin']:
+                user = self.users.get(userid)
+                if user:
+                    orgadmins.append(user)
         return orgadmins
 
     def get_maintainer_orgadmins(self, dataset):
@@ -264,6 +298,9 @@ class DataFreshnessStatus:
 
     def get_dataset_url(self, dataset):
         return '%sdataset/%s' % (self.site_url, dataset['name'])
+
+    def get_organization_url(self, organization):
+        return '%sorganization/%s' % (self.site_url, organization['name'])
 
     @staticmethod
     def output_newline(msg, htmlmsg):
@@ -382,6 +419,7 @@ class DataFreshnessStatus:
                 current_values.append(new_row)
                 urls.append(url)
                 updated_notimes.add(url)
+        current_values = sorted(current_values, key=lambda x: x[dateadded_ind], reverse=True)
         sheet.update_cells('A1', current_values)
 
     def send_broken_email(self, userclass=User, sendto=None):
@@ -486,7 +524,7 @@ class DataFreshnessStatus:
 
         output, htmloutput = self.msg_close(msg, htmlmsg)
         if sendto is None:
-            users_to_email = self.sysadmins
+            users_to_email = self.sysadmins_to_email
         else:
             users_to_email = sendto
         if self.send_emails:
@@ -535,7 +573,7 @@ class DataFreshnessStatus:
             datasets_flat.append(row)
         output, htmloutput = self.msg_close(msg, htmlmsg)
         if self.send_emails:
-            userclass.email_users(self.sysadmins, 'Delinquent datasets', output, html_body=htmloutput)
+            userclass.email_users(self.sysadmins_to_email, 'Delinquent datasets', output, html_body=htmloutput)
         logger.info(output)
         return datasets_flat
 
@@ -584,15 +622,14 @@ class DataFreshnessStatus:
     def process_overdue(self, userclass=User, sendto=None):
         self.send_overdue_emails(userclass=userclass, sendto=sendto)
 
-    def send_maintainer_email(self, userclass=User):
+    def send_maintainer_email(self, invalid_maintainers, userclass=User):
         datasets_flat = list()
-        datasets = self.get_invalid_maintainer()
-        if len(datasets) == 0:
+        if len(invalid_maintainers) == 0:
             return datasets_flat
         startmsg = 'Dear system administrator,\n\nThe following datasets have an invalid maintainer:\n\n'
         msg = [startmsg]
         htmlmsg = [self.html_start(self.htmlify(startmsg))]
-        for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
+        for dataset in sorted(invalid_maintainers, key=lambda d: (d['organization_title'], d['name'])):
             maintainer, orgadmins, _ = self.get_maintainer_orgadmins(dataset)
             dataset_string, dataset_html_string = self.create_dataset_string(dataset, maintainer, orgadmins,
                                                                              sysadmin=True)
@@ -618,16 +655,49 @@ class DataFreshnessStatus:
             datasets_flat.append(row)
         output, htmloutput = self.msg_close(msg, htmlmsg)
         if self.send_emails:
-            userclass.email_users(self.sysadmins, 'Datasets with invalid maintainer', output, html_body=htmloutput)
+            userclass.email_users(self.sysadmins_to_email, 'Datasets with invalid maintainer', output,
+                                  html_body=htmloutput)
         logger.info(output)
         return datasets_flat
 
-    def process_maintainer(self, userclass=User):
-        datasets = self.send_maintainer_email(userclass=userclass)
+    def send_orgadmins_email(self, invalid_orgadmins, userclass=User):
+        organizations_flat = list()
+        if len(invalid_orgadmins) == 0:
+            return organizations_flat
+        startmsg = 'Dear system administrator,\n\nThe following organizations have an invalid admin:\n\n'
+        msg = [startmsg]
+        htmlmsg = [self.html_start(self.htmlify(startmsg))]
+        for key in sorted(invalid_orgadmins):
+            organization = invalid_orgadmins[key]
+            url = self.get_organization_url(organization)
+            title = organization['title']
+            error = organization['error']
+            msg.append('%s (%s)' % (title, url))
+            htmlmsg.append('<a href="%s">%s</a>' % (url, title))
+            msg.append(' with error: %s\n' % error)
+            htmlmsg.append(' with error: %s<br>' % error)
+            # URL	Title	Problem
+            row = {'URL': url, 'Title': title, 'Error': error}
+            organizations_flat.append(row)
+        output, htmloutput = self.msg_close(msg, htmlmsg)
+        if self.send_emails:
+            userclass.email_users(self.sysadmins_to_email, 'Organizations with invalid admins', output,
+                                  html_body=htmloutput)
+        logger.info(output)
+        return organizations_flat
+
+    def process_maintainer_orgadmins(self, userclass=User):
+        invalid_maintainers, invalid_orgadmins = self.get_invalid_maintainer_orgadmins()
+        datasets = self.send_maintainer_email(invalid_maintainers, userclass=userclass)
+        if self.spreadsheet is not None and self.dutyofficer is not None:
+            # sheet must have been set up!
+            sheet = self.spreadsheet.worksheet_by_title('Maintainer')
+            self.update_sheet(sheet, datasets)
+        datasets = self.send_orgadmins_email(invalid_orgadmins, userclass=userclass)
         if self.spreadsheet is None or self.dutyofficer is None:
             return
         # sheet must have been set up!
-        sheet = self.spreadsheet.worksheet_by_title('Maintainer')
+        sheet = self.spreadsheet.worksheet_by_title('OrgAdmins')
         self.update_sheet(sheet, datasets)
 
     def close(self):

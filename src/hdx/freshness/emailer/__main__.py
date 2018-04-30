@@ -78,7 +78,7 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_
         dutyroster = downloader.download_tabular_cols_as_dicts(configuration['duty_roster_url'], headers=2)
         dutyofficers = key_value_convert(dutyroster['Duty Officer'], keyfn=get_date)
 
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=db_url, send_emails=False)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=db_url)  # , send_emails=False)
 
         logger.info('> GSheet Credentials: %s' % gsheet_auth)
         gc = pygsheets.authorize(credentials=Credentials.new_from_json(gsheet_auth))
@@ -90,18 +90,18 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_
         # Send failure messages to Serban and Mike only
         mikeuser = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
         serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True, 'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
-        # freshness.check_number_datasets(send_failures=[mikeuser, serbanuser])
-        # freshness.process_broken()
+        freshness.check_number_datasets(send_failures=[mikeuser, serbanuser])
+        freshness.process_broken()
         # temporarily send just to me
         # freshness.process_broken(sendto=[mikeuser])
 
-        # freshness.process_delinquent()
+        freshness.process_delinquent()
 
-        # freshness.process_overdue()
+        freshness.process_overdue()
         # temporarily send just to me
         # freshness.process_overdue(sendto=[mikeuser])
 
-        freshness.process_maintainer()
+        freshness.process_maintainer_orgadmins()
 
         freshness.close()
         logger.info('Freshness emailer completed!')

@@ -6,6 +6,7 @@ from os.path import join, abspath, realpath, dirname
 
 from setuptools import setup, find_packages
 
+
 def script_dir(pyobject, follow_symlinks=True):
     """Get current script's directory
 
@@ -64,7 +65,7 @@ setup(
     description='HDX Data Freshness Emailer',
     license='MIT',
     url='https://github.com/OCHA-DAP/hdx-data-freshness-emailer',
-    version='0.53',
+    version='0.54',
     author='Michael Rans',
     author_email='rans@email.com',
     keywords=['HDX', 'fresh', 'freshness', 'data freshness emailer'],
