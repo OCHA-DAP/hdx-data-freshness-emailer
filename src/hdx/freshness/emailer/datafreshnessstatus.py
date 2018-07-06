@@ -385,9 +385,11 @@ class DataFreshnessStatus:
 </html>
 ''' % msg
 
-    def update_sheet(self, sheet, datasets):
-        if sheet is None:
+    def update_sheet(self, sheetname, datasets):
+        # sheet must have been set up!
+        if self.spreadsheet is None or self.dutyofficer is None:
             return
+        sheet = self.spreadsheet.worksheet_by_title(sheetname)
         current_values = sheet.get_all_values(returnas='matrix')
         keys = current_values[0]
         url_ind = keys.index('URL')
@@ -534,11 +536,7 @@ class DataFreshnessStatus:
 
     def process_broken(self, userclass=User, sendto=None):
         datasets = self.send_broken_email(userclass=userclass, sendto=sendto)
-        if self.spreadsheet is None or self.dutyofficer is None:
-            return
-        # sheet must have been set up!
-        sheet = self.spreadsheet.worksheet_by_title('Broken')
-        self.update_sheet(sheet, datasets)
+        self.update_sheet('Broken', datasets)
 
     def send_delinquent_email(self, userclass=User):
         datasets_flat = list()
@@ -579,11 +577,7 @@ class DataFreshnessStatus:
 
     def process_delinquent(self, userclass=User):
         datasets = self.send_delinquent_email(userclass=userclass)
-        if self.spreadsheet is None or self.dutyofficer is None:
-            return
-        # sheet must have been set up!
-        sheet = self.spreadsheet.worksheet_by_title('Delinquent')
-        self.update_sheet(sheet, datasets)
+        self.update_sheet('Delinquent', datasets)
 
     def send_overdue_emails(self, userclass=User, sendto=None):
         datasets = self.get_status(2)
@@ -689,16 +683,9 @@ class DataFreshnessStatus:
     def process_maintainer_orgadmins(self, userclass=User):
         invalid_maintainers, invalid_orgadmins = self.get_invalid_maintainer_orgadmins()
         datasets = self.send_maintainer_email(invalid_maintainers, userclass=userclass)
-        if self.spreadsheet is not None and self.dutyofficer is not None:
-            # sheet must have been set up!
-            sheet = self.spreadsheet.worksheet_by_title('Maintainer')
-            self.update_sheet(sheet, datasets)
+        self.update_sheet('Maintainer', datasets)
         datasets = self.send_orgadmins_email(invalid_orgadmins, userclass=userclass)
-        if self.spreadsheet is None or self.dutyofficer is None:
-            return
-        # sheet must have been set up!
-        sheet = self.spreadsheet.worksheet_by_title('OrgAdmins')
-        self.update_sheet(sheet, datasets)
+        self.update_sheet('OrgAdmins', datasets)
 
     def close(self):
         self.session.close()

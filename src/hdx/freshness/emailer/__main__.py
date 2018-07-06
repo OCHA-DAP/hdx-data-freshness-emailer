@@ -42,12 +42,16 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_
     configuration = Configuration.read()
     logger.info('--------------------------------------------------')
     logger.info('> HDX Site: %s' % site_url)
-    email_config = email_server.split(',')
-    email_config_dict = {'connection_type': email_config[0], 'host': email_config[1], 'port': int(email_config[2]),
-                         'username': email_config[3], 'password': email_config[4]}
-    configuration.setup_emailer(email_config_dict=email_config_dict)
-    logger.info('--------------------------------------------------')
-    logger.info('> Email host: %s' % email_config[1])
+    if email_server:
+        email_config = email_server.split(',')
+        email_config_dict = {'connection_type': email_config[0], 'host': email_config[1], 'port': int(email_config[2]),
+                             'username': email_config[3], 'password': email_config[4]}
+        configuration.setup_emailer(email_config_dict=email_config_dict)
+        logger.info('--------------------------------------------------')
+        logger.info('> Email host: %s' % email_config[1])
+        send_emails = True
+    else:
+        send_emails = False
     if db_url:
         logger.info('> DB URL: %s' % db_url)
         if 'postgres' in db_url:
@@ -78,11 +82,14 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_
         dutyroster = downloader.download_tabular_cols_as_dicts(configuration['duty_roster_url'], headers=2)
         dutyofficers = key_value_convert(dutyroster['Duty Officer'], keyfn=get_date)
 
-        freshness = DataFreshnessStatus(site_url=site_url, db_url=db_url)  # , send_emails=False)
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=db_url, send_emails=send_emails)
 
-        logger.info('> GSheet Credentials: %s' % gsheet_auth)
-        gc = pygsheets.authorize(credentials=Credentials.new_from_json(gsheet_auth))
-        freshness.spreadsheet = gc.open_by_url(configuration['issues_spreadsheet_url'])
+        if gsheet_auth:
+            logger.info('> GSheet Credentials: %s' % gsheet_auth)
+            gc = pygsheets.authorize(credentials=Credentials.new_from_json(gsheet_auth))
+            freshness.spreadsheet = gc.open_by_url(configuration['issues_spreadsheet_url'])
+        else:
+            freshness.spreadsheet = None
 
         closest_week = next(x for x in sorted(dutyofficers.keys(), reverse=True) if x <= freshness.now)
         freshness.dutyofficer = dutyofficers[closest_week]
