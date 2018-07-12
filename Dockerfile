@@ -2,10 +2,7 @@ FROM mcarans/hdx-data-freshness
 
 MAINTAINER Michael Rans <rans@email.com>
 
-RUN apk add --no-cache --update postgresql-dev libstdc++ && \
-    pip --no-cache-dir install hdx-data-freshness-emailer && \
-    apk del postgresql-dev && \
-    apk add --no-cache libpq && \
+RUN pip --no-cache-dir install hdx-data-freshness-emailer && \
     rm -r /root/.cache && \
     rm -rf /var/lib/apk/*
 
