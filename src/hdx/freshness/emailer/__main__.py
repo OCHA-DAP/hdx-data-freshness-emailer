@@ -110,6 +110,8 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_
 
         freshness.process_maintainer_orgadmins()
 
+        freshness.process_datasets_noresources()
+
         freshness.close()
         logger.info('Freshness emailer completed!')
 

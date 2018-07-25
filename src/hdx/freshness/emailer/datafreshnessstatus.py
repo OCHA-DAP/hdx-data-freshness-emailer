@@ -250,6 +250,27 @@ class DataFreshnessStatus:
             invalid_maintainers.append(dataset)
         return invalid_maintainers, invalid_orgadmins
 
+    def get_datasets_noresources(self):
+        datasets_noresources = list()
+        no_runs = len(self.run_numbers)
+        if no_runs == 0:
+            return datasets_noresources
+        subquery = self.session.query(DBResource.dataset_id).distinct().filter(
+            DBResource.run_number == self.run_numbers[0][0])
+        columns = [DBInfoDataset.id, DBInfoDataset.name, DBInfoDataset.title, DBInfoDataset.maintainer,
+                   DBOrganization.id.label('organization_id'), DBOrganization.name.label('organization_name'),
+                   DBOrganization.title.label('organization_title'),
+                   DBDataset.update_frequency, DBDataset.last_modified, DBDataset.what_updated]
+        filters = [DBDataset.id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
+                   DBDataset.run_number == self.run_numbers[0][0], ~DBDataset.id.in_(subquery)]
+        query = self.session.query(*columns).filter(and_(*filters))
+        for result in query:
+            dataset = dict()
+            for i, column in enumerate(columns):
+                dataset[column.key] = result[i]
+            datasets_noresources.append(dataset)
+        return datasets_noresources
+
     def get_maintainer(self, dataset):
         maintainer = dataset['maintainer']
         return self.users.get(maintainer)
@@ -686,6 +707,48 @@ class DataFreshnessStatus:
         self.update_sheet('Maintainer', datasets)
         datasets = self.send_orgadmins_email(invalid_orgadmins, userclass=userclass)
         self.update_sheet('OrgAdmins', datasets)
+
+    def send_datasets_noresources_email(self, userclass=User):
+        datasets_flat = list()
+        datasets = self.get_datasets_noresources()
+        if len(datasets) == 0:
+            return datasets_flat
+        startmsg = 'Dear system administrator,\n\nThe following datasets have no resources:\n\n'
+        msg = [startmsg]
+        htmlmsg = [self.html_start(self.htmlify(startmsg))]
+        for dataset in datasets:
+            maintainer, orgadmins, _ = self.get_maintainer_orgadmins(dataset)
+            dataset_string, dataset_html_string = self.create_dataset_string(dataset, maintainer, orgadmins,
+                                                                             sysadmin=True)
+            msg.append(dataset_string)
+            htmlmsg.append(dataset_html_string)
+            url = self.get_dataset_url(dataset)
+            title = dataset['title']
+            org_title = dataset['organization_title']
+            if maintainer:
+                maintainer_name, maintainer_email = maintainer
+            else:
+                maintainer_name, maintainer_email = '', ''
+            orgadmin_names = ','.join([x[0] for x in orgadmins])
+            orgadmin_emails = ','.join([x[1] for x in orgadmins])
+            update_freq = self.get_update_frequency(dataset)
+            last_modified = dataset['last_modified'].isoformat()
+            # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
+            # Update Frequency	Last Modified
+            row = {'URL': url, 'Title': title, 'Organisation': org_title,
+                   'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
+                   'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
+                   'Update Frequency': update_freq, 'Last Modified': last_modified}
+            datasets_flat.append(row)
+        output, htmloutput = self.msg_close(msg, htmlmsg)
+        if self.send_emails:
+            userclass.email_users(self.sysadmins_to_email, 'Datasets with no resources', output, html_body=htmloutput)
+        logger.info(output)
+        return datasets_flat
+
+    def process_datasets_noresources(self, userclass=User):
+        datasets = self.send_datasets_noresources_email(userclass=userclass)
+        self.update_sheet('NoResources', datasets)
 
     def close(self):
         self.session.close()

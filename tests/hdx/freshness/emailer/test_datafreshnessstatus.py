@@ -101,6 +101,27 @@ class TestDataFreshnessStatus:
             TestWorksheet.sheetname = sheetname
             return TestWorksheet
 
+    class TestSpreadsheet_NoResources:
+        @staticmethod
+        def worksheet_by_title(_):
+            class TestWorksheet:
+                @staticmethod
+                def get_all_values(returnas):
+                    return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
+                             'Org Admin Emails', 'Update Frequency', 'Last Modified', 'Date Added', 'No. Times',
+                             'Assigned', 'Status'],
+                            ['http://lala/dataset/ourairports-myt', 'Airports in Mayotte', 'OurAirports', 'blah5full',
+                             'blah5@blah.com', 'blah3disp,blah4disp,blah5full',
+                             'blah3@blah.com,blah4@blah.com,blah5@blah.com', 'every year', '2015-11-24T23:32:32.025059',
+                             '2017-01-01T19:07:30.333492', 2, 'Peter', 'Done']]
+
+                @staticmethod
+                def update_cells(_, cells):
+                    TestDataFreshnessStatus.cells_result = cells
+
+            return TestWorksheet
+
+
     @pytest.fixture(scope='class')
     def users(self):
         return [{'email': 'blah@blah.com', 'id': 'blah', 'name': 'blahname', 'sysadmin': False, 'fullname': 'blahfull', 'display_name': 'blahdisp'},
@@ -180,6 +201,17 @@ class TestDataFreshnessStatus:
     @pytest.fixture(scope='function')
     def database_failure(self):
         dbfile = 'test_freshness_failure.db'
+        dbpath = join('tests', dbfile)
+        try:
+            os.remove(dbpath)
+        except FileNotFoundError:
+            pass
+        shutil.copyfile(join('tests', 'fixtures', dbfile), dbpath)
+        return 'sqlite:///%s' % dbpath
+
+    @pytest.fixture(scope='function')
+    def database_noresources(self):
+        dbfile = 'test_freshness_noresources.db'
         dbpath = join('tests', dbfile)
         try:
             os.remove(dbpath)
@@ -568,3 +600,39 @@ class TestDataFreshnessStatus:
                                                                'FAILURE: No run today!', 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n\nBest wishes,\nHDX Team', '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>It is highly probable that data freshness has failed!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
         freshness.close()
 
+    def test_freshnessdatasetsnoresources(self, configuration, database_noresources, users, organizations):
+        site_url = 'http://lala/'
+        ignore_sysadmin_emails = ['blah3@blah.com']
+        now = parser.parse('2017-02-03 19:07:30.333492')
+        freshness = DataFreshnessStatus(site_url=site_url, db_url=database_noresources, users=users,
+                                        organizations=organizations, ignore_sysadmin_emails=ignore_sysadmin_emails,
+                                        now=now)
+        freshness.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_NoResources
+        freshness.dutyofficer = 'Andrew'
+
+        TestDataFreshnessStatus.email_users_result = list()
+        TestDataFreshnessStatus.cells_result = None
+        freshness.process_datasets_noresources(userclass=TestDataFreshnessStatus.TestUser)
+        assert TestDataFreshnessStatus.email_users_result == \
+               [([{'email': 'blah2@blah.com', 'id': 'blah2', 'name': 'blah2name', 'sysadmin': True,
+                   'fullname': 'blah2full'},
+                  {'email': 'blah4@blah.com', 'id': 'blah4', 'name': 'blah4name', 'sysadmin': True,
+                   'fullname': 'blah4full', 'display_name': 'blah4disp'}], 'Datasets with no resources',
+                 'Dear system administrator,\n\nThe following datasets have no resources:\n\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
+                 '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The following datasets have no resources:<br><br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+        assert TestDataFreshnessStatus.cells_result == [
+            ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email',
+             'Org Admins', 'Org Admin Emails', 'Update Frequency', 'Last Modified',
+             'Date Added', 'No. Times', 'Assigned', 'Status'],
+            ['http://lala/dataset/ourairports-wsm', 'Airports in Samoa',
+             'OurAirports', '', '', 'blah3disp,blah4disp,blah5full',
+             'blah3@blah.com,blah4@blah.com,blah5@blah.com', 'every year',
+             '2015-11-24T23:32:30.661408', '2017-02-03T19:07:30.333492',
+             1, 'Andrew', ''],
+            ['http://lala/dataset/ourairports-myt',
+             'Airports in Mayotte', 'OurAirports', 'blah5full', 'blah5@blah.com',
+             'blah3disp,blah4disp,blah5full', 'blah3@blah.com,blah4@blah.com,blah5@blah.com',
+             'every year', '2015-11-24T23:32:32.025059',
+             '2017-01-01T19:07:30.333492', 2, 'Peter', 'Done']]
+
+        freshness.close()
