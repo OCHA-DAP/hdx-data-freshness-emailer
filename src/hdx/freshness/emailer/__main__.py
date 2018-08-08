@@ -47,10 +47,10 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_
         email_config_dict = {'connection_type': email_config[0], 'host': email_config[1], 'port': int(email_config[2]),
                              'username': email_config[3], 'password': email_config[4]}
         configuration.setup_emailer(email_config_dict=email_config_dict)
-        logger.info('--------------------------------------------------')
         logger.info('> Email host: %s' % email_config[1])
         send_emails = True
     else:
+        logger.info('> No email host!')
         send_emails = False
     if db_url:
         logger.info('> DB URL: %s' % db_url)
@@ -89,10 +89,12 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_
             gc = pygsheets.authorize(credentials=Credentials.new_from_json(gsheet_auth))
             freshness.spreadsheet = gc.open_by_url(configuration['issues_spreadsheet_url'])
         else:
+            logger.info('> No GSheet Credentials!')
             freshness.spreadsheet = None
-
+        logger.info('--------------------------------------------------')
         closest_week = next(x for x in sorted(dutyofficers.keys(), reverse=True) if x <= freshness.now)
         freshness.dutyofficer = dutyofficers[closest_week]
+        logger.info('Duty officer: %s' % freshness.dutyofficer)
 
         # Send failure messages to Serban and Mike only
         mikeuser = User({'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans', 'display_name': 'Michael Rans'})
