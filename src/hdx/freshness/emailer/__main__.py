@@ -46,6 +46,8 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, email_server, gsheet_
         email_config = email_server.split(',')
         email_config_dict = {'connection_type': email_config[0], 'host': email_config[1], 'port': int(email_config[2]),
                              'username': email_config[3], 'password': email_config[4]}
+        if len(email_config) > 5:
+            email_config_dict['sender'] = email_config[5]
         configuration.setup_emailer(email_config_dict=email_config_dict)
         logger.info('> Email host: %s' % email_config[1])
         send_emails = True
