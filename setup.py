@@ -47,7 +47,7 @@ def get_readme():
 
 requirements = ['oauth2client',
                 'pygsheets',
-                'hdx-data-freshness>=1.2.4']
+                'hdx-data-freshness>=1.2.5']
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -66,7 +66,7 @@ setup(
     description='HDX Data Freshness Emailer',
     license='MIT',
     url='https://github.com/OCHA-DAP/hdx-data-freshness-emailer',
-    version='1.1.3',
+    version='1.1.4',
     author='Michael Rans',
     author_email='rans@email.com',
     keywords=['HDX', 'fresh', 'freshness', 'data freshness emailer'],

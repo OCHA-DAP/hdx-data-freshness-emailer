@@ -90,6 +90,7 @@ class DataFreshnessStatus:
     def check_number_datasets(self, send_failures=None, userclass=User):
         logger.info('\n\n*** Checking number of datasets ***')
         run_date = self.run_numbers[0][1]
+        stop = True
         if self.now < run_date:
             title = 'FAILURE: Future run date!'
             msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
@@ -105,7 +106,7 @@ class DataFreshnessStatus:
             percentage_diff = diff_datasets / datasets_previous
             if percentage_diff <= 0.02:
                 logger.info('No issues with number of datasets.')
-                return
+                return False
             if percentage_diff == 1.0:
                 title = 'FAILURE: No datasets today!'
                 msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
@@ -115,9 +116,10 @@ class DataFreshnessStatus:
                 msg = 'Dear system administrator,\n\nThere are %d (%d%%) fewer datasets today than yesterday on HDX!\n' % \
                          (diff_datasets, percentage_diff * 100)
                 send_to = self.sysadmins_to_email
+                stop = False
         else:
             logger.info('No issues with number of datasets.')
-            return
+            return False
         htmlmsg = self.html_start(self.htmlify(msg))
         output, htmloutput = self.msg_close(msg, htmlmsg)
         if self.send_emails:
@@ -125,6 +127,7 @@ class DataFreshnessStatus:
         else:
             logger.warning('Not sending any email!')
         logger.info(output)
+        return stop
 
     def get_broken(self):
         datasets = dict()
