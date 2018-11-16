@@ -14,7 +14,6 @@ import re
 from hdx.data.dataset import Dataset
 from hdx.data.organization import Organization
 from hdx.data.user import User
-from hdx.freshness.database.base import Base
 from hdx.freshness.database.dbdataset import DBDataset
 from hdx.freshness.database.dbinfodataset import DBInfoDataset
 from hdx.freshness.database.dborganization import DBOrganization
@@ -22,9 +21,8 @@ from hdx.freshness.database.dbresource import DBResource
 from hdx.freshness.database.dbrun import DBRun
 from hdx.hdx_configuration import Configuration
 from hdx.utilities.dictandlist import dict_of_lists_add
-from sqlalchemy import create_engine, func
-from sqlalchemy.orm import sessionmaker, aliased
-from sqlalchemy.pool import NullPool
+from sqlalchemy import func
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import and_
 
 logger = logging.getLogger(__name__)
@@ -35,14 +33,11 @@ class DataFreshnessStatus:
     object_output_limit = 2
     other_error_msg = 'Server Error (may be temporary)'
 
-    def __init__(self, site_url, db_url='sqlite:///freshness.db', users=None, organizations=None,
+    def __init__(self, site_url, session, users=None, organizations=None,
                  ignore_sysadmin_emails=None, now=None, send_emails=True):
         ''''''
         self.site_url = site_url
-        engine = create_engine(db_url, poolclass=NullPool, echo=False)
-        Session = sessionmaker(bind=engine)
-        Base.metadata.create_all(engine)
-        self.session = Session()
+        self.session = session
         if users is None:  # pragma: no cover
             users = User.get_all_users()
         if organizations is None:  # pragma: no cover
@@ -795,7 +790,4 @@ class DataFreshnessStatus:
         logger.info('\n\n*** Checking for datasets with no resources ***')
         datasets = self.send_datasets_noresources_email(userclass=userclass)
         self.update_sheet('NoResources', datasets)
-
-    def close(self):
-        self.session.close()
 
