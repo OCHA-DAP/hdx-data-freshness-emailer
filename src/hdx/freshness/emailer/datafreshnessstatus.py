@@ -461,7 +461,7 @@ class DataFreshnessStatus:
                 urls.append(url)
                 updated_notimes.add(url)
         current_values = sorted(current_values, key=lambda x: x[dateadded_ind], reverse=True)
-        sheet.update_cells('A1', current_values)
+        sheet.update_values('A1', current_values)
 
     def send_broken_email(self, userclass=User, sendto=None):
         datasets_flat = list()

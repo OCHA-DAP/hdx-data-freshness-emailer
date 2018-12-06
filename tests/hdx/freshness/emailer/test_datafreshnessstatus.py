@@ -39,7 +39,7 @@ class TestDataFreshnessStatus:
                              'Contacted Maintainer']]
 
                 @staticmethod
-                def update_cells(_, cells):
+                def update_values(_, cells):
                     TestDataFreshnessStatus.cells_result = cells
             return TestWorksheet
 
@@ -52,7 +52,7 @@ class TestDataFreshnessStatus:
                     return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails', 'Update Frequency', 'Last Modified', 'Freshness', 'Error Type', 'Error', 'Date Added', 'No. Times', 'Assigned', 'Status']]
 
                 @staticmethod
-                def update_cells(_, cells):
+                def update_values(_, cells):
                     TestDataFreshnessStatus.cells_result = cells
             return TestWorksheet
 
@@ -69,7 +69,7 @@ class TestDataFreshnessStatus:
                              '2017-01-01T19:07:30.333492', 2, 'Peter', 'Done']]
 
                 @staticmethod
-                def update_cells(_, cells):
+                def update_values(_, cells):
                     TestDataFreshnessStatus.cells_result = cells
             return TestWorksheet
 
@@ -96,7 +96,7 @@ class TestDataFreshnessStatus:
                                  'All org admins are sysadmins!', '2017-01-01T19:07:30.333492', 5, 'Aaron', '']]
 
                 @staticmethod
-                def update_cells(_, cells):
+                def update_values(_, cells):
                     TestDataFreshnessStatus.cells_result.append(cells)
 
             TestWorksheet.sheetname = sheetname
@@ -117,7 +117,7 @@ class TestDataFreshnessStatus:
                              '2017-01-01T19:07:30.333492', 2, 'Peter', 'Done']]
 
                 @staticmethod
-                def update_cells(_, cells):
+                def update_values(_, cells):
                     TestDataFreshnessStatus.cells_result = cells
 
             return TestWorksheet

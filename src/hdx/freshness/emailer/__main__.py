@@ -68,7 +68,7 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, db_params, email_serv
 
             if gsheet_auth:
                 logger.info('> GSheet Credentials: %s' % gsheet_auth)
-                gc = pygsheets.authorize(credentials=Credentials.new_from_json(gsheet_auth))
+                gc = pygsheets.authorize(custom_credentials=Credentials.new_from_json(gsheet_auth))
                 freshness.spreadsheet = gc.open_by_url(configuration['issues_spreadsheet_url'])
             else:
                 logger.info('> No GSheet Credentials!')
