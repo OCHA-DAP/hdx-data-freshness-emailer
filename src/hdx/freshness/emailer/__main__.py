@@ -8,11 +8,13 @@ Caller script. Designed to call all other functions.
 
 '''
 import argparse
+import json
 import logging
-import os
 from datetime import datetime
+from os import getenv
 
 import pygsheets
+from google.oauth2 import service_account
 from hdx.data.user import User
 from hdx.hdx_configuration import Configuration
 from hdx.utilities.database import Database
@@ -20,7 +22,6 @@ from hdx.utilities.dictandlist import key_value_convert, args_to_dict
 from hdx.utilities.downloader import Download
 from hdx.utilities.easy_logging import setup_logging
 from hdx.utilities.path import script_dir_plus_file
-from oauth2client.client import Credentials
 
 from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
 
@@ -68,7 +69,8 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, db_params, email_serv
 
             if gsheet_auth:
                 logger.info('> GSheet Credentials: %s' % gsheet_auth)
-                gc = pygsheets.authorize(custom_credentials=Credentials.new_from_json(gsheet_auth))
+                info = json.loads(gsheet_auth)
+                gc = pygsheets.authorize(custom_credentials=service_account.Credentials.from_service_account_info(info))
                 freshness.spreadsheet = gc.open_by_url(configuration['issues_spreadsheet_url'])
             else:
                 logger.info('> No GSheet Credentials!')
@@ -115,27 +117,27 @@ if __name__ == '__main__':
     args = parser.parse_args()
     hdx_key = args.hdx_key
     if hdx_key is None:
-        hdx_key = os.getenv('HDX_KEY')
+        hdx_key = getenv('HDX_KEY')
     user_agent = args.user_agent
     if user_agent is None:
-        user_agent = os.getenv('USER_AGENT')
+        user_agent = getenv('USER_AGENT')
         if user_agent is None:
             user_agent = 'freshness-emailer'
     preprefix = args.preprefix
     if preprefix is None:
-        preprefix = os.getenv('PREPREFIX')
+        preprefix = getenv('PREPREFIX')
     hdx_site = args.hdx_site
     if hdx_site is None:
-        hdx_site = os.getenv('HDX_SITE', 'prod')
+        hdx_site = getenv('HDX_SITE', 'prod')
     db_url = args.db_url
     if db_url is None:
-        db_url = os.getenv('DB_URL')
+        db_url = getenv('DB_URL')
     if db_url and '://' not in db_url:
         db_url = 'postgresql://%s' % db_url
     email_server = args.email_server
     if email_server is None:
-        email_server = os.getenv('EMAIL_SERVER')
+        email_server = getenv('EMAIL_SERVER')
     gsheet_auth = args.gsheet_auth
     if gsheet_auth is None:
-        gsheet_auth = os.getenv('GSHEET_AUTH')
+        gsheet_auth = getenv('GSHEET_AUTH')
     main(hdx_key, user_agent, preprefix, hdx_site, db_url, args.db_params, email_server, gsheet_auth)
