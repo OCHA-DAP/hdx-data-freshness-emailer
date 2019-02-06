@@ -45,9 +45,9 @@ def get_readme():
     return readme_file.read()
 
 
-requirements = ['oauth2client',
-                'pygsheets',
-                'hdx-data-freshness>=1.3.0']
+requirements = ['pygsheets',
+                'hdx-data-freshness>=1.3.0',
+                'libhxl']
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",

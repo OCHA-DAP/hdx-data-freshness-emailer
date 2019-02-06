@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-'''
-Data freshness status:
-----------------------
+"""
+Data Freshness Status
+---------------------
 
-Reads the HDX data freshness database and finds datasets whose status has
-changed from overdue to delinquent or from due to overdue.
+Determines freshness status
+"""
 
-'''
+
 import datetime
 import logging
 import re
@@ -25,6 +25,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import and_
 
+from hdx.freshness.emailer.freshnessemail import Email
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,13 +35,16 @@ class DataFreshnessStatus:
     object_output_limit = 2
     other_error_msg = 'Server Error (may be temporary)'
 
-    def __init__(self, site_url, session, users=None, organizations=None,
-                 ignore_sysadmin_emails=None, now=None, send_emails=True):
+    def __init__(self, now, site_url, session, email, sheet, users=None, organizations=None,
+                 ignore_sysadmin_emails=None):
         ''''''
+        self.now = now
         self.site_url = site_url
         self.session = session
         if users is None:  # pragma: no cover
             users = User.get_all_users()
+        self.email = email
+        self.sheet = sheet
         if organizations is None:  # pragma: no cover
             organizations = Organization.get_all_organization_names(all_fields=True, include_users=True)
         if ignore_sysadmin_emails is None:  # pragma: no cover
@@ -60,16 +65,9 @@ class DataFreshnessStatus:
             for user in organization['users']:
                 dict_of_lists_add(users_per_capacity, user['capacity'], user['id'])
             self.organizations[organization['id']] = users_per_capacity
-        if now is None:
-            self.now = datetime.datetime.utcnow()
-        else:
-            self.now = now
         self.run_numbers = self.get_cur_prev_runs()
         if len(self.run_numbers) < 2:
             logger.warning('Less than 2 runs!')
-        self.send_emails = send_emails
-        self.spreadsheet = None
-        self.dutyofficer = None
 
     def get_cur_prev_runs(self):
         all_run_numbers = self.session.query(DBRun.run_number, DBRun.run_date).distinct().order_by(DBRun.run_number.desc()).all()
@@ -82,7 +80,7 @@ class DataFreshnessStatus:
                     return [run_number, all_run_numbers[i+1]]
         return list()
 
-    def check_number_datasets(self, send_failures=None, userclass=User):
+    def check_number_datasets(self, send_failures=None):
         logger.info('\n\n*** Checking number of datasets ***')
         run_date = self.run_numbers[0][1]
         stop = True
@@ -115,13 +113,7 @@ class DataFreshnessStatus:
         else:
             logger.info('No issues with number of datasets.')
             return False
-        htmlmsg = self.html_start(self.htmlify(msg))
-        output, htmloutput = self.msg_close(msg, htmlmsg)
-        if self.send_emails:
-            userclass.email_users(send_to, title, output, html_body=htmloutput)
-        else:
-            logger.warning('Not sending any email!')
-        logger.info(output)
+        self.email.htmlify_send(send_to, title, msg)
         return stop
 
     def get_broken(self):
@@ -339,11 +331,6 @@ class DataFreshnessStatus:
     def get_organization_url(self, organization):
         return '%sorganization/%s' % (self.site_url, organization['name'])
 
-    @staticmethod
-    def output_newline(msg, htmlmsg):
-        msg.append('\n')
-        htmlmsg.append('<br>')
-
     def create_dataset_string(self, dataset, maintainer, orgadmins, sysadmin=False, include_org=True, include_freshness=False):
         url = self.get_dataset_url(dataset)
         msg = list()
@@ -381,89 +368,11 @@ class DataFreshnessStatus:
             fresh = self.freshness_status.get(dataset['fresh'], 'None')
             msg.append(' and freshness: %s' % fresh)
             htmlmsg.append(' and freshness: %s' % fresh)
-        self.output_newline(msg, htmlmsg)
+        Email.output_newline(msg, htmlmsg)
 
         return ''.join(msg), ''.join(htmlmsg)
 
-    @staticmethod
-    def msg_close(msg, htmlmsg, endmsg=''):
-        closure = '\nBest wishes,\nHDX Team'
-        output = '%s%s%s' % (''.join(msg), endmsg, closure)
-        htmloutput = DataFreshnessStatus.html_end('%s%s%s' % (''.join(htmlmsg), DataFreshnessStatus.htmlify(endmsg),
-                                                              DataFreshnessStatus.htmlify(closure)))
-        return output, htmloutput
-
-    @staticmethod
-    def htmlify(msg):
-        return msg.replace('\n', '<br>')
-
-    @staticmethod
-    def html_start(msg):
-        return '''\
-<html>
-  <head></head>
-  <body>
-    <span>%s''' % msg
-
-    @staticmethod
-    def html_end(msg):
-        return '''%s
-      <br/><br/>
-      <small>
-        <p>
-          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>
-        </p>
-        <p>
-          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>
-        </p>
-      </small>
-    </span>
-  </body>
-</html>
-''' % msg
-
-    def update_sheet(self, sheetname, datasets):
-        # sheet must have been set up!
-        if self.spreadsheet is None or self.dutyofficer is None:
-            logger.warning('Cannot update Google spreadsheet!')
-            return
-        logger.info('Updating Google spreadsheet.')
-        sheet = self.spreadsheet.worksheet_by_title(sheetname)
-        current_values = sheet.get_all_values(returnas='matrix')
-        keys = current_values[0]
-        url_ind = keys.index('URL')
-        dateadded_ind = keys.index('Date Added')
-        no_times_ind = keys.index('No. Times')
-        assigned_ind = keys.index('Assigned')
-        status_ind = keys.index('Status')
-        urls = [x[url_ind] for i, x in enumerate(current_values) if i != 0]
-        updated_notimes = set()
-        for dataset in datasets:
-            url = dataset['URL']
-            new_row = [dataset.get(key, '') for key in keys]
-            try:
-                rowno = urls.index(url) + 1
-                current_row = current_values[rowno]
-                new_row[dateadded_ind] = current_row[dateadded_ind]
-                no_times = current_row[no_times_ind]
-                new_row[no_times_ind] = int(no_times)
-                if url not in updated_notimes:
-                    updated_notimes.add(url)
-                    new_row[no_times_ind] += 1
-                new_row[assigned_ind] = current_row[assigned_ind]
-                new_row[status_ind] = current_row[status_ind]
-                current_values[rowno] = new_row
-            except ValueError:
-                new_row[dateadded_ind] = self.now.isoformat()
-                new_row[no_times_ind] = 1
-                new_row[assigned_ind] = self.dutyofficer
-                current_values.append(new_row)
-                urls.append(url)
-                updated_notimes.add(url)
-        current_values = sorted(current_values, key=lambda x: x[dateadded_ind], reverse=True)
-        sheet.update_values('A1', current_values)
-
-    def send_broken_email(self, userclass=User, sendto=None):
+    def send_broken_email(self, sendto=None):
         datasets_flat = list()
         datasets = self.get_broken()
         if len(datasets) == 0:
@@ -471,7 +380,7 @@ class DataFreshnessStatus:
             return datasets_flat
         startmsg = 'Dear system administrator,\n\nThe following datasets have broken resources:\n\n'
         msg = [startmsg]
-        htmlmsg = [self.html_start(self.htmlify(startmsg))]
+        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
 
         def output_tabs(n=1):
             for i in range(n):
@@ -500,7 +409,7 @@ class DataFreshnessStatus:
                 msg.append('%s\n' % resource_string)
                 htmlmsg.append('%s<br>' % resource_string)
             if newline:
-                self.output_newline(msg, htmlmsg)
+                Email.output_newline(msg, htmlmsg)
 
         def create_cut_down_broken_dataset_string(i, ds):
             if i == self.object_output_limit:
@@ -516,12 +425,12 @@ class DataFreshnessStatus:
         def output_error(error):
             msg.append(error)
             htmlmsg.append('<b>%s</b>' % error)
-            self.output_newline(msg, htmlmsg)
+            Email.output_newline(msg, htmlmsg)
 
         def output_org(title):
             msg.append(title)
             htmlmsg.append('<b><i>%s</i></b>' % title)
-            self.output_newline(msg, htmlmsg)
+            Email.output_newline(msg, htmlmsg)
 
         for error_type in sorted(datasets):
             output_error(error_type)
@@ -561,27 +470,22 @@ class DataFreshnessStatus:
                            'Error Type': error_type, 'Error': '\n'.join(error)}
                     datasets_flat.append(row)
                 if newline:
-                    self.output_newline(msg, htmlmsg)
-            self.output_newline(msg, htmlmsg)
+                    Email.output_newline(msg, htmlmsg)
+            Email.output_newline(msg, htmlmsg)
 
-        output, htmloutput = self.msg_close(msg, htmlmsg)
         if sendto is None:
             users_to_email = self.sysadmins_to_email
         else:
             users_to_email = sendto
-        if self.send_emails:
-            userclass.email_users(users_to_email, 'Broken datasets', output, html_body=htmloutput)
-        else:
-            logger.warning('Not sending any email!')
-        logger.info(output)
+        self.email.close_send(users_to_email, 'Broken datasets', msg, htmlmsg)
         return datasets_flat
 
-    def process_broken(self, userclass=User, sendto=None):
+    def process_broken(self, sendto=None):
         logger.info('\n\n*** Checking for broken datasets ***')
-        datasets = self.send_broken_email(userclass=userclass, sendto=sendto)
-        self.update_sheet('Broken', datasets)
+        datasets = self.send_broken_email(sendto=sendto)
+        self.sheet.update('Broken', datasets)
 
-    def send_delinquent_email(self, userclass=User):
+    def send_delinquent_email(self):
         datasets_flat = list()
         datasets = self.get_status(3)
         if len(datasets) == 0:
@@ -589,7 +493,7 @@ class DataFreshnessStatus:
             return datasets_flat
         startmsg = 'Dear system administrator,\n\nThe following datasets have just become delinquent:\n\n'
         msg = [startmsg]
-        htmlmsg = [self.html_start(self.htmlify(startmsg))]
+        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
             maintainer, orgadmins, _ = self.get_maintainer_orgadmins(dataset)
             dataset_string, dataset_html_string = self.create_dataset_string(dataset, maintainer, orgadmins, sysadmin=True)
@@ -613,26 +517,22 @@ class DataFreshnessStatus:
                    'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
                    'Update Frequency': update_freq, 'Last Modified': last_modified}
             datasets_flat.append(row)
-        output, htmloutput = self.msg_close(msg, htmlmsg)
-        if self.send_emails:
-            userclass.email_users(self.sysadmins_to_email, 'Delinquent datasets', output, html_body=htmloutput)
-        else:
-            logger.warning('Not sending any email!')
+        output = self.email.close_send(self.sysadmins_to_email, 'Delinquent datasets', msg, htmlmsg)
         logger.info(output)
         return datasets_flat
 
-    def process_delinquent(self, userclass=User):
+    def process_delinquent(self):
         logger.info('\n\n*** Checking for delinquent datasets ***')
-        datasets = self.send_delinquent_email(userclass=userclass)
-        self.update_sheet('Delinquent', datasets)
+        datasets = self.send_delinquent_email()
+        self.sheet.update('Delinquent', datasets)
 
-    def send_overdue_emails(self, userclass=User, sendto=None):
+    def send_overdue_emails(self, sendto=None):
         datasets = self.get_status(2)
         if len(datasets) == 0:
             logger.info('No overdue datasets found.')
             return
         startmsg = 'Dear %s,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\n'
-        starthtmlmsg = self.html_start(self.htmlify(startmsg))
+        starthtmlmsg = Email.html_start(Email.convert_newlines(startmsg))
         all_users_to_email = dict()
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
             maintainer, orgadmins, users_to_email = self.get_maintainer_orgadmins(dataset)
@@ -652,29 +552,24 @@ class DataFreshnessStatus:
                 msg.append(dataset_string)
                 htmlmsg.append(dataset_html_string)
             endmsg = '\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n'
-            output, htmloutput = self.msg_close(msg, htmlmsg, endmsg)
             if sendto is None:
                 users_to_email = [user]
             else:
                 users_to_email = sendto
-            if self.send_emails:
-                userclass.email_users(users_to_email, 'Time to update your datasets on HDX', output, html_body=htmloutput)
-            else:
-                logger.warning('Not sending any email!')
-            logger.info(output)
+            self.email.close_send(users_to_email, 'Time to update your datasets on HDX', msg, htmlmsg, endmsg)
 
-    def process_overdue(self, userclass=User, sendto=None):
+    def process_overdue(self, sendto=None):
         logger.info('\n\n*** Checking for overdue datasets ***')
-        self.send_overdue_emails(userclass=userclass, sendto=sendto)
+        self.send_overdue_emails(sendto=sendto)
 
-    def send_maintainer_email(self, invalid_maintainers, userclass=User):
+    def send_maintainer_email(self, invalid_maintainers):
         datasets_flat = list()
         if len(invalid_maintainers) == 0:
             logger.info('No invalid maintainers found.')
             return datasets_flat
         startmsg = 'Dear system administrator,\n\nThe following datasets have an invalid maintainer:\n\n'
         msg = [startmsg]
-        htmlmsg = [self.html_start(self.htmlify(startmsg))]
+        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
         for dataset in sorted(invalid_maintainers, key=lambda d: (d['organization_title'], d['name'])):
             maintainer, orgadmins, _ = self.get_maintainer_orgadmins(dataset)
             dataset_string, dataset_html_string = self.create_dataset_string(dataset, maintainer, orgadmins,
@@ -699,23 +594,17 @@ class DataFreshnessStatus:
                    'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
                    'Update Frequency': update_freq, 'Last Modified': last_modified}
             datasets_flat.append(row)
-        output, htmloutput = self.msg_close(msg, htmlmsg)
-        if self.send_emails:
-            userclass.email_users(self.sysadmins_to_email, 'Datasets with invalid maintainer', output,
-                                  html_body=htmloutput)
-        else:
-            logger.warning('Not sending any email!')
-        logger.info(output)
+        self.email.close_send(self.sysadmins_to_email, 'Datasets with invalid maintainer', msg, htmlmsg)
         return datasets_flat
 
-    def send_orgadmins_email(self, invalid_orgadmins, userclass=User):
+    def send_orgadmins_email(self, invalid_orgadmins):
         organizations_flat = list()
         if len(invalid_orgadmins) == 0:
             logger.info('No invalid organisation administrators found.')
             return organizations_flat
         startmsg = 'Dear system administrator,\n\nThe following organizations have an invalid admin:\n\n'
         msg = [startmsg]
-        htmlmsg = [self.html_start(self.htmlify(startmsg))]
+        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
         for key in sorted(invalid_orgadmins):
             organization = invalid_orgadmins[key]
             url = self.get_organization_url(organization)
@@ -728,24 +617,20 @@ class DataFreshnessStatus:
             # URL	Title	Problem
             row = {'URL': url, 'Title': title, 'Error': error}
             organizations_flat.append(row)
-        output, htmloutput = self.msg_close(msg, htmlmsg)
-        if self.send_emails:
-            userclass.email_users(self.sysadmins_to_email, 'Organizations with invalid admins', output,
-                                  html_body=htmloutput)
-        else:
-            logger.warning('Not sending any email!')
+        output, htmloutput = Email.msg_close(msg, htmlmsg)
+        self.email.send(self.sysadmins_to_email, 'Organizations with invalid admins', output, htmloutput)
         logger.info(output)
         return organizations_flat
 
-    def process_maintainer_orgadmins(self, userclass=User):
+    def process_maintainer_orgadmins(self):
         logger.info('\n\n*** Checking for invalid maintainers and organisation administrators ***')
         invalid_maintainers, invalid_orgadmins = self.get_invalid_maintainer_orgadmins()
-        datasets = self.send_maintainer_email(invalid_maintainers, userclass=userclass)
-        self.update_sheet('Maintainer', datasets)
-        datasets = self.send_orgadmins_email(invalid_orgadmins, userclass=userclass)
-        self.update_sheet('OrgAdmins', datasets)
+        datasets = self.send_maintainer_email(invalid_maintainers)
+        self.sheet.update('Maintainer', datasets)
+        datasets = self.send_orgadmins_email(invalid_orgadmins)
+        self.sheet.update('OrgAdmins', datasets)
 
-    def send_datasets_noresources_email(self, userclass=User):
+    def send_datasets_noresources_email(self):
         datasets_flat = list()
         datasets = self.get_datasets_noresources()
         if len(datasets) == 0:
@@ -753,7 +638,7 @@ class DataFreshnessStatus:
             return datasets_flat
         startmsg = 'Dear system administrator,\n\nThe following datasets have no resources:\n\n'
         msg = [startmsg]
-        htmlmsg = [self.html_start(self.htmlify(startmsg))]
+        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
         for dataset in datasets:
             maintainer, orgadmins, _ = self.get_maintainer_orgadmins(dataset)
             dataset_string, dataset_html_string = self.create_dataset_string(dataset, maintainer, orgadmins,
@@ -778,16 +663,10 @@ class DataFreshnessStatus:
                    'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
                    'Update Frequency': update_freq, 'Last Modified': last_modified}
             datasets_flat.append(row)
-        output, htmloutput = self.msg_close(msg, htmlmsg)
-        if self.send_emails:
-            userclass.email_users(self.sysadmins_to_email, 'Datasets with no resources', output, html_body=htmloutput)
-        else:
-            logger.warning('Not sending any email!')
-        logger.info(output)
+        self.email.close_send(self.sysadmins_to_email, 'Datasets with no resources', msg, htmlmsg)
         return datasets_flat
 
-    def process_datasets_noresources(self, userclass=User):
+    def process_datasets_noresources(self):
         logger.info('\n\n*** Checking for datasets with no resources ***')
-        datasets = self.send_datasets_noresources_email(userclass=userclass)
-        self.update_sheet('NoResources', datasets)
-
+        datasets = self.send_datasets_noresources_email()
+        self.sheet.update('NoResources', datasets)

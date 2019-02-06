@@ -1,36 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-'''
+"""
 REGISTER:
 ---------
 
 Caller script. Designed to call all other functions.
 
-'''
+"""
 import argparse
-import json
+import datetime
 import logging
-from datetime import datetime
 from os import getenv
 
-import pygsheets
-from google.oauth2 import service_account
 from hdx.data.user import User
 from hdx.hdx_configuration import Configuration
 from hdx.utilities.database import Database
-from hdx.utilities.dictandlist import key_value_convert, args_to_dict
-from hdx.utilities.downloader import Download
+from hdx.utilities.dictandlist import args_to_dict
 from hdx.utilities.easy_logging import setup_logging
 from hdx.utilities.path import script_dir_plus_file
 
 from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
+from hdx.freshness.emailer.freshnessemail import Email
+from hdx.freshness.emailer.sheet import Sheet
 
 setup_logging()
 logger = logging.getLogger(__name__)
-
-
-def get_date(datestr):
-    return datetime.strptime(datestr, '%Y-%m-%d')
 
 
 def main(hdx_key, user_agent, preprefix, hdx_site, db_url, db_params, email_server, gsheet_auth):
@@ -61,45 +55,40 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, db_params, email_serv
         params = {'driver': 'sqlite', 'database': 'freshness.db'}
     logger.info('> Database parameters: %s' % params)
     with Database(**params) as session:
-        with Download() as downloader:
-            dutyroster = downloader.download_tabular_cols_as_dicts(configuration['duty_roster_url'], headers=2)
-            dutyofficers = key_value_convert(dutyroster['Duty Officer'], keyfn=get_date)
+        email = Email(send_emails=send_emails)
+        now = datetime.datetime.utcnow()
+        sheet = Sheet(now)
 
-            freshness = DataFreshnessStatus(site_url=site_url, session=session, send_emails=send_emails)
-
-            if gsheet_auth:
-                logger.info('> GSheet Credentials: %s' % gsheet_auth)
-                info = json.loads(gsheet_auth)
-                gc = pygsheets.authorize(custom_credentials=service_account.Credentials.from_service_account_info(info))
-                freshness.spreadsheet = gc.open_by_url(configuration['issues_spreadsheet_url'])
+        # Send failure messages to Serban and Mike only
+        mikeuser = User(
+            {'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans',
+             'display_name': 'Michael Rans'})
+        serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True,
+                           'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
+        error = sheet.setup_input(configuration)
+        if error:
+            email.htmlify_send([mikeuser, serbanuser], 'Error reading DP duty roster!', error)
+        else:
+            error = sheet.setup_output(configuration, gsheet_auth)
+            if error:
+                email.htmlify_send([mikeuser, serbanuser], 'Error accessing datasets with issues Google sheet!', error)
             else:
-                logger.info('> No GSheet Credentials!')
-                freshness.spreadsheet = None
-            logger.info('--------------------------------------------------')
-            closest_week = next(x for x in sorted(dutyofficers.keys(), reverse=True) if x <= freshness.now)
-            freshness.dutyofficer = dutyofficers[closest_week]
-            logger.info('Duty officer: %s' % freshness.dutyofficer)
+                freshness = DataFreshnessStatus(now=now, site_url=site_url, session=session, email=email, sheet=sheet)
 
-            # Send failure messages to Serban and Mike only
-            mikeuser = User(
-                {'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans',
-                 'display_name': 'Michael Rans'})
-            serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True,
-                               'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
-            if not freshness.check_number_datasets(send_failures=[mikeuser, serbanuser]):
-                freshness.process_broken()
-                # temporarily send just to me
-                # freshness.process_broken(sendto=[mikeuser])
+                if not freshness.check_number_datasets(send_failures=[mikeuser, serbanuser]):
+                    freshness.process_broken()
+                    # temporarily send just to me
+                    # freshness.process_broken(sendto=[mikeuser])
 
-                freshness.process_delinquent()
+                    freshness.process_delinquent()
 
-                freshness.process_overdue()
-                # temporarily send just to me
-                # freshness.process_overdue(sendto=[mikeuser])
+                    freshness.process_overdue()
+                    # temporarily send just to me
+                    # freshness.process_overdue(sendto=[mikeuser])
 
-                freshness.process_maintainer_orgadmins()
+                    freshness.process_maintainer_orgadmins()
 
-                freshness.process_datasets_noresources()
+                    freshness.process_datasets_noresources()
 
     logger.info('Freshness emailer completed!')
 
