@@ -33,7 +33,9 @@ class TestDataFreshnessStatus:
             class TestWorksheet:
                 @staticmethod
                 def get_all_values(returnas):
-                    return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails', 'Update Frequency', 'Last Modified', 'Freshness', 'Error Type', 'Error', 'Date Added', 'No. Times', 'Assigned', 'Status'],
+                    return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
+                             'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Freshness', 'Error Type',
+                             'Error', 'Date Added', 'No. Times', 'Assigned', 'Status'],
                             ['http://lala/dataset/yemen-admin-boundaries', 'Yemen - Administrative Boundaries',
                              'OCHA Yemen', '', '', 'blah4disp,blah5full', 'blah4@blah.com,blah5@blah.com', 'every year',
                              '2015-12-28T06:39:20.134647', 'Delinquent', 'Server Error (may be temporary)',
@@ -51,7 +53,9 @@ class TestDataFreshnessStatus:
             class TestWorksheet:
                 @staticmethod
                 def get_all_values(returnas):
-                    return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails', 'Update Frequency', 'Last Modified', 'Freshness', 'Error Type', 'Error', 'Date Added', 'No. Times', 'Assigned', 'Status']]
+                    return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
+                             'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Freshness', 'Error Type',
+                             'Error', 'Date Added', 'No. Times', 'Assigned', 'Status']]
 
                 @staticmethod
                 def update_values(_, cells):
@@ -64,7 +68,9 @@ class TestDataFreshnessStatus:
             class TestWorksheet:
                 @staticmethod
                 def get_all_values(returnas):
-                    return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails', 'Update Frequency', 'Last Modified', 'Date Added', 'No. Times', 'Assigned', 'Status'],
+                    return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
+                             'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Date Added', 'No. Times',
+                             'Assigned', 'Status'],
                             ['http://lala/dataset/ourairports-myt', 'Airports in Mayotte', 'OurAirports', 'blah5full',
                              'blah5@blah.com', 'blah3disp,blah4disp,blah5full',
                              'blah3@blah.com,blah4@blah.com,blah5@blah.com', 'every year', '2015-11-24T23:32:32.025059',
@@ -84,7 +90,8 @@ class TestDataFreshnessStatus:
                 def get_all_values(returnas):
                     if TestWorksheet.sheetname == 'Maintainer':
                         return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
-                                 'Org Admin Emails', 'Update Frequency', 'Last Modified', 'Date Added', 'No. Times',
+                                 'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Date Added',
+                                 'No. Times',
                                  'Assigned', 'Status'],
                                 ['http://lala/dataset/ourairports-myt', 'Airports in Mayotte', 'OurAirports',
                                  'blah5full',
@@ -111,7 +118,7 @@ class TestDataFreshnessStatus:
                 @staticmethod
                 def get_all_values(returnas):
                     return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
-                             'Org Admin Emails', 'Update Frequency', 'Last Modified', 'Date Added', 'No. Times',
+                             'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Date Added', 'No. Times',
                              'Assigned', 'Status'],
                             ['http://lala/dataset/ourairports-myt', 'Airports in Mayotte', 'OurAirports', 'blah5full',
                              'blah5@blah.com', 'blah3disp,blah4disp,blah5full',
@@ -270,7 +277,8 @@ class TestDataFreshnessStatus:
                      '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The following datasets have broken resources:<br><br><b>ClientConnectorError</b><br><b><i>OCHA Somalia</i></b><br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months and freshness: Delinquent<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource Rural-Urban-and-IDP-Projected-Population-February-June-2016[1].xlsx (93a361c6-ace7-4cea-8407-ffd2c30d0853) has error: error: code= message=Cannot connect to host xxx ssl:False [Connection refused] raised=aiohttp.client_exceptions.ClientConnectorError url=xxx!<br><br><b>ClientConnectorSSLError</b><br><b><i>OCHA Yemen</i></b><br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with missing maintainer and organization administrators <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year and freshness: Delinquent<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource Admin-1.zip (69146e1e-62c7-4e7f-8f6c-2dacffe02283) has error: error: code= message=Cannot connect to host xxx ssl:True [[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:645)] raised=aiohttp.client_exceptions.ClientConnectorSSLError url=xxx!<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource Admin-2.zip (f60035dc-624a-49cf-95de-9d489c07d3b9) has error: error: code= message=Cannot connect to host xxx ssl:True [[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:645)] raised=aiohttp.client_exceptions.ClientConnectorSSLError url=xxx!<br><br><b>ClientResponseError</b><br><b><i>OCHA Colombia</i></b><br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months and freshness: Delinquent<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource 160304Tendencias_Humanitarias_2016_I.xlsx (256d8b17-5975-4be6-8985-5df18dda061e) has error: code=404 message=Non-retryable response code raised=aiohttp.ClientResponseError url=xxx!<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource 160304Tendencias_Humanitarias_2016_I_2.xlsx (256d8b17-5975-4be6-8985-5df18dda061a) has error: code=404 message=Non-retryable response code raised=aiohttp.ClientResponseError url=xxx!<br><br><b>Server Error (may be temporary)</b><br><b><i>OCHA Yemen</i></b><br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with missing maintainer and organization administrators <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year and freshness: Delinquent<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource Admin-0.zip (2ade2886-2990-41d0-a89b-33c5d1de6e3a) has error: Fail!<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource Admin-3.zip (f60035dc-624a-49cf-95de-9d489c07d3ba) has error: Fail!<br><b><i>OurAirports</i></b><br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/ourairports-myt">Airports in Mayotte</a> maintained by <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year and freshness: Delinquent<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource List of airports in Mayotte (HXL tags) (89a99c0a-4cbf-4717-9cde-987042bc435f) has error: code= message=Connection timeout to host xxx raised=aiohttp.client_exceptions.ServerTimeoutError url=xxx!<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource List of airports in Mayotte (no HXL tags) (a5797320-ce50-4b3a-99a5-76aabd0633d9) has error: code= message=Connection timeout to host xxx raised=aiohttp.client_exceptions.ServerTimeoutError url=xxx!<br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/ourairports-rom">Airports in Romania</a> with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year and freshness: Overdue<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource List of airports in Romania (89b35e5b-32ea-4470-a854-95e47fe1a958) has error: Fail!<br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/ourairports-som">Airports in Somewhere</a>&nbsp&nbsp<a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a><br><br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
             assert TestDataFreshnessStatus.cells_result == [
                 ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',
-                 'Update Frequency', 'Last Modified', 'Freshness', 'Error Type', 'Error', 'Date Added', 'No. Times',
+                 'Update Frequency', 'Latest of Modifieds', 'Freshness', 'Error Type', 'Error', 'Date Added',
+                 'No. Times',
                  'Assigned', 'Status'],
                 ['http://lala/dataset/projected-ipc-population-estimates-february-june-2016',
                  'Projected IPC population Estimates February - June 2016', 'OCHA Somalia', 'blahdisp', 'blah@blah.com',
@@ -327,7 +335,8 @@ class TestDataFreshnessStatus:
                      '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The following datasets have broken resources:<br><br><b>ClientConnectorError</b><br><b><i>OCHA Somalia</i></b><br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months and freshness: Delinquent<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource Rural-Urban-and-IDP-Projected-Population-February-June-2016[1].xlsx (93a361c6-ace7-4cea-8407-ffd2c30d0853) has error: error: code= message=Cannot connect to host xxx ssl:False [Connection refused] raised=aiohttp.client_exceptions.ClientConnectorError url=xxx!<br><br><b>ClientConnectorSSLError</b><br><b><i>OCHA Yemen</i></b><br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with missing maintainer and organization administrators <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year and freshness: Delinquent<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource Admin-1.zip (69146e1e-62c7-4e7f-8f6c-2dacffe02283) has error: error: code= message=Cannot connect to host xxx ssl:True [[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:645)] raised=aiohttp.client_exceptions.ClientConnectorSSLError url=xxx!<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource Admin-2.zip (f60035dc-624a-49cf-95de-9d489c07d3b9) has error: error: code= message=Cannot connect to host xxx ssl:True [[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:645)] raised=aiohttp.client_exceptions.ClientConnectorSSLError url=xxx!<br><br><b>ClientResponseError</b><br><b><i>OCHA Colombia</i></b><br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> maintained by <a href="mailto:blah@blah.com">blahdisp</a> with expected update frequency: every six months and freshness: Delinquent<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource 160304Tendencias_Humanitarias_2016_I.xlsx (256d8b17-5975-4be6-8985-5df18dda061e) has error: code=404 message=Non-retryable response code raised=aiohttp.ClientResponseError url=xxx!<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource 160304Tendencias_Humanitarias_2016_I_2.xlsx (256d8b17-5975-4be6-8985-5df18dda061a) has error: code=404 message=Non-retryable response code raised=aiohttp.ClientResponseError url=xxx!<br><br><b>Server Error (may be temporary)</b><br><b><i>OCHA Yemen</i></b><br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with missing maintainer and organization administrators <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year and freshness: Delinquent<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource Admin-0.zip (2ade2886-2990-41d0-a89b-33c5d1de6e3a) has error: Fail!<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource Admin-3.zip (f60035dc-624a-49cf-95de-9d489c07d3ba) has error: Fail!<br><b><i>OurAirports</i></b><br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/ourairports-myt">Airports in Mayotte</a> maintained by <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year and freshness: Delinquent<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource List of airports in Mayotte (HXL tags) (89a99c0a-4cbf-4717-9cde-987042bc435f) has error: code= message=Connection timeout to host xxx raised=aiohttp.client_exceptions.ServerTimeoutError url=xxx!<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource List of airports in Mayotte (no HXL tags) (a5797320-ce50-4b3a-99a5-76aabd0633d9) has error: code= message=Connection timeout to host xxx raised=aiohttp.client_exceptions.ServerTimeoutError url=xxx!<br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/ourairports-rom">Airports in Romania</a> with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year and freshness: Overdue<br>&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbspResource List of airports in Romania (89b35e5b-32ea-4470-a854-95e47fe1a958) has error: Fail!<br>&nbsp&nbsp&nbsp&nbsp<a href="http://lala/dataset/ourairports-som">Airports in Somewhere</a>&nbsp&nbsp<a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a><br><br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
             assert TestDataFreshnessStatus.cells_result == [
                 ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',
-                 'Update Frequency', 'Last Modified', 'Freshness', 'Error Type', 'Error', 'Date Added', 'No. Times',
+                 'Update Frequency', 'Latest of Modifieds', 'Freshness', 'Error Type', 'Error', 'Date Added',
+                 'No. Times',
                  'Assigned', 'Status'],
                 ['http://lala/dataset/projected-ipc-population-estimates-february-june-2016',
                  'Projected IPC population Estimates February - June 2016', 'OCHA Somalia', 'blahdisp', 'blah@blah.com',
@@ -383,7 +392,8 @@ class TestDataFreshnessStatus:
             assert TestDataFreshnessStatus.email_users_result == list()
             assert TestDataFreshnessStatus.cells_result == [
                 ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',
-                 'Update Frequency', 'Last Modified', 'Freshness', 'Error Type', 'Error', 'Date Added', 'No. Times',
+                 'Update Frequency', 'Latest of Modifieds', 'Freshness', 'Error Type', 'Error', 'Date Added',
+                 'No. Times',
                  'Assigned', 'Status'],
                 ['http://lala/dataset/yemen-admin-boundaries', 'Yemen - Administrative Boundaries', 'OCHA Yemen', '',
                  '',
@@ -428,7 +438,7 @@ class TestDataFreshnessStatus:
                      '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The following datasets have just become delinquent:<br><br><a href="http://lala/dataset/ourairports-myt">Airports in Mayotte</a> from OurAirports maintained by <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
             assert TestDataFreshnessStatus.cells_result == [
                 ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',
-                 'Update Frequency', 'Last Modified', 'Date Added', 'No. Times', 'Assigned', 'Status'],
+                 'Update Frequency', 'Latest of Modifieds', 'Date Added', 'No. Times', 'Assigned', 'Status'],
                 ['http://lala/dataset/ourairports-wsm', 'Airports in Samoa', 'OurAirports', '', '',
                  'blah3disp,blah4disp,blah5full', 'blah3@blah.com,blah4@blah.com,blah5@blah.com', 'every year',
                  '2015-11-24T23:32:30.661408', '2017-02-02T19:07:30.333492', 1, 'Sharon', ''],
@@ -489,7 +499,7 @@ class TestDataFreshnessStatus:
             assert TestDataFreshnessStatus.email_users_result == list()
             assert TestDataFreshnessStatus.cells_result == [
                 ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',
-                 'Update Frequency', 'Last Modified', 'Date Added', 'No. Times', 'Assigned', 'Status'],
+                 'Update Frequency', 'Latest of Modifieds', 'Date Added', 'No. Times', 'Assigned', 'Status'],
                 ['http://lala/dataset/ourairports-myt', 'Airports in Mayotte', 'OurAirports', 'blah5full',
                  'blah5@blah.com',
                  'blah3disp,blah4disp,blah5full', 'blah3@blah.com,blah4@blah.com,blah5@blah.com', 'every year',
@@ -530,7 +540,7 @@ class TestDataFreshnessStatus:
 
             assert TestDataFreshnessStatus.cells_result == [[
                 ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',
-                 'Update Frequency', 'Last Modified', 'Date Added', 'No. Times', 'Assigned', 'Status'],
+                 'Update Frequency', 'Latest of Modifieds', 'Date Added', 'No. Times', 'Assigned', 'Status'],
                 ['http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015',
                  'Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015', 'OCHA Colombia', 'blahdisp', 'blah@blah.com',
                  'blah3disp,blah5full', 'blah3@blah.com,blah5@blah.com', 'every six months',
@@ -685,7 +695,7 @@ class TestDataFreshnessStatus:
                      '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The following datasets have no resources:<br><br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
             assert TestDataFreshnessStatus.cells_result == [
                 ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email',
-                 'Org Admins', 'Org Admin Emails', 'Update Frequency', 'Last Modified',
+                 'Org Admins', 'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds',
                  'Date Added', 'No. Times', 'Assigned', 'Status'],
                 ['http://lala/dataset/ourairports-wsm', 'Airports in Samoa',
                  'OurAirports', '', '', 'blah3disp,blah4disp,blah5full',

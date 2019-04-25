@@ -46,7 +46,7 @@ def get_readme():
 
 
 requirements = ['pygsheets',
-                'hdx-data-freshness>=1.3.3',
+                'hdx-data-freshness>=1.3.5',
                 'libhxl']
 
 classifiers = [
@@ -66,7 +66,7 @@ setup(
     description='HDX Data Freshness Emailer',
     license='MIT',
     url='https://github.com/OCHA-DAP/hdx-data-freshness-emailer',
-    version='1.2.0',
+    version='1.2.1',
     author='Michael Rans',
     author_email='rans@email.com',
     keywords=['HDX', 'fresh', 'freshness', 'data freshness emailer'],

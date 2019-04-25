@@ -123,7 +123,8 @@ class DataFreshnessStatus:
         columns = [DBResource.id.label('resource_id'), DBResource.name.label('resource_name'),
                    DBResource.dataset_id.label('id'), DBResource.error, DBInfoDataset.name, DBInfoDataset.title,
                    DBInfoDataset.maintainer, DBOrganization.id.label('organization_id'),
-                   DBOrganization.title.label('organization_title'), DBDataset.update_frequency, DBDataset.last_modified,
+                   DBOrganization.title.label('organization_title'), DBDataset.update_frequency,
+                   DBDataset.latest_of_modifieds,
                    DBDataset.what_updated, DBDataset.fresh]
         filters = [DBResource.dataset_id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
                    DBResource.dataset_id == DBDataset.id, DBDataset.run_number == self.run_numbers[0][0],
@@ -173,7 +174,7 @@ class DataFreshnessStatus:
             return datasets
         columns = [DBInfoDataset.id, DBInfoDataset.name, DBInfoDataset.title, DBInfoDataset.maintainer,
                    DBOrganization.id.label('organization_id'), DBOrganization.title.label('organization_title'),
-                   DBDataset.update_frequency, DBDataset.last_modified, DBDataset.what_updated]
+                   DBDataset.update_frequency, DBDataset.latest_of_modifieds, DBDataset.what_updated]
         filters = [DBDataset.id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
                    DBDataset.fresh == status, DBDataset.run_number == self.run_numbers[0][0]]
         if no_runs >= 2:
@@ -206,7 +207,7 @@ class DataFreshnessStatus:
         columns = [DBInfoDataset.id, DBInfoDataset.name, DBInfoDataset.title, DBInfoDataset.maintainer,
                    DBOrganization.id.label('organization_id'), DBOrganization.name.label('organization_name'),
                    DBOrganization.title.label('organization_title'),
-                   DBDataset.update_frequency, DBDataset.last_modified, DBDataset.what_updated]
+                   DBDataset.update_frequency, DBDataset.latest_of_modifieds, DBDataset.what_updated]
         filters = [DBDataset.id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
                    DBDataset.run_number == self.run_numbers[0][0]]
         query = self.session.query(*columns).filter(and_(*filters))
@@ -265,7 +266,7 @@ class DataFreshnessStatus:
         columns = [DBInfoDataset.id, DBInfoDataset.name, DBInfoDataset.title, DBInfoDataset.maintainer,
                    DBOrganization.id.label('organization_id'), DBOrganization.name.label('organization_name'),
                    DBOrganization.title.label('organization_title'),
-                   DBDataset.update_frequency, DBDataset.last_modified, DBDataset.what_updated]
+                   DBDataset.update_frequency, DBDataset.latest_of_modifieds, DBDataset.what_updated]
         filters = [DBDataset.id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
                    DBDataset.run_number == self.run_numbers[0][0], ~DBDataset.id.in_(subquery)]
         query = self.session.query(*columns).filter(and_(*filters))
@@ -456,17 +457,18 @@ class DataFreshnessStatus:
                     orgadmin_names = ','.join([x[0] for x in orgadmins])
                     orgadmin_emails = ','.join([x[1] for x in orgadmins])
                     update_freq = self.get_update_frequency(dataset)
-                    last_modified = dataset['last_modified'].isoformat()
+                    latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
                     fresh = self.freshness_status.get(dataset['fresh'], 'None')
                     error = list()
                     for resource in sorted(dataset['resources'], key=lambda d: d['name']):
                         error.append('%s:%s' % (resource['name'], resource['error']))
                     # Date Added    URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins
-                    # Org Admin Emails	Update Frequency    Last Modified	Freshness	Error Type	Error
+                    # Org Admin Emails	Update Frequency    Latest of Modifieds	Freshness	Error Type	Error
                     row = {'URL': url, 'Title': title, 'Organisation': org_title,
                            'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
                            'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
-                           'Update Frequency': update_freq, 'Last Modified': last_modified, 'Freshness': fresh,
+                           'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds,
+                           'Freshness': fresh,
                            'Error Type': error_type, 'Error': '\n'.join(error)}
                     datasets_flat.append(row)
                 if newline:
@@ -509,13 +511,13 @@ class DataFreshnessStatus:
             orgadmin_names = ','.join([x[0] for x in orgadmins])
             orgadmin_emails = ','.join([x[1] for x in orgadmins])
             update_freq = self.get_update_frequency(dataset)
-            last_modified = dataset['last_modified'].isoformat()
+            latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
             # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
-            # Update Frequency	Last Modified
+            # Update Frequency	Latest of Modifieds
             row = {'URL': url, 'Title': title, 'Organisation': org_title,
                    'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
                    'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
-                   'Update Frequency': update_freq, 'Last Modified': last_modified}
+                   'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
             datasets_flat.append(row)
         output = self.email.close_send(self.sysadmins_to_email, 'Delinquent datasets', msg, htmlmsg)
         logger.info(output)
@@ -586,13 +588,13 @@ class DataFreshnessStatus:
             orgadmin_names = ','.join([x[0] for x in orgadmins])
             orgadmin_emails = ','.join([x[1] for x in orgadmins])
             update_freq = self.get_update_frequency(dataset)
-            last_modified = dataset['last_modified'].isoformat()
+            latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
             # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
-            # Update Frequency	Last Modified
+            # Update Frequency	Latest of Modifieds
             row = {'URL': url, 'Title': title, 'Organisation': org_title,
                    'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
                    'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
-                   'Update Frequency': update_freq, 'Last Modified': last_modified}
+                   'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
             datasets_flat.append(row)
         self.email.close_send(self.sysadmins_to_email, 'Datasets with invalid maintainer', msg, htmlmsg)
         return datasets_flat
@@ -655,13 +657,13 @@ class DataFreshnessStatus:
             orgadmin_names = ','.join([x[0] for x in orgadmins])
             orgadmin_emails = ','.join([x[1] for x in orgadmins])
             update_freq = self.get_update_frequency(dataset)
-            last_modified = dataset['last_modified'].isoformat()
+            latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
             # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
-            # Update Frequency	Last Modified
+            # Update Frequency	Latest of Modifieds
             row = {'URL': url, 'Title': title, 'Organisation': org_title,
                    'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
                    'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
-                   'Update Frequency': update_freq, 'Last Modified': last_modified}
+                   'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
             datasets_flat.append(row)
         self.email.close_send(self.sysadmins_to_email, 'Datasets with no resources', msg, htmlmsg)
         return datasets_flat
