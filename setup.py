@@ -4,7 +4,9 @@ import sys
 from codecs import open
 from os.path import join, abspath, realpath, dirname
 
+from hdx.utilities import CleanCommand, PackageCommand, PublishCommand
 from setuptools import setup, find_packages
+
 
 def script_dir(pyobject, follow_symlinks=True):
     """Get current script's directory
@@ -45,7 +47,8 @@ def get_readme():
 
 
 requirements = ['pygsheets',
-                'hdx-data-freshness>=1.0.8']
+                'hdx-data-freshness>=1.3.7',
+                'libhxl']
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -64,7 +67,7 @@ setup(
     description='HDX Data Freshness Emailer',
     license='MIT',
     url='https://github.com/OCHA-DAP/hdx-data-freshness-emailer',
-    version='0.53',
+    version='1.2.2',
     author='Michael Rans',
     author_email='rans@email.com',
     keywords=['HDX', 'fresh', 'freshness', 'data freshness emailer'],
@@ -77,4 +80,5 @@ setup(
     zip_safe=True,
     classifiers=classifiers,
     install_requires=requirements,
+    cmdclass={'clean': CleanCommand, 'package': PackageCommand, 'publish': PublishCommand},
 )

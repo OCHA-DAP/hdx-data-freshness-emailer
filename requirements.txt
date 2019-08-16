@@ -1,2 +1,3 @@
-pygsheets==1.1.4
-hdx-data-freshness==1.0.8
+pygsheets==2.0.1
+hdx-data-freshness==1.3.7
+libhxl==4.15.1
