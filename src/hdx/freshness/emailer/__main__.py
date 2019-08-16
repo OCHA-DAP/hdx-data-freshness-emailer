@@ -13,6 +13,7 @@ import logging
 from os import getenv
 
 from hdx.data.user import User
+from hdx.facades.keyword_arguments import facade
 from hdx.hdx_configuration import Configuration
 from hdx.utilities.database import Database
 from hdx.utilities.dictandlist import args_to_dict
@@ -27,14 +28,8 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-def main(hdx_key, user_agent, preprefix, hdx_site, db_url, db_params, email_server, gsheet_auth):
-    project_config_yaml = script_dir_plus_file('project_configuration.yml', main)
-    site_url = Configuration.create(hdx_key=hdx_key, hdx_site=hdx_site,
-                                    user_agent=user_agent, preprefix=preprefix,
-                                    project_config_yaml=project_config_yaml)
+def main(db_url, db_params, email_server, gsheet_auth, **ignore):
     configuration = Configuration.read()
-    logger.info('--------------------------------------------------')
-    logger.info('> HDX Site: %s' % site_url)
     if email_server:
         email_config = email_server.split(',')
         email_config_dict = {'connection_type': email_config[0], 'host': email_config[1], 'port': int(email_config[2]),
@@ -73,7 +68,8 @@ def main(hdx_key, user_agent, preprefix, hdx_site, db_url, db_params, email_serv
             if error:
                 email.htmlify_send([mikeuser, serbanuser], 'Error accessing datasets with issues Google sheet!', error)
             else:
-                freshness = DataFreshnessStatus(now=now, site_url=site_url, session=session, email=email, sheet=sheet)
+                freshness = DataFreshnessStatus(now=now, site_url=configuration.get_hdx_site_url(), session=session,
+                                                email=email, sheet=sheet)
 
                 if not freshness.check_number_datasets(send_failures=[mikeuser, serbanuser]):
                     freshness.process_broken()
@@ -129,4 +125,7 @@ if __name__ == '__main__':
     gsheet_auth = args.gsheet_auth
     if gsheet_auth is None:
         gsheet_auth = getenv('GSHEET_AUTH')
-    main(hdx_key, user_agent, preprefix, hdx_site, db_url, args.db_params, email_server, gsheet_auth)
+    project_config_yaml = script_dir_plus_file('project_configuration.yml', main)
+    facade(main, hdx_key=hdx_key, user_agent=user_agent, preprefix=preprefix, hdx_site=hdx_site,
+           project_config_yaml=project_config_yaml, db_url=db_url, db_params=args.db_params,
+           email_server=email_server, gsheet_auth=gsheet_auth)
