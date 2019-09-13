@@ -28,10 +28,20 @@ class Email:
         self.send(send_to, title, output, htmloutput)
         logger.info(output)
 
-    def close_send(self, send_to, title, msg, htmlmsg, endmsg=''):
+    def close_send(self, send_to, title, msg, htmlmsg, endmsg='', log=True):
         output, htmloutput = Email.msg_close(msg, htmlmsg, endmsg)
         self.send(send_to, title, output, htmloutput)
-        logger.info(output)
+        if log:
+            logger.info(output)
+
+    def send_sysadmin_summary(self, sysadmins, emails, title):
+        if sysadmins:
+            startmsg = 'Dear system administrator,\n\n'
+            msg = [startmsg]
+            htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
+            msg.extend(emails['plain'])
+            htmlmsg.extend(emails['html'])
+            self.close_send(sysadmins, title, msg, htmlmsg)
 
     closure = '\nBest wishes,\nHDX Team'
 

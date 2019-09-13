@@ -21,7 +21,6 @@ from hdx.freshness.database.dbresource import DBResource
 from hdx.freshness.database.dbrun import DBRun
 from hdx.hdx_configuration import Configuration
 from hdx.utilities.dictandlist import dict_of_lists_add
-from sqlalchemy import func
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import and_
 
@@ -129,7 +128,7 @@ class DataFreshnessStatus:
         filters = [DBResource.dataset_id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
                    DBResource.dataset_id == DBDataset.id, DBDataset.run_number == self.run_numbers[0][0],
                    DBResource.run_number == DBDataset.run_number, DBResource.error != None,
-                   func.date(DBResource.when_checked) == func.date(self.run_numbers[0][1])]
+                   DBResource.when_checked > self.run_numbers[1][1]]
         query = self.session.query(*columns).filter(and_(*filters))
         norows = 0
         for norows, result in enumerate(query):
@@ -280,6 +279,47 @@ class DataFreshnessStatus:
         logger.info('SQL query returned %d rows.' % norows)
         return datasets_noresources
 
+    def get_datasets_dataset_date(self):
+        datasets_dataset_date = list()
+        no_runs = len(self.run_numbers)
+        if no_runs < 2:
+            return datasets_dataset_date
+        columns = [DBInfoDataset.id, DBInfoDataset.name, DBInfoDataset.title, DBInfoDataset.maintainer,
+                   DBOrganization.id.label('organization_id'), DBOrganization.name.label('organization_name'),
+                   DBOrganization.title.label('organization_title'), DBDataset.dataset_date,
+                   DBDataset.update_frequency, DBDataset.latest_of_modifieds, DBDataset.what_updated]
+        filters = [DBDataset.id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
+                   DBDataset.run_number == self.run_numbers[0][0],
+                   DBDataset.latest_of_modifieds > self.run_numbers[1][1]]
+        query = self.session.query(*columns).filter(and_(*filters))
+        # select * from dbdatasets a, dbdatasets b where a.id = b.id and a.dataset_date = b.dataset_date and a.latest_of_modifieds = now...
+
+        norows = 0
+        for norows, result in enumerate(query):
+            dataset = dict()
+            for i, column in enumerate(columns):
+                dataset[column.key] = result[i]
+            update_frequency = dataset['update_frequency']
+            if update_frequency == -1:  # ignore Never
+                continue
+            if update_frequency == 0:
+                update_frequency = 1
+            if update_frequency == -2:
+                update_frequency = 365
+            dataset_date = dataset['dataset_date']
+            if not dataset_date:
+                continue
+            if '-' in dataset_date:
+                dataset_date = dataset_date.split('-')[1]
+            dataset_date = datetime.datetime.strptime(dataset_date, '%m/%d/%Y')
+            delta = dataset['latest_of_modifieds'] - dataset_date
+            if delta <= datetime.timedelta(days=update_frequency):
+                continue
+            datasets_dataset_date.append(dataset)
+
+        logger.info('SQL query returned %d rows.' % norows)
+        return datasets_dataset_date
+
     def get_maintainer(self, dataset):
         maintainer = dataset['maintainer']
         return self.users.get(maintainer)
@@ -332,7 +372,8 @@ class DataFreshnessStatus:
     def get_organization_url(self, organization):
         return '%sorganization/%s' % (self.site_url, organization['name'])
 
-    def create_dataset_string(self, dataset, maintainer, orgadmins, sysadmin=False, include_org=True, include_freshness=False):
+    def create_dataset_string(self, dataset, maintainer, orgadmins, sysadmin=False, include_org=True,
+                              include_freshness=False, include_datasetdate=False):
         url = self.get_dataset_url(dataset)
         msg = list()
         htmlmsg = list()
@@ -369,6 +410,10 @@ class DataFreshnessStatus:
             fresh = self.freshness_status.get(dataset['fresh'], 'None')
             msg.append(' and freshness: %s' % fresh)
             htmlmsg.append(' and freshness: %s' % fresh)
+        if include_datasetdate:
+            datasetdate = dataset['dataset_date']
+            msg.append(' and date of dataset: %s' % datasetdate)
+            htmlmsg.append(' and date of dataset: %s' % datasetdate)
         Email.output_newline(msg, htmlmsg)
 
         return ''.join(msg), ''.join(htmlmsg)
@@ -519,8 +564,7 @@ class DataFreshnessStatus:
                    'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
                    'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
             datasets_flat.append(row)
-        output = self.email.close_send(self.sysadmins_to_email, 'Delinquent datasets', msg, htmlmsg)
-        logger.info(output)
+        self.email.close_send(self.sysadmins_to_email, 'Delinquent datasets', msg, htmlmsg)
         return datasets_flat
 
     def process_delinquent(self):
@@ -528,7 +572,7 @@ class DataFreshnessStatus:
         datasets = self.send_delinquent_email()
         self.sheet.update('Delinquent', datasets)
 
-    def send_overdue_emails(self, sendto=None):
+    def send_overdue_emails(self, sendto=None, sysadmins=None):
         datasets = self.get_status(2)
         if len(datasets) == 0:
             logger.info('No overdue datasets found.')
@@ -546,23 +590,30 @@ class DataFreshnessStatus:
                     output_list = list()
                     all_users_to_email[id] = output_list
                 output_list.append((dataset_string, dataset_html_string))
+        emails = dict()
         for id in sorted(all_users_to_email.keys()):
             user = self.users[id]
-            msg = [startmsg % self.get_user_name(user)]
+            basemsg = startmsg % self.get_user_name(user)
+            dict_of_lists_add(emails, 'plain', basemsg)
+            dict_of_lists_add(emails, 'html', self.email.convert_newlines(basemsg))
+            msg = [basemsg]
             htmlmsg = [starthtmlmsg % self.get_user_name(user)]
             for dataset_string, dataset_html_string in all_users_to_email[id]:
                 msg.append(dataset_string)
                 htmlmsg.append(dataset_html_string)
+                dict_of_lists_add(emails, 'plain', dataset_string)
+                dict_of_lists_add(emails, 'html', dataset_html_string)
             endmsg = '\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n'
             if sendto is None:
                 users_to_email = [user]
             else:
                 users_to_email = sendto
             self.email.close_send(users_to_email, 'Time to update your datasets on HDX', msg, htmlmsg, endmsg)
+        self.email.send_sysadmin_summary(sysadmins, emails, 'All overdue dataset emails')
 
-    def process_overdue(self, sendto=None):
+    def process_overdue(self, sendto=None, sysadmins=None):
         logger.info('\n\n*** Checking for overdue datasets ***')
-        self.send_overdue_emails(sendto=sendto)
+        self.send_overdue_emails(sendto=sendto, sysadmins=sysadmins)
 
     def send_maintainer_email(self, invalid_maintainers):
         datasets_flat = list()
@@ -619,9 +670,7 @@ class DataFreshnessStatus:
             # URL	Title	Problem
             row = {'URL': url, 'Title': title, 'Error': error}
             organizations_flat.append(row)
-        output, htmloutput = Email.msg_close(msg, htmlmsg)
-        self.email.send(self.sysadmins_to_email, 'Organizations with invalid admins', output, htmloutput)
-        logger.info(output)
+        self.email.close_send(self.sysadmins_to_email, 'Organizations with invalid admins', msg, htmlmsg)
         return organizations_flat
 
     def process_maintainer_orgadmins(self):
@@ -672,3 +721,67 @@ class DataFreshnessStatus:
         logger.info('\n\n*** Checking for datasets with no resources ***')
         datasets = self.send_datasets_noresources_email()
         self.sheet.update('NoResources', datasets)
+
+    def send_datasets_dataset_date_email(self, sendto=None, sysadmins=None):
+        datasets_flat = list()
+        datasets = self.get_datasets_dataset_date()
+        if len(datasets) == 0:
+            logger.info('No datasets with date of dataset needing update found.')
+            return datasets_flat
+        startmsg = 'Dear %s,\n\nThe dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\n'
+        starthtmlmsg = Email.html_start(Email.convert_newlines(startmsg))
+        all_users_to_email = dict()
+        for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
+            maintainer, orgadmins, users_to_email = self.get_maintainer_orgadmins(dataset)
+            dataset_string, dataset_html_string = self.create_dataset_string(dataset, maintainer, orgadmins,
+                                                                             include_datasetdate=True)
+            for user in users_to_email:
+                id = user['id']
+                output_list = all_users_to_email.get(id)
+                if output_list is None:
+                    output_list = list()
+                    all_users_to_email[id] = output_list
+                output_list.append((dataset_string, dataset_html_string))
+            url = self.get_dataset_url(dataset)
+            title = dataset['title']
+            org_title = dataset['organization_title']
+            if maintainer:
+                maintainer_name, maintainer_email = maintainer
+            else:
+                maintainer_name, maintainer_email = '', ''
+            orgadmin_names = ','.join([x[0] for x in orgadmins])
+            orgadmin_emails = ','.join([x[1] for x in orgadmins])
+            update_freq = self.get_update_frequency(dataset)
+            latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
+            # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
+            # Update Frequency	Latest of Modifieds
+            row = {'URL': url, 'Title': title, 'Organisation': org_title,
+                   'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
+                   'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
+                   'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
+            datasets_flat.append(row)
+        emails = dict()
+        for id in sorted(all_users_to_email.keys()):
+            user = self.users[id]
+            basemsg = startmsg % self.get_user_name(user)
+            dict_of_lists_add(emails, 'plain', basemsg)
+            dict_of_lists_add(emails, 'html', self.email.convert_newlines(basemsg))
+            msg = [basemsg]
+            htmlmsg = [starthtmlmsg % self.get_user_name(user)]
+            for dataset_string, dataset_html_string in all_users_to_email[id]:
+                msg.append(dataset_string)
+                htmlmsg.append(dataset_html_string)
+                dict_of_lists_add(emails, 'plain', dataset_string)
+                dict_of_lists_add(emails, 'html', dataset_html_string)
+            if sendto is None:
+                users_to_email = [user]
+            else:
+                users_to_email = sendto
+            self.email.close_send(users_to_email, 'Check date of dataset for your datasets on HDX', msg, htmlmsg)
+        self.email.send_sysadmin_summary(sysadmins, emails, 'All date of dataset emails')
+        return datasets_flat
+
+    def process_datasets_dataset_date(self, sendto=None, sysadmins=None):
+        logger.info('\n\n*** Checking for datasets where date of dataset has not been updated ***')
+        datasets = self.send_datasets_dataset_date_email(sendto=sendto, sysadmins=sysadmins)
+        self.sheet.update('DateofDatasets', datasets)
