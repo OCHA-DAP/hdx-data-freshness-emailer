@@ -41,7 +41,7 @@ class Email:
             htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
             msg.extend(emails['plain'])
             htmlmsg.extend(emails['html'])
-            self.close_send(sysadmins, title, msg, htmlmsg)
+            self.close_send(sysadmins, title, msg, htmlmsg, log=False)
 
     closure = '\nBest wishes,\nHDX Team'
 

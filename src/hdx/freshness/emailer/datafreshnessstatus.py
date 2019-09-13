@@ -300,11 +300,9 @@ class DataFreshnessStatus:
             for i, column in enumerate(columns):
                 dataset[column.key] = result[i]
             update_frequency = dataset['update_frequency']
-            if update_frequency == -1:  # ignore Never
-                continue
             if update_frequency == 0:
                 update_frequency = 1
-            if update_frequency == -2:
+            if update_frequency == -1 or update_frequency == -2:
                 update_frequency = 365
             dataset_date = dataset['dataset_date']
             if not dataset_date:
@@ -609,7 +607,7 @@ class DataFreshnessStatus:
             else:
                 users_to_email = sendto
             self.email.close_send(users_to_email, 'Time to update your datasets on HDX', msg, htmlmsg, endmsg)
-        self.email.send_sysadmin_summary(sysadmins, emails, 'All overdue dataset emails', log=False)
+        self.email.send_sysadmin_summary(sysadmins, emails, 'All overdue dataset emails')
 
     def process_overdue(self, sendto=None, sysadmins=None):
         logger.info('\n\n*** Checking for overdue datasets ***')
@@ -778,7 +776,7 @@ class DataFreshnessStatus:
             else:
                 users_to_email = sendto
             self.email.close_send(users_to_email, 'Check date of dataset for your datasets on HDX', msg, htmlmsg)
-        self.email.send_sysadmin_summary(sysadmins, emails, 'All date of dataset emails', log=False)
+        self.email.send_sysadmin_summary(sysadmins, emails, 'All date of dataset emails')
         return datasets_flat
 
     def process_datasets_dataset_date(self, sendto=None, sysadmins=None):
