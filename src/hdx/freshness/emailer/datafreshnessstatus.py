@@ -609,7 +609,7 @@ class DataFreshnessStatus:
             else:
                 users_to_email = sendto
             self.email.close_send(users_to_email, 'Time to update your datasets on HDX', msg, htmlmsg, endmsg)
-        self.email.send_sysadmin_summary(sysadmins, emails, 'All overdue dataset emails')
+        self.email.send_sysadmin_summary(sysadmins, emails, 'All overdue dataset emails', log=False)
 
     def process_overdue(self, sendto=None, sysadmins=None):
         logger.info('\n\n*** Checking for overdue datasets ***')
@@ -778,7 +778,7 @@ class DataFreshnessStatus:
             else:
                 users_to_email = sendto
             self.email.close_send(users_to_email, 'Check date of dataset for your datasets on HDX', msg, htmlmsg)
-        self.email.send_sysadmin_summary(sysadmins, emails, 'All date of dataset emails')
+        self.email.send_sysadmin_summary(sysadmins, emails, 'All date of dataset emails', log=False)
         return datasets_flat
 
     def process_datasets_dataset_date(self, sendto=None, sysadmins=None):

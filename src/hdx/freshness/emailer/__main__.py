@@ -70,25 +70,24 @@ def main(db_url, db_params, email_server, gsheet_auth, **ignore):
             else:
                 freshness = DataFreshnessStatus(now=now, site_url=configuration.get_hdx_site_url(), session=session,
                                                 email=email, sheet=sheet)
-                freshness.process_datasets_dataset_date(sysadmins=[mikeuser])  #### remove
-                # if not freshness.check_number_datasets(send_failures=[mikeuser, serbanuser]):
-                #     freshness.process_broken()
-                #     # temporarily send just to me
-                #     # freshness.process_broken(sendto=[mikeuser])
-                #
-                #     freshness.process_delinquent()
-                #
-                #     freshness.process_overdue(sysadmins=[mikeuser])
-                #     # temporarily send just to me
-                #     # freshness.process_overdue(sendto=[mikeuser])
-                #
-                #     freshness.process_maintainer_orgadmins()
-                #
-                #     freshness.process_datasets_noresources()
-                #
-                #     freshness.process_datasets_dataset_date(sysadmins=[mikeuser])
-                #     # temporarily send just to me
-                #     # freshness.process_datasets_dataset_date(sendto=[mikeuser])
+                if not freshness.check_number_datasets(send_failures=[mikeuser, serbanuser]):
+                    freshness.process_broken()
+                    # temporarily send just to me
+                    # freshness.process_broken(sendto=[mikeuser])
+
+                    freshness.process_delinquent()
+
+                    freshness.process_overdue(sysadmins=[mikeuser])
+                    # temporarily send just to me
+                    # freshness.process_overdue(sendto=[mikeuser])
+
+                    freshness.process_maintainer_orgadmins()
+
+                    freshness.process_datasets_noresources()
+
+                    # freshness.process_datasets_dataset_date(sysadmins=[mikeuser])
+                    # temporarily send just to me
+                    freshness.process_datasets_dataset_date(sendto=[mikeuser])
 
     logger.info('Freshness emailer completed!')
 
