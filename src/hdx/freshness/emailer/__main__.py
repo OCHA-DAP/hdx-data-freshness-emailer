@@ -87,7 +87,7 @@ def main(db_url, db_params, email_server, gsheet_auth, **ignore):
 
                     # freshness.process_datasets_dataset_date(sysadmins=[mikeuser])
                     # temporarily send just to me
-                    freshness.process_datasets_dataset_date(sendto=[mikeuser])
+                    freshness.process_datasets_dataset_date(sendto=[mikeuser], sysadmins=[mikeuser])
 
     logger.info('Freshness emailer completed!')
 
