@@ -279,6 +279,16 @@ class DataFreshnessStatus:
         logger.info('SQL query returned %d rows.' % norows)
         return datasets_noresources
 
+    def get_dataset_dates(self, dataset):
+        dataset_date = dataset['dataset_date']
+        if not dataset_date:
+            return None, None
+        if '-' in dataset_date:
+            date_start, date_end = dataset_date.split('-')
+        else:
+            date_start = date_end = dataset_date
+        return datetime.datetime.strptime(date_start, '%m/%d/%Y'), datetime.datetime.strptime(date_end, '%m/%d/%Y')
+
     def get_datasets_dataset_date(self):
         datasets_dataset_date = list()
         no_runs = len(self.run_numbers)
@@ -304,12 +314,9 @@ class DataFreshnessStatus:
                 update_frequency = 1
             if update_frequency == -1 or update_frequency == -2:
                 update_frequency = 365
-            dataset_date = dataset['dataset_date']
+            _, dataset_date = self.get_dataset_dates(dataset)
             if not dataset_date:
                 continue
-            if '-' in dataset_date:
-                dataset_date = dataset_date.split('-')[1]
-            dataset_date = datetime.datetime.strptime(dataset_date, '%m/%d/%Y')
             delta = dataset['latest_of_modifieds'] - dataset_date
             if delta <= datetime.timedelta(days=update_frequency):
                 continue
@@ -749,13 +756,16 @@ class DataFreshnessStatus:
                 maintainer_name, maintainer_email = '', ''
             orgadmin_names = ','.join([x[0] for x in orgadmins])
             orgadmin_emails = ','.join([x[1] for x in orgadmins])
+            start_date, end_date = self.get_dataset_dates(dataset)
+            start_date = start_date.isoformat()
+            end_date = end_date.isoformat()
             update_freq = self.get_update_frequency(dataset)
             latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
             # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
             # Update Frequency	Latest of Modifieds
-            row = {'URL': url, 'Title': title, 'Organisation': org_title,
-                   'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
-                   'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
+            row = {'URL': url, 'Title': title, 'Organisation': org_title, 'Maintainer': maintainer_name,
+                   'Maintainer Email': maintainer_email, 'Org Admins': orgadmin_names,
+                   'Org Admin Emails': orgadmin_emails, 'Dataset Start Date': start_date, 'Dataset End Date': end_date,
                    'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
             datasets_flat.append(row)
         emails = dict()
