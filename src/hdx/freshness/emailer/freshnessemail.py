@@ -45,11 +45,11 @@ class Email:
 
     closure = '\nBest wishes,\nHDX Team'
 
-    @staticmethod
-    def msg_close(msg, htmlmsg, endmsg=''):
+    @classmethod
+    def msg_close(cls, msg, htmlmsg, endmsg=''):
         output = '%s%s%s' % (''.join(msg), endmsg, Email.closure)
-        htmloutput = Email.html_end('%s%s%s' % (''.join(htmlmsg), Email.convert_newlines(endmsg),
-                                                Email.convert_newlines(Email.closure)))
+        htmloutput = cls.html_end('%s%s%s' % (''.join(htmlmsg), Email.convert_newlines(endmsg),
+                                              Email.convert_newlines(Email.closure)))
         return output, htmloutput
 
     @staticmethod
@@ -82,11 +82,29 @@ class Email:
 ''' % msg
 
     @staticmethod
+    def output_tabs(msg, htmlmsg, n=1):
+        for i in range(n):
+            msg.append('  ')
+            htmlmsg.append('&nbsp&nbsp')
+
+    @staticmethod
     def output_newline(msg, htmlmsg):
         msg.append('\n')
         htmlmsg.append('<br>')
 
-    @staticmethod
-    def htmlify(msg):
-        htmlmsg = Email.html_start(Email.convert_newlines(msg))
-        return Email.msg_close(msg, htmlmsg)
+    @classmethod
+    def htmlify(cls, msg):
+        htmlmsg = cls.html_start(Email.convert_newlines(msg))
+        return cls.msg_close(msg, htmlmsg)
+
+    @classmethod
+    def output_error(cls, msg, htmlmsg, error):
+        msg.append(error)
+        htmlmsg.append('<b>%s</b>' % error)
+        cls.output_newline(msg, htmlmsg)
+
+    @classmethod
+    def output_org(cls, msg, htmlmsg, title):
+        msg.append(title)
+        htmlmsg.append('<b><i>%s</i></b>' % title)
+        cls.output_newline(msg, htmlmsg)

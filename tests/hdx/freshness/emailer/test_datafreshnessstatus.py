@@ -15,6 +15,7 @@ from hdx.utilities.database import Database
 
 from hdx.freshness.emailer.databasequeries import DatabaseQueries
 from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
+from hdx.freshness.emailer.datasethelper import DatasetHelper
 from hdx.freshness.emailer.freshnessemail import Email
 from hdx.freshness.emailer.sheet import Sheet
 
@@ -254,10 +255,11 @@ class TestDataFreshnessStatus:
         sheet = Sheet(now)
         email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
         with Database(**database_broken) as session:
+            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
+                                          ignore_sysadmin_emails=ignore_sysadmin_emails)
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=organizations,
-                                            ignore_sysadmin_emails=ignore_sysadmin_emails)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
 
             sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken1
             sheet.dutyofficer = 'Peter'
@@ -377,9 +379,8 @@ class TestDataFreshnessStatus:
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=organizations,
-                                            ignore_sysadmin_emails=ignore_sysadmin_emails)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
 
             sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken1
             sheet.dutyofficer = 'Peter'
@@ -405,10 +406,11 @@ class TestDataFreshnessStatus:
         sheet = Sheet(now)
         email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
         with Database(**database_status) as session:
+            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
+                                          ignore_sysadmin_emails=ignore_sysadmin_emails)
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=organizations,
-                                            ignore_sysadmin_emails=ignore_sysadmin_emails)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
             sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_OverdueDelinquent
             sheet.dutyofficer = 'Sharon'
 
@@ -495,9 +497,8 @@ class TestDataFreshnessStatus:
 
             now = parser.parse('2017-01-31 19:07:30.333492')
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=organizations,
-                                            ignore_sysadmin_emails=ignore_sysadmin_emails)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
             sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_OverdueDelinquent
             sheet.dutyofficer = 'Sharon'
 
@@ -523,10 +524,11 @@ class TestDataFreshnessStatus:
         sheet = Sheet(now)
         email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
         with Database(**database_maintainer) as session:
+            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
+                                          ignore_sysadmin_emails=ignore_sysadmin_emails)
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=organizations,
-                                            ignore_sysadmin_emails=ignore_sysadmin_emails)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
             sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_MaintainerOrgAdmins
             sheet.dutyofficer = 'Aaron'
 
@@ -579,10 +581,11 @@ class TestDataFreshnessStatus:
                 {'capacity': 'editor', 'id': 'blah', 'name': 'blahname', 'sysadmin': False, 'fullname': 'blahfull',
                  'display_name': 'blahdisp'})
             neworgs[1]['users'] = list()
+            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=neworgs,
+                                          ignore_sysadmin_emails=ignore_sysadmin_emails)
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=neworgs,
-                                            ignore_sysadmin_emails=ignore_sysadmin_emails)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
             TestDataFreshnessStatus.email_users_result = list()
             freshness.process_maintainer_orgadmins()
             assert TestDataFreshnessStatus.email_users_result == \
@@ -604,10 +607,11 @@ class TestDataFreshnessStatus:
                  'display_name': 'blahdisp'})
             neworgs[1]['users'][0]['id'] = 'NOTEXIST1'
             neworgs[1]['users'][1]['id'] = 'NOTEXIST2'
+            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=neworgs,
+                                          ignore_sysadmin_emails=ignore_sysadmin_emails)
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=neworgs,
-                                            ignore_sysadmin_emails=ignore_sysadmin_emails)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
             TestDataFreshnessStatus.email_users_result = list()
             freshness.process_maintainer_orgadmins()
             assert TestDataFreshnessStatus.email_users_result == \
@@ -633,9 +637,10 @@ class TestDataFreshnessStatus:
         sheet = Sheet(now)
         email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
         with Database(**database_failure) as session:
+            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations)
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=organizations)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
             freshness.check_number_datasets(now, send_failures=[mikeuser, serbanuser])
             assert TestDataFreshnessStatus.email_users_result == [([{'name': 'mcarans', 'sysadmin': True,
                                                                      'display_name': 'Michael Rans',
@@ -651,8 +656,8 @@ class TestDataFreshnessStatus:
             TestDataFreshnessStatus.email_users_result = list()
             now = parser.parse('2017-02-02 19:07:30.333492')
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=organizations)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
             freshness.check_number_datasets(parser.parse('2017-02-01 19:07:30.333492'),
                                             send_failures=[mikeuser, serbanuser])
             assert TestDataFreshnessStatus.email_users_result == [([{'name': 'mcarans', 'sysadmin': True,
@@ -669,8 +674,8 @@ class TestDataFreshnessStatus:
             TestDataFreshnessStatus.email_users_result = list()
             now = parser.parse('2017-02-04 19:07:30.333492')
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=organizations)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
             freshness.check_number_datasets(now, send_failures=[mikeuser, serbanuser])
             assert TestDataFreshnessStatus.email_users_result == [([{'name': 'mcarans', 'sysadmin': True,
                                                                      'display_name': 'Michael Rans',
@@ -691,10 +696,11 @@ class TestDataFreshnessStatus:
         sheet = Sheet(now)
         email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
         with Database(**database_noresources) as session:
+            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
+                                          ignore_sysadmin_emails=ignore_sysadmin_emails)
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=organizations,
-                                            ignore_sysadmin_emails=ignore_sysadmin_emails)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
             sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_NoResources
             sheet.dutyofficer = 'Andrew'
 
@@ -730,10 +736,11 @@ class TestDataFreshnessStatus:
         sheet = Sheet(now)
         email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
         with Database(**database_dataset_date) as session:
+            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
+                                          ignore_sysadmin_emails=ignore_sysadmin_emails)
             databasequeries = DatabaseQueries(session=session, now=now)
-            freshness = DataFreshnessStatus(site_url=site_url, databasequeries=databasequeries, email=email,
-                                            sheet=sheet, users=users, organizations=organizations,
-                                            ignore_sysadmin_emails=ignore_sysadmin_emails)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
             sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_DatasetDate
             sheet.dutyofficer = 'Sharon'
 

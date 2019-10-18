@@ -18,7 +18,7 @@ from hdx.freshness.database.dbrun import DBRun
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import and_
 
-from hdx.freshness.emailer.utilities import get_dataset_dates
+from hdx.freshness.emailer.datasethelper import DatasetHelper
 
 logger = logging.getLogger(__name__)
 
@@ -244,7 +244,7 @@ class DatabaseQueries:
                 update_frequency = 1
             if update_frequency == -1 or update_frequency == -2:
                 update_frequency = 365
-            _, dataset_date = get_dataset_dates(dataset)
+            _, dataset_date = DatasetHelper.get_dataset_dates(dataset)
             if not dataset_date:
                 continue
             delta = dataset['latest_of_modifieds'] - dataset_date
