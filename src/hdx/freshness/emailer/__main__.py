@@ -20,6 +20,7 @@ from hdx.utilities.dictandlist import args_to_dict
 from hdx.utilities.easy_logging import setup_logging
 from hdx.utilities.path import script_dir_plus_file
 
+from hdx.freshness.emailer.databasequeries import DatabaseQueries
 from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
 from hdx.freshness.emailer.freshnessemail import Email
 from hdx.freshness.emailer.sheet import Sheet
@@ -68,9 +69,10 @@ def main(db_url, db_params, email_server, gsheet_auth, **ignore):
             if error:
                 email.htmlify_send([mikeuser, serbanuser], 'Error accessing datasets with issues Google sheet!', error)
             else:
-                freshness = DataFreshnessStatus(now=now, site_url=configuration.get_hdx_site_url(), session=session,
-                                                email=email, sheet=sheet)
-                if not freshness.check_number_datasets(send_failures=[mikeuser, serbanuser]):
+                databasequeries = DatabaseQueries(session=session, now=now)
+                freshness = DataFreshnessStatus(site_url=configuration.get_hdx_site_url(),
+                                                databasequeries=databasequeries, email=email, sheet=sheet)
+                if not freshness.check_number_datasets(now, send_failures=[mikeuser, serbanuser]):
                     freshness.process_broken()
                     # temporarily send just to me
                     # freshness.process_broken(sendto=[mikeuser])
