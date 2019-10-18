@@ -124,28 +124,13 @@ class DataFreshnessStatus:
                         newline = True
                     else:
                         create_broken_dataset_string(dataset, maintainer, orgadmins)
-                    url = self.datasethelper.get_dataset_url(dataset)
-                    title = dataset['title']
-                    if maintainer:
-                        maintainer_name, maintainer_email = maintainer
-                    else:
-                        maintainer_name, maintainer_email = '', ''
-                    orgadmin_names = ','.join([x[0] for x in orgadmins])
-                    orgadmin_emails = ','.join([x[1] for x in orgadmins])
-                    update_freq = self.datasethelper.get_update_frequency(dataset)
-                    latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
-                    fresh = self.datasethelper.freshness_status.get(dataset['fresh'], 'None')
+                    row = self.sheet.construct_row(self.datasethelper, dataset, maintainer, orgadmins)
+                    row['Freshness'] = self.datasethelper.freshness_status.get(dataset['fresh'], 'None')
                     error = list()
                     for resource in sorted(dataset['resources'], key=lambda d: d['name']):
                         error.append('%s:%s' % (resource['name'], resource['error']))
-                    # Date Added    URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins
-                    # Org Admin Emails	Update Frequency    Latest of Modifieds	Freshness	Error Type	Error
-                    row = {'URL': url, 'Title': title, 'Organisation': org_title,
-                           'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
-                           'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
-                           'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds,
-                           'Freshness': fresh,
-                           'Error Type': error_type, 'Error': '\n'.join(error)}
+                    row['Error Type'] = error_type
+                    row['Error'] = '\n'.join(error)
                     datasets_flat.append(row)
                 if newline:
                     Email.output_newline(msg, htmlmsg)
@@ -178,24 +163,7 @@ class DataFreshnessStatus:
                                                                                            orgadmins, sysadmin=True)
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
-            url = self.datasethelper.get_dataset_url(dataset)
-            title = dataset['title']
-            org_title = dataset['organization_title']
-            if maintainer:
-                maintainer_name, maintainer_email = maintainer
-            else:
-                maintainer_name, maintainer_email = '', ''
-            orgadmin_names = ','.join([x[0] for x in orgadmins])
-            orgadmin_emails = ','.join([x[1] for x in orgadmins])
-            update_freq = self.datasethelper.get_update_frequency(dataset)
-            latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
-            # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
-            # Update Frequency	Latest of Modifieds
-            row = {'URL': url, 'Title': title, 'Organisation': org_title,
-                   'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
-                   'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
-                   'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
-            datasets_flat.append(row)
+            datasets_flat.append(self.sheet.construct_row(self.datasethelper, dataset, maintainer, orgadmins))
         self.email.close_send(self.datasethelper.sysadmins_to_email, 'Delinquent datasets', msg, htmlmsg)
         return datasets_flat
 
@@ -262,24 +230,7 @@ class DataFreshnessStatus:
                                                                                            orgadmins, sysadmin=True)
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
-            url = self.datasethelper.get_dataset_url(dataset)
-            title = dataset['title']
-            org_title = dataset['organization_title']
-            if maintainer:
-                maintainer_name, maintainer_email = maintainer
-            else:
-                maintainer_name, maintainer_email = '', ''
-            orgadmin_names = ','.join([x[0] for x in orgadmins])
-            orgadmin_emails = ','.join([x[1] for x in orgadmins])
-            update_freq = self.datasethelper.get_update_frequency(dataset)
-            latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
-            # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
-            # Update Frequency	Latest of Modifieds
-            row = {'URL': url, 'Title': title, 'Organisation': org_title,
-                   'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
-                   'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
-                   'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
-            datasets_flat.append(row)
+            datasets_flat.append(self.sheet.construct_row(self.datasethelper, dataset, maintainer, orgadmins))
         self.email.close_send(self.datasethelper.sysadmins_to_email, 'Datasets with invalid maintainer', msg, htmlmsg)
         return datasets_flat
 
@@ -332,24 +283,7 @@ class DataFreshnessStatus:
                                                                                            orgadmins, sysadmin=True)
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
-            url = self.datasethelper.get_dataset_url(dataset)
-            title = dataset['title']
-            org_title = dataset['organization_title']
-            if maintainer:
-                maintainer_name, maintainer_email = maintainer
-            else:
-                maintainer_name, maintainer_email = '', ''
-            orgadmin_names = ','.join([x[0] for x in orgadmins])
-            orgadmin_emails = ','.join([x[1] for x in orgadmins])
-            update_freq = self.datasethelper.get_update_frequency(dataset)
-            latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
-            # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
-            # Update Frequency	Latest of Modifieds
-            row = {'URL': url, 'Title': title, 'Organisation': org_title,
-                   'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
-                   'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
-                   'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
-            datasets_flat.append(row)
+            datasets_flat.append(self.sheet.construct_row(self.datasethelper, dataset, maintainer, orgadmins))
         self.email.close_send(self.datasethelper.sysadmins_to_email, 'Datasets with no resources', msg, htmlmsg)
         return datasets_flat
 
@@ -379,26 +313,10 @@ class DataFreshnessStatus:
                     output_list = list()
                     all_users_to_email[id] = output_list
                 output_list.append((dataset_string, dataset_html_string))
-            url = self.datasethelper.get_dataset_url(dataset)
-            title = dataset['title']
-            org_title = dataset['organization_title']
-            if maintainer:
-                maintainer_name, maintainer_email = maintainer
-            else:
-                maintainer_name, maintainer_email = '', ''
-            orgadmin_names = ','.join([x[0] for x in orgadmins])
-            orgadmin_emails = ','.join([x[1] for x in orgadmins])
+            row = self.sheet.construct_row(self.datasethelper, dataset, maintainer, orgadmins)
             start_date, end_date = self.datasethelper.get_dataset_dates(dataset)
-            start_date = start_date.isoformat()
-            end_date = end_date.isoformat()
-            update_freq = self.datasethelper.get_update_frequency(dataset)
-            latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
-            # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
-            # Update Frequency	Latest of Modifieds
-            row = {'URL': url, 'Title': title, 'Organisation': org_title, 'Maintainer': maintainer_name,
-                   'Maintainer Email': maintainer_email, 'Org Admins': orgadmin_names,
-                   'Org Admin Emails': orgadmin_emails, 'Dataset Start Date': start_date, 'Dataset End Date': end_date,
-                   'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
+            row['Dataset Start Date'] = start_date.isoformat()
+            row['Dataset End Date'] = end_date.isoformat()
             datasets_flat.append(row)
         emails = dict()
         for id in sorted(all_users_to_email.keys()):

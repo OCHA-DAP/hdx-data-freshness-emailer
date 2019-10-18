@@ -96,3 +96,24 @@ class Sheet:
                 updated_notimes.add(url)
         current_values = sorted(current_values, key=lambda x: x[dateadded_ind], reverse=True)
         sheet.update_values('A1', current_values)
+
+    @staticmethod
+    def construct_row(datasethelper, dataset, maintainer, orgadmins):
+        url = datasethelper.get_dataset_url(dataset)
+        title = dataset['title']
+        org_title = dataset['organization_title']
+        if maintainer:
+            maintainer_name, maintainer_email = maintainer
+        else:
+            maintainer_name, maintainer_email = '', ''
+        orgadmin_names = ','.join([x[0] for x in orgadmins])
+        orgadmin_emails = ','.join([x[1] for x in orgadmins])
+        update_freq = datasethelper.get_update_frequency(dataset)
+        latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
+        # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
+        # Update Frequency	Latest of Modifieds
+        row = {'URL': url, 'Title': title, 'Organisation': org_title,
+               'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
+               'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
+               'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
+        return row
