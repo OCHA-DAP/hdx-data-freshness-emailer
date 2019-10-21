@@ -10,8 +10,6 @@ Determines freshness status
 import datetime
 import logging
 
-from hdx.utilities.dictandlist import dict_of_lists_add
-
 from hdx.freshness.emailer.freshnessemail import Email
 
 logger = logging.getLogger(__name__)
@@ -149,23 +147,11 @@ class DataFreshnessStatus:
         self.sheet.update('Broken', datasets)
 
     def send_delinquent_email(self):
-        datasets_flat = list()
         datasets = self.databasequeries.get_status(3)
-        if len(datasets) == 0:
-            logger.info('No delinquent datasets found.')
-            return datasets_flat
+        nodatasetsmsg = 'No delinquent datasets found.'
         startmsg = 'Dear system administrator,\n\nThe following datasets have just become delinquent:\n\n'
-        msg = [startmsg]
-        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
-        for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
-            maintainer, orgadmins, _ = self.datasethelper.get_maintainer_orgadmins(dataset)
-            dataset_string, dataset_html_string = self.datasethelper.create_dataset_string(dataset, maintainer,
-                                                                                           orgadmins, sysadmin=True)
-            msg.append(dataset_string)
-            htmlmsg.append(dataset_html_string)
-            datasets_flat.append(self.sheet.construct_row(self.datasethelper, dataset, maintainer, orgadmins))
-        self.email.close_send(self.datasethelper.sysadmins_to_email, 'Delinquent datasets', msg, htmlmsg)
-        return datasets_flat
+        subject = 'Delinquent datasets'
+        return self.email.email_admins(datasets, nodatasetsmsg, startmsg, self.datasethelper, self.sheet, subject)
 
     def process_delinquent(self):
         logger.info('\n\n*** Checking for delinquent datasets ***')
@@ -177,8 +163,6 @@ class DataFreshnessStatus:
         if len(datasets) == 0:
             logger.info('No overdue datasets found.')
             return
-        startmsg = 'Dear %s,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\n'
-        starthtmlmsg = Email.html_start(Email.convert_newlines(startmsg))
         all_users_to_email = dict()
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
             maintainer, orgadmins, users_to_email = self.datasethelper.get_maintainer_orgadmins(dataset)
@@ -191,48 +175,23 @@ class DataFreshnessStatus:
                     output_list = list()
                     all_users_to_email[id] = output_list
                 output_list.append((dataset_string, dataset_html_string))
-        emails = dict()
-        for id in sorted(all_users_to_email.keys()):
-            user = self.datasethelper.users[id]
-            basemsg = startmsg % self.datasethelper.get_user_name(user)
-            dict_of_lists_add(emails, 'plain', basemsg)
-            dict_of_lists_add(emails, 'html', self.email.convert_newlines(basemsg))
-            msg = [basemsg]
-            htmlmsg = [starthtmlmsg % self.datasethelper.get_user_name(user)]
-            for dataset_string, dataset_html_string in all_users_to_email[id]:
-                msg.append(dataset_string)
-                htmlmsg.append(dataset_html_string)
-                dict_of_lists_add(emails, 'plain', dataset_string)
-                dict_of_lists_add(emails, 'html', dataset_html_string)
-            endmsg = '\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n'
-            if sendto is None:
-                users_to_email = [user]
-            else:
-                users_to_email = sendto
-            self.email.close_send(users_to_email, 'Time to update your datasets on HDX', msg, htmlmsg, endmsg)
-        self.email.send_sysadmin_summary(sysadmins, emails, 'All overdue dataset emails')
+        startmsg = 'Dear %s,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\n'
+        endmsg = '\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n'
+        subject = 'Time to update your datasets on HDX'
+        summary_subject = 'All overdue dataset emails'
+        self.email.email_users_send_summary(all_users_to_email, self.datasethelper, startmsg, endmsg, sendto, subject,
+                                            sysadmins, summary_subject)
 
     def process_overdue(self, sendto=None, sysadmins=None):
         logger.info('\n\n*** Checking for overdue datasets ***')
         self.send_overdue_emails(sendto=sendto, sysadmins=sysadmins)
 
     def send_maintainer_email(self, invalid_maintainers):
-        datasets_flat = list()
-        if len(invalid_maintainers) == 0:
-            logger.info('No invalid maintainers found.')
-            return datasets_flat
+        nodatasetsmsg = 'No invalid maintainers found.'
         startmsg = 'Dear system administrator,\n\nThe following datasets have an invalid maintainer:\n\n'
-        msg = [startmsg]
-        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
-        for dataset in sorted(invalid_maintainers, key=lambda d: (d['organization_title'], d['name'])):
-            maintainer, orgadmins, _ = self.datasethelper.get_maintainer_orgadmins(dataset)
-            dataset_string, dataset_html_string = self.datasethelper.create_dataset_string(dataset, maintainer,
-                                                                                           orgadmins, sysadmin=True)
-            msg.append(dataset_string)
-            htmlmsg.append(dataset_html_string)
-            datasets_flat.append(self.sheet.construct_row(self.datasethelper, dataset, maintainer, orgadmins))
-        self.email.close_send(self.datasethelper.sysadmins_to_email, 'Datasets with invalid maintainer', msg, htmlmsg)
-        return datasets_flat
+        subject = 'Datasets with invalid maintainer'
+        return self.email.email_admins(invalid_maintainers, nodatasetsmsg, startmsg, self.datasethelper, self.sheet,
+                                       subject)
 
     def send_orgadmins_email(self, invalid_orgadmins):
         organizations_flat = list()
@@ -269,23 +228,11 @@ class DataFreshnessStatus:
         self.sheet.update('OrgAdmins', datasets)
 
     def send_datasets_noresources_email(self):
-        datasets_flat = list()
         datasets = self.databasequeries.get_datasets_noresources()
-        if len(datasets) == 0:
-            logger.info('No datasets with no resources found.')
-            return datasets_flat
+        nodatasetsmsg = 'No datasets with no resources found.'
         startmsg = 'Dear system administrator,\n\nThe following datasets have no resources:\n\n'
-        msg = [startmsg]
-        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
-        for dataset in datasets:
-            maintainer, orgadmins, _ = self.datasethelper.get_maintainer_orgadmins(dataset)
-            dataset_string, dataset_html_string = self.datasethelper.create_dataset_string(dataset, maintainer,
-                                                                                           orgadmins, sysadmin=True)
-            msg.append(dataset_string)
-            htmlmsg.append(dataset_html_string)
-            datasets_flat.append(self.sheet.construct_row(self.datasethelper, dataset, maintainer, orgadmins))
-        self.email.close_send(self.datasethelper.sysadmins_to_email, 'Datasets with no resources', msg, htmlmsg)
-        return datasets_flat
+        subject = 'Datasets with no resources'
+        return self.email.email_admins(datasets, nodatasetsmsg, startmsg, self.datasethelper, self.sheet, subject)
 
     def process_datasets_noresources(self):
         logger.info('\n\n*** Checking for datasets with no resources ***')
@@ -298,8 +245,6 @@ class DataFreshnessStatus:
         if len(datasets) == 0:
             logger.info('No datasets with date of dataset needing update found.')
             return datasets_flat
-        startmsg = 'Dear %s,\n\nThe dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\n'
-        starthtmlmsg = Email.html_start(Email.convert_newlines(startmsg))
         all_users_to_email = dict()
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
             maintainer, orgadmins, users_to_email = self.datasethelper.get_maintainer_orgadmins(dataset)
@@ -318,25 +263,12 @@ class DataFreshnessStatus:
             row['Dataset Start Date'] = start_date.isoformat()
             row['Dataset End Date'] = end_date.isoformat()
             datasets_flat.append(row)
-        emails = dict()
-        for id in sorted(all_users_to_email.keys()):
-            user = self.datasethelper.users[id]
-            basemsg = startmsg % self.datasethelper.get_user_name(user)
-            dict_of_lists_add(emails, 'plain', basemsg)
-            dict_of_lists_add(emails, 'html', self.email.convert_newlines(basemsg))
-            msg = [basemsg]
-            htmlmsg = [starthtmlmsg % self.datasethelper.get_user_name(user)]
-            for dataset_string, dataset_html_string in all_users_to_email[id]:
-                msg.append(dataset_string)
-                htmlmsg.append(dataset_html_string)
-                dict_of_lists_add(emails, 'plain', dataset_string)
-                dict_of_lists_add(emails, 'html', dataset_html_string)
-            if sendto is None:
-                users_to_email = [user]
-            else:
-                users_to_email = sendto
-            self.email.close_send(users_to_email, 'Check date of dataset for your datasets on HDX', msg, htmlmsg)
-        self.email.send_sysadmin_summary(sysadmins, emails, 'All date of dataset emails')
+        startmsg = 'Dear %s,\n\nThe dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\n'
+        endmsg = ''
+        subject = 'Check date of dataset for your datasets on HDX'
+        summary_subject = 'All date of dataset emails'
+        self.email.email_users_send_summary(all_users_to_email, self.datasethelper, startmsg, endmsg, sendto, subject,
+                                            sysadmins, summary_subject)
         return datasets_flat
 
     def process_datasets_dataset_date(self, sendto=None, sysadmins=None):
@@ -359,24 +291,7 @@ class DataFreshnessStatus:
                                                                                            orgadmins, sysadmin=True)
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
-            url = self.datasethelper.get_dataset_url(dataset)
-            title = dataset['title']
-            org_title = dataset['organization_title']
-            if maintainer:
-                maintainer_name, maintainer_email = maintainer
-            else:
-                maintainer_name, maintainer_email = '', ''
-            orgadmin_names = ','.join([x[0] for x in orgadmins])
-            orgadmin_emails = ','.join([x[1] for x in orgadmins])
-            update_freq = self.datasethelper.get_update_frequency(dataset)
-            latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
-            # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
-            # Update Frequency	Latest of Modifieds
-            row = {'URL': url, 'Title': title, 'Organisation': org_title,
-                   'Maintainer': maintainer_name, 'Maintainer Email': maintainer_email,
-                   'Org Admins': orgadmin_names, 'Org Admin Emails': orgadmin_emails,
-                   'Update Frequency': update_freq, 'Latest of Modifieds': latest_of_modifieds}
-            datasets_flat.append(row)
+            datasets_flat.append(self.sheet.construct_row(self.datasethelper, dataset, maintainer, orgadmins))
         self.email.close_send(self.datasethelper.sysadmins_to_email, 'Candidates for the datagrid', msg, htmlmsg)
         return datasets_flat
 

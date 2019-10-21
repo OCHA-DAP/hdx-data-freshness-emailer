@@ -8,6 +8,7 @@ Utilities to handle creating email messages in raw text and HTML formats
 import logging
 
 from hdx.data.user import User
+from hdx.utilities.dictandlist import dict_of_lists_add
 
 logger = logging.getLogger(__name__)
 
@@ -108,3 +109,44 @@ class Email:
         msg.append(title)
         htmlmsg.append('<b><i>%s</i></b>' % title)
         cls.output_newline(msg, htmlmsg)
+
+    def email_users_send_summary(self, all_users_to_email, datasethelper, startmsg, endmsg, sendto, subject, sysadmins,
+                                 summary_subject):
+        starthtmlmsg = self.html_start(self.convert_newlines(startmsg))
+        emails = dict()
+        for id in sorted(all_users_to_email.keys()):
+            user = datasethelper.users[id]
+            username = datasethelper.get_user_name(user)
+            basemsg = startmsg % username
+            dict_of_lists_add(emails, 'plain', basemsg)
+            dict_of_lists_add(emails, 'html', self.convert_newlines(basemsg))
+            msg = [basemsg]
+            htmlmsg = [starthtmlmsg % username]
+            for dataset_string, dataset_html_string in all_users_to_email[id]:
+                msg.append(dataset_string)
+                htmlmsg.append(dataset_html_string)
+                dict_of_lists_add(emails, 'plain', dataset_string)
+                dict_of_lists_add(emails, 'html', dataset_html_string)
+            if sendto is None:
+                users_to_email = [user]
+            else:
+                users_to_email = sendto
+            self.close_send(users_to_email, subject, msg, htmlmsg, endmsg)
+        self.send_sysadmin_summary(sysadmins, emails, summary_subject)
+
+    def email_admins(self, datasets, nodatasetsmsg, startmsg, datasethelper, sheet, subject):
+        datasets_flat = list()
+        if len(datasets) == 0:
+            logger.info(nodatasetsmsg)
+            return datasets_flat
+        msg = [startmsg]
+        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
+        for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
+            maintainer, orgadmins, _ = datasethelper.get_maintainer_orgadmins(dataset)
+            dataset_string, dataset_html_string = datasethelper.create_dataset_string(dataset, maintainer, orgadmins,
+                                                                                      sysadmin=True)
+            msg.append(dataset_string)
+            htmlmsg.append(dataset_html_string)
+            datasets_flat.append(sheet.construct_row(datasethelper, dataset, maintainer, orgadmins))
+        self.close_send(datasethelper.sysadmins_to_email, subject, msg, htmlmsg)
+        return datasets_flat
