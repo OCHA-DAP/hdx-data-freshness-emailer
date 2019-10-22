@@ -110,8 +110,39 @@ class Email:
         htmlmsg.append('<b><i>%s</i></b>' % title)
         cls.output_newline(msg, htmlmsg)
 
-    def email_users_send_summary(self, all_users_to_email, datasethelper, startmsg, endmsg, sendto, subject, sysadmins,
-                                 summary_subject):
+    @staticmethod
+    def prepare_emails(datasethelper, include_datasetdate, datasets, nodatasetsmsg, sheet, sheetname):
+        all_users_to_email = dict()
+        if len(datasets) == 0:
+            logger.info(nodatasetsmsg)
+            return all_users_to_email
+        datasets_flat = list()
+        for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
+            maintainer, orgadmins, users_to_email = datasethelper.get_maintainer_orgadmins(dataset)
+            dataset_string, dataset_html_string = datasethelper.create_dataset_string(dataset, maintainer, orgadmins,
+                                                                                      include_datasetdate=include_datasetdate)
+            for user in users_to_email:
+                id = user['id']
+                output_list = all_users_to_email.get(id)
+                if output_list is None:
+                    output_list = list()
+                    all_users_to_email[id] = output_list
+                output_list.append((dataset_string, dataset_html_string))
+            row = sheet.construct_row(datasethelper, dataset, maintainer, orgadmins)
+            if include_datasetdate:
+                start_date, end_date = datasethelper.get_dataset_dates(dataset)
+                row['Dataset Start Date'] = start_date.isoformat()
+                row['Dataset End Date'] = end_date.isoformat()
+            datasets_flat.append(row)
+        if sheetname is not None:
+            sheet.update(sheetname, datasets_flat)
+        return all_users_to_email
+
+    def email_users_send_summary(self, datasethelper, include_datasetdate, datasets, nodatasetsmsg, startmsg, endmsg,
+                                 sendto, subject, sysadmins, summary_subject, sheet, sheetname):
+        all_users_to_email = self.prepare_emails(datasethelper, include_datasetdate, datasets, nodatasetsmsg, sheet,
+                                                 sheetname)
+
         starthtmlmsg = self.html_start(self.convert_newlines(startmsg))
         emails = dict()
         for id in sorted(all_users_to_email.keys()):
@@ -134,11 +165,11 @@ class Email:
             self.close_send(users_to_email, subject, msg, htmlmsg, endmsg)
         self.send_sysadmin_summary(sysadmins, emails, summary_subject)
 
-    def email_admins(self, datasets, nodatasetsmsg, startmsg, datasethelper, sheet, subject):
+    def email_admins(self, datasethelper, datasets, nodatasetsmsg, startmsg, subject, sheet, sheetname):
         datasets_flat = list()
         if len(datasets) == 0:
             logger.info(nodatasetsmsg)
-            return datasets_flat
+            return
         msg = [startmsg]
         htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
@@ -149,4 +180,4 @@ class Email:
             htmlmsg.append(dataset_html_string)
             datasets_flat.append(sheet.construct_row(datasethelper, dataset, maintainer, orgadmins))
         self.close_send(datasethelper.sysadmins_to_email, subject, msg, htmlmsg)
-        return datasets_flat
+        sheet.update(sheetname, datasets_flat)

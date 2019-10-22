@@ -388,16 +388,7 @@ class TestDataFreshnessStatus:
             TestDataFreshnessStatus.cells_result = None
             freshness.process_broken()
             assert TestDataFreshnessStatus.email_users_result == list()
-            assert TestDataFreshnessStatus.cells_result == [
-                ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',
-                 'Update Frequency', 'Latest of Modifieds', 'Freshness', 'Error Type', 'Error', 'Date Added',
-                 'No. Times',
-                 'Assigned', 'Status'],
-                ['http://lala/dataset/yemen-admin-boundaries', 'Yemen - Administrative Boundaries', 'OCHA Yemen', '',
-                 '',
-                 'blah4disp,blah5full', 'blah4@blah.com,blah5@blah.com', 'every year', '2015-12-28T06:39:20.134647',
-                 'Delinquent', 'Server Error (may be temporary)', 'Admin-0.zip:Fail\nAdmin-3.zip:Fail',
-                 '2017-01-02T19:07:30.333492', 3, 'Andrew', 'Contacted Maintainer']]
+            assert TestDataFreshnessStatus.cells_result is None
 
     def test_freshnessstatus(self, configuration, database_status, users, organizations):
         site_url = 'http://lala/'
@@ -506,13 +497,7 @@ class TestDataFreshnessStatus:
             TestDataFreshnessStatus.cells_result = None
             freshness.process_delinquent()
             assert TestDataFreshnessStatus.email_users_result == list()
-            assert TestDataFreshnessStatus.cells_result == [
-                ['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',
-                 'Update Frequency', 'Latest of Modifieds', 'Date Added', 'No. Times', 'Assigned', 'Status'],
-                ['http://lala/dataset/ourairports-myt', 'Airports in Mayotte', 'OurAirports', 'blah5full',
-                 'blah5@blah.com',
-                 'blah3disp,blah4disp,blah5full', 'blah3@blah.com,blah4@blah.com,blah5@blah.com', 'every year',
-                 '2015-11-24T23:32:32.025059', '2017-01-01T19:07:30.333492', 2, 'Peter', 'Done']]
+            assert TestDataFreshnessStatus.cells_result is None
             TestDataFreshnessStatus.email_users_result = list()
             freshness.process_overdue()
             assert TestDataFreshnessStatus.email_users_result == list()
