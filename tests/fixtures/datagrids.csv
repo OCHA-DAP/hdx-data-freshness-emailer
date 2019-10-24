@@ -81,6 +81,6 @@ default       ,baseline_population           ,                                  
 default       ,baseline_population           ,                                                                                                                     ,(name:afghanistan-rainfall-2013-2016-and-population-comparisons-2010-2020)
 default       ,baseline_population_sadd      ,"(vocab_Topics:""baseline population"" AND vocab_Topics:""sex and age disaggregated data - sadd"" AND subnational:1)",(organization:afdb) #African Development Bank Group datasets are not subnational
 default       ,baseline_population_sadd      ,                                                                                                                     ,(name:estimated-population-of-afghanistan-2015-2016)
-default       ,poverty_rate                  ,(vocab_Topics:poverty AND subnational:1)                                                                             ,
-lakechadcrisis,datagrid                      ,(groups:TCD OR groups:NGA OR groups:NER OR groups:CMR)                                                               ,
-afg           ,administrative divisions      ,"(vocab_Topics:""administrative divisions"" AND has_geodata:True)"                                                   ,(title:hotosm)
+default       ,poverty_rate                  ,"(vocab_Topics:poverty AND subnational:1)"                                                                           ,
+lakechadcrisis,datagrid                      ,"(groups:TCD OR groups:NGA OR groups:NER OR groups:CMR)"                                                             ,
+afg           ,administrative_divisions      ,"(vocab_Topics:""administrative divisions"" AND has_geodata:True)"                                                   ,(title:hotosm)
