@@ -12,6 +12,7 @@ from datetime import datetime
 import hxl
 import pygsheets
 from google.oauth2 import service_account
+from hdx.utilities.dictandlist import dict_of_sets_add
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,30 @@ class Sheet:
         self.now = now
         self.spreadsheet = None
         self.dutyofficer = None
+        self.datagrids = dict()
+
+    @staticmethod
+    def add_query(grid, row):
+        category = row.get('#category').strip()
+        include = row.get('#include')
+        if include:
+            include = include.strip()
+        exclude = row.get('#exclude')
+        if exclude:
+            exclude = exclude.strip()
+        query = grid.get(category, '')
+        if query:
+            queryparts = query.split(' ! ')
+            query = queryparts[0]
+            if include:
+                query = '%s OR %s' % (query, include)
+            if len(queryparts) > 1:
+                query = '%s ! %s' % (query, ' ! '.join(queryparts[1:]))
+        elif include:
+            query = include
+        if exclude:
+            query = '%s ! %s' % (query, exclude)
+        grid[category] = query
 
     def setup_input(self, configuration):
         logger.info('--------------------------------------------------')
@@ -33,10 +58,34 @@ class Sheet:
             dutyofficers = dutyofficers.sort(keys=['#date+start'], reverse=True)
 
             for dutyofficer in dutyofficers:
-                if datetime.strptime(dutyofficer.get('#date+start'), '%Y-%m-%d') <= self.now:
-                    self.dutyofficer = dutyofficer.get('#contact+name')
+                startdate = dutyofficer.get('#date+start').strip()
+                if datetime.strptime(startdate, '%Y-%m-%d') <= self.now:
+                    self.dutyofficer = dutyofficer.get('#contact+name').strip()
                     logger.info('Duty officer: %s' % self.dutyofficer)
                     break
+            datagrids = hxl.data(configuration['datagrids_url']).cache()
+            defaultgrid = dict()
+            for row in datagrids.with_rows('#datagrid=default'):
+                self.add_query(defaultgrid, row)
+
+            for curator in hxl.data(configuration['curators_url']):
+                curatorname = curator.get('#contact+name').strip()
+                curatoremail = curator.get('#contact+email').strip()
+                for dg in curator.get('#datagrid').strip().split(','):
+                    datagridname = dg.strip()
+                    datagrid = self.datagrids.get(datagridname)
+                    if datagrid is None:
+                        datagrid = dict()
+                        self.datagrids[datagridname] = datagrid
+                        for row in datagrids.with_rows('#datagrid=%s' % datagridname):
+                            self.add_query(datagrid, row)
+                        for key in defaultgrid:
+                            if key not in datagrid:
+                                if key == 'datagrid':
+                                    datagrid[key] = defaultgrid[key].replace('$datagrid', datagridname)
+                                else:
+                                    datagrid[key] = defaultgrid[key]
+                    dict_of_sets_add(datagrid, 'curators', (curatorname, curatoremail))
         except Exception as ex:
             return str(ex)
 

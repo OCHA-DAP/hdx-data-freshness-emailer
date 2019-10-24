@@ -64,7 +64,8 @@ def main(db_url, db_params, email_server, gsheet_auth, **ignore):
                            'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
         error = sheet.setup_input(configuration)
         if error:
-            email.htmlify_send([mikeuser, serbanuser], 'Error reading DP duty roster!', error)
+            email.htmlify_send([mikeuser, serbanuser], 'Error reading DP duty roster or data grid curation sheet!',
+                               error)
         else:
             error = sheet.setup_output(configuration, gsheet_auth)
             if error:

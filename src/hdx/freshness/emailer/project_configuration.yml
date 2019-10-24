@@ -5,6 +5,8 @@ ignore_sysadmin_emails:
   - "fake@gmail.com"
 duty_roster_url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRu7AIaP1AaLM4Ci36tay3Nj6XSDtTmPjtdYdXYSNpvfyil1npJ8lfB2Q2WUk9BFTVb8_5lwkgQmetk/pub?gid=0&single=true&output=csv"
 # prod
-issues_spreadsheet_url: "https://docs.google.com/spreadsheets/d/15Q6fZaQ4ZSe7XYme-fDifnVRyhwaDovrEQTi41txgko/edit"
+#issues_spreadsheet_url: "https://docs.google.com/spreadsheets/d/15Q6fZaQ4ZSe7XYme-fDifnVRyhwaDovrEQTi41txgko/edit"
 # test
-#issues_spreadsheet_url: "https://docs.google.com/spreadsheets/d/1ZiNRRBofxwwQQpqa_vdw_TSTY6_ytg6VZRTCq-5J92w/edit"
+issues_spreadsheet_url: "https://docs.google.com/spreadsheets/d/1ZiNRRBofxwwQQpqa_vdw_TSTY6_ytg6VZRTCq-5J92w/edit"
+curators_url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQjPIhNaGxfUKEnpQpgXt92FQSXqZoG38avyJLvXxXcV9JBZJ_tYDZuMlAl-WBfMYV8ltfQ3COxEzf1/pub?gid=0&single=true&output=csv"
+datagrids_url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQjPIhNaGxfUKEnpQpgXt92FQSXqZoG38avyJLvXxXcV9JBZJ_tYDZuMlAl-WBfMYV8ltfQ3COxEzf1/pub?gid=477218626&single=true&output=csv"
