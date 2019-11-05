@@ -144,6 +144,10 @@ class Email:
                                                  sheetname)
 
         starthtmlmsg = self.html_start(self.convert_newlines(startmsg))
+        if '$dashboard' in startmsg:
+            startmsg = startmsg.replace('$dashboard', 'dashboard')
+            starthtmlmsg = starthtmlmsg.replace('$dashboard',
+                                                '<a href="https://data.humdata.org/dashboard/datasets">dashboard</a>')
         emails = dict()
         for id in sorted(all_users_to_email.keys()):
             user = datasethelper.users[id]
@@ -165,7 +169,8 @@ class Email:
             self.close_send(users_to_email, subject, msg, htmlmsg, endmsg)
         self.send_sysadmin_summary(sysadmins, emails, summary_subject)
 
-    def email_admins(self, datasethelper, datasets, nodatasetsmsg, startmsg, subject, sheet, sheetname):
+    def email_admins(self, datasethelper, datasets, nodatasetsmsg, startmsg, subject, sheet, sheetname, sendto=None,
+                     dutyofficer=None):
         datasets_flat = list()
         if len(datasets) == 0:
             logger.info(nodatasetsmsg)
@@ -179,5 +184,9 @@ class Email:
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
             datasets_flat.append(sheet.construct_row(datasethelper, dataset, maintainer, orgadmins))
-        self.close_send(datasethelper.sysadmins_to_email, subject, msg, htmlmsg)
-        sheet.update(sheetname, datasets_flat)
+        if sendto is None:
+            users_to_email = datasethelper.sysadmins_to_email
+        else:
+            users_to_email = sendto
+        self.close_send(users_to_email, subject, msg, htmlmsg)
+        sheet.update(sheetname, datasets_flat, dutyofficer=dutyofficer)

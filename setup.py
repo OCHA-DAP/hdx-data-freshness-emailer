@@ -47,7 +47,7 @@ def get_readme():
 
 
 requirements = ['pygsheets',
-                'hdx-data-freshness>=1.3.8',
+                'hdx-data-freshness>=1.3.9',
                 'libhxl']
 
 classifiers = [

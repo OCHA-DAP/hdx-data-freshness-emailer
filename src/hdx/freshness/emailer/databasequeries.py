@@ -9,6 +9,7 @@ Queries to the freshness database
 import datetime
 import logging
 import re
+from collections import OrderedDict
 
 from hdx.freshness.database.dbdataset import DBDataset
 from hdx.freshness.database.dbinfodataset import DBInfoDataset
@@ -219,11 +220,11 @@ class DatabaseQueries:
         logger.info('SQL query returned %d rows.' % norows)
         return datasets_noresources
 
-    def get_datasets_dataset_date(self):
-        datasets_dataset_date = list()
+    def get_datasets_modified_yesterday(self):
+        datasets = OrderedDict()
         no_runs = len(self.run_numbers)
         if no_runs < 2:
-            return datasets_dataset_date
+            return datasets
         columns = [DBInfoDataset.id, DBInfoDataset.name, DBInfoDataset.title, DBInfoDataset.maintainer,
                    DBOrganization.id.label('organization_id'), DBOrganization.name.label('organization_name'),
                    DBOrganization.title.label('organization_title'), DBDataset.dataset_date,
@@ -232,13 +233,19 @@ class DatabaseQueries:
                    DBDataset.run_number == self.run_numbers[0][0],
                    DBDataset.latest_of_modifieds > self.run_numbers[1][1]]
         query = self.session.query(*columns).filter(and_(*filters))
-        # select * from dbdatasets a, dbdatasets b where a.id = b.id and a.dataset_date = b.dataset_date and a.latest_of_modifieds = now...
-
         norows = 0
         for norows, result in enumerate(query):
             dataset = dict()
             for i, column in enumerate(columns):
                 dataset[column.key] = result[i]
+            datasets[dataset['id']] = dataset
+        logger.info('SQL query returned %d rows.' % norows)
+        return datasets
+
+    def get_datasets_dataset_date(self):
+        datasets = self.get_datasets_modified_yesterday()
+        datasets_dataset_date = list()
+        for dataset in datasets.values():
             update_frequency = dataset['update_frequency']
             if update_frequency == 0:
                 update_frequency = 1
@@ -251,6 +258,4 @@ class DatabaseQueries:
             if delta <= datetime.timedelta(days=update_frequency):
                 continue
             datasets_dataset_date.append(dataset)
-
-        logger.info('SQL query returned %d rows.' % norows)
         return datasets_dataset_date

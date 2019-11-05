@@ -105,7 +105,7 @@ class Sheet:
             self.spreadsheet = None
         return None
 
-    def update(self, sheetname, datasets):
+    def update(self, sheetname, datasets, dutyofficer=None):
         # sheet must have been set up!
         if self.spreadsheet is None or self.dutyofficer is None:
             logger.warning('Cannot update Google spreadsheet!')
@@ -139,7 +139,10 @@ class Sheet:
             except ValueError:
                 new_row[dateadded_ind] = self.now.isoformat()
                 new_row[no_times_ind] = 1
-                new_row[assigned_ind] = self.dutyofficer
+                if dutyofficer is not None:
+                    new_row[assigned_ind] = dutyofficer
+                else:
+                    new_row[assigned_ind] = self.dutyofficer
                 current_values.append(new_row)
                 urls.append(url)
                 updated_notimes.add(url)

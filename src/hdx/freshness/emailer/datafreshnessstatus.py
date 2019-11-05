@@ -10,6 +10,8 @@ Determines freshness status
 import datetime
 import logging
 
+from hdx.data.dataset import Dataset
+
 from hdx.freshness.emailer.freshnessemail import Email
 
 logger = logging.getLogger(__name__)
@@ -155,14 +157,13 @@ class DataFreshnessStatus:
         logger.info('\n\n*** Checking for overdue datasets ***')
         datasets = self.databasequeries.get_status(2)
         nodatasetsmsg = 'No overdue datasets found.'
-        startmsg = 'Dear %s,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\n'
+        startmsg = 'Dear %s,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your $dashboard on HDX.\n\n'
         endmsg = '\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n'
         subject = 'Time to update your datasets on HDX'
         summary_subject = 'All overdue dataset emails'
         sheetname = None
         self.email.email_users_send_summary(self.datasethelper, False, datasets, nodatasetsmsg, startmsg, endmsg,
-                                            sendto,
-                                            subject, sysadmins, summary_subject, self.sheet, sheetname)
+                                            sendto, subject, sysadmins, summary_subject, self.sheet, sheetname)
 
     def send_maintainer_email(self, datasets):
         nodatasetsmsg = 'No invalid maintainers found.'
@@ -224,11 +225,28 @@ class DataFreshnessStatus:
         self.email.email_users_send_summary(self.datasethelper, True, datasets, nodatasetsmsg, startmsg, endmsg, sendto,
                                             subject, sysadmins, summary_subject, self.sheet, sheetname)
 
-    def process_datasets_datagrid(self):
+    def process_datasets_datagrid(self, datasetclass=Dataset):
         logger.info('\n\n*** Checking for datasets that are candidates for the datagrid ***')
         nodatasetsmsg = 'No dataset candidates for the data grid found.'
         startmsg = 'Dear system administrator,\n\nThe new dataset(s) listed below are candidates for the data grid:\n\n'
         subject = 'Candidates for the datagrid'
         sheetname = 'Datagrid'
-        datasets = self.databasequeries.get_datasets_datagrid()
-        self.email.email_admins(self.datasethelper, datasets, nodatasetsmsg, startmsg, subject, self.sheet, sheetname)
+        datasets_modified_yesterday = self.databasequeries.get_datasets_modified_yesterday()
+        for datagridname in self.sheet.datagrids:
+            datasets = list()
+            datagrid = self.sheet.datagrids[datagridname]
+            for category in datagrid:
+                if category == 'datagrid' or category == 'curators':
+                    continue
+                runyesterday = self.databasequeries.run_numbers[1][1].isoformat()
+                runtoday = self.databasequeries.run_numbers[0][1].isoformat()
+                query = 'metadata_created:[%sZ TO %sZ] AND %s AND (%s)' % (runyesterday, runtoday, datagrid['datagrid'],
+                                                                           datagrid[category])
+                datasetinfos = datasetclass.search_in_hdx(fq=query)
+                for datasetinfo in datasetinfos:
+                    datasets.append(datasets_modified_yesterday[datasetinfo['id']])
+            curators = list()
+            for curator in sorted(datagrid['curators']):
+                curators.append({'fullname': curator[0], 'email': curator[1]})
+            self.email.email_admins(self.datasethelper, datasets, nodatasetsmsg, startmsg, subject, self.sheet,
+                                    sheetname, sendto=curators, dutyofficer=curators[0]['fullname'])

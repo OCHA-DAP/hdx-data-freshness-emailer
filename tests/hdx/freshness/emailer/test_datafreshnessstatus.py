@@ -11,6 +11,7 @@ from os.path import join
 import pytest
 from dateutil import parser
 from hdx.data.user import User
+from hdx.hdx_configuration import Configuration
 from hdx.utilities.database import Database
 
 from hdx.freshness.emailer.databasequeries import DatabaseQueries
@@ -28,6 +29,14 @@ class TestDataFreshnessStatus:
         @staticmethod
         def email_users(users_to_email, subject, output, html_body):
             TestDataFreshnessStatus.email_users_result.append((users_to_email, subject, output, html_body))
+
+    class TestDataset:
+        @staticmethod
+        def search_in_hdx(fq):
+            if 'airport' in fq:
+                return [{'id': '34cb4297-36e2-40b0-b822-47320ea9314c'}]
+            else:
+                return list()
 
     class TestSpreadsheet_Broken1:
         @staticmethod
@@ -133,7 +142,7 @@ class TestDataFreshnessStatus:
 
             return TestWorksheet
 
-    class TestSpreadsheet_DatasetDate:
+    class TestSpreadsheet_Empty:
         @staticmethod
         def worksheet_by_title(_):
             class TestWorksheet:
@@ -238,8 +247,8 @@ class TestDataFreshnessStatus:
         return {'driver': 'sqlite', 'database': dbpath}
 
     @pytest.fixture(scope='function')
-    def database_dataset_date(self):
-        dbfile = 'test_freshness_dataset_date.db'
+    def database_datasets_modified_yesterday(self):
+        dbfile = 'test_freshness_modified_yesterday.db'
         dbpath = join('tests', dbfile)
         try:
             os.remove(dbpath)
@@ -253,7 +262,7 @@ class TestDataFreshnessStatus:
         ignore_sysadmin_emails = ['blah2@blah.com']
         now = parser.parse('2017-02-03 19:07:30.333492')
         sheet = Sheet(now)
-        email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
+        email = Email(userclass=self.TestUser, send_emails=True)
         with Database(**database_broken) as session:
             datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
                                           ignore_sysadmin_emails=ignore_sysadmin_emails)
@@ -395,7 +404,7 @@ class TestDataFreshnessStatus:
         ignore_sysadmin_emails = ['blah3@blah.com']
         now = parser.parse('2017-02-02 19:07:30.333492')
         sheet = Sheet(now)
-        email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
+        email = Email(userclass=self.TestUser, send_emails=True)
         with Database(**database_status) as session:
             datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
                                           ignore_sysadmin_emails=ignore_sysadmin_emails)
@@ -441,16 +450,16 @@ class TestDataFreshnessStatus:
             expected_result = \
                 [([{'sysadmin': False, 'email': 'blah@blah.com', 'id': 'blah', 'name': 'blahname',
                     'display_name': 'blahdisp', 'fullname': 'blahfull'}], 'Time to update your datasets on HDX',
-                  'Dear blahdisp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) with expected update frequency: every six months\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) with expected update frequency: every six months\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
-                  '<html>\n  <head></head>\n  <body>\n    <span>Dear blahdisp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> with expected update frequency: every six months<br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> with expected update frequency: every six months<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'),
+                  'Dear blahdisp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) with expected update frequency: every six months\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) with expected update frequency: every six months\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
+                  '<html>\n  <head></head>\n  <body>\n    <span>Dear blahdisp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your <a href="https://data.humdata.org/dashboard/datasets">dashboard</a> on HDX.<br><br><a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> with expected update frequency: every six months<br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> with expected update frequency: every six months<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'),
                  ([{'sysadmin': True, 'email': 'blah4@blah.com', 'id': 'blah4', 'name': 'blah4name',
                     'display_name': 'blah4disp', 'fullname': 'blah4full'}], 'Time to update your datasets on HDX',
-                  'Dear blah4disp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
-                  '<html>\n  <head></head>\n  <body>\n    <span>Dear blah4disp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'),
+                  'Dear blah4disp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
+                  '<html>\n  <head></head>\n  <body>\n    <span>Dear blah4disp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your <a href="https://data.humdata.org/dashboard/datasets">dashboard</a> on HDX.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'),
                  ([{'name': 'blah5name', 'sysadmin': False, 'email': 'blah5@blah.com', 'fullname': 'blah5full',
                     'id': 'blah5'}], 'Time to update your datasets on HDX',
-                  'Dear blah5full,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
-                  '<html>\n  <head></head>\n  <body>\n    <span>Dear blah5full,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+                  'Dear blah5full,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
+                  '<html>\n  <head></head>\n  <body>\n    <span>Dear blah5full,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your <a href="https://data.humdata.org/dashboard/datasets">dashboard</a> on HDX.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
             TestDataFreshnessStatus.email_users_result = list()
             freshness.process_overdue()
             assert TestDataFreshnessStatus.email_users_result == expected_result
@@ -459,8 +468,8 @@ class TestDataFreshnessStatus:
             expected_result.append(
                 ([{'email': 'blah@blah.com', 'id': 'blah', 'name': 'blahname', 'sysadmin': False,
                    'fullname': 'blahfull', 'display_name': 'blahdisp'}], 'All overdue dataset emails',
-                 'Dear system administrator,\n\nDear blahdisp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) with expected update frequency: every six months\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) with expected update frequency: every six months\nDear blah4disp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\nDear blah5full,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
-                 '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>Dear blahdisp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> with expected update frequency: every six months<br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> with expected update frequency: every six months<br>Dear blah4disp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br>Dear blah5full,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'))
+                 'Dear system administrator,\n\nDear blahdisp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) with expected update frequency: every six months\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) with expected update frequency: every six months\nDear blah4disp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\nDear blah5full,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
+                 '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>Dear blahdisp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.<br><br><a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> with expected update frequency: every six months<br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> with expected update frequency: every six months<br>Dear blah4disp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br>Dear blah5full,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'))
             assert TestDataFreshnessStatus.email_users_result == expected_result
             TestDataFreshnessStatus.email_users_result = list()
             user0 = User(users[0])
@@ -471,20 +480,20 @@ class TestDataFreshnessStatus:
                        'display_name': 'blahdisp', 'name': 'blahname'},
                       {'fullname': 'blah2full', 'name': 'blah2name', 'email': 'blah2@blah.com', 'sysadmin': True,
                        'id': 'blah2'}], 'Time to update your datasets on HDX',
-                     'Dear blahdisp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) with expected update frequency: every six months\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) with expected update frequency: every six months\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
-                     '<html>\n  <head></head>\n  <body>\n    <span>Dear blahdisp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> with expected update frequency: every six months<br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> with expected update frequency: every six months<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'),
+                     'Dear blahdisp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.\n\nTendencias Humanitarias y Paz - Nov 2012 - Dic 2015 (http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015) with expected update frequency: every six months\nProjected IPC population Estimates February - June 2016 (http://lala/dataset/projected-ipc-population-estimates-february-june-2016) with expected update frequency: every six months\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
+                     '<html>\n  <head></head>\n  <body>\n    <span>Dear blahdisp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your <a href="https://data.humdata.org/dashboard/datasets">dashboard</a> on HDX.<br><br><a href="http://lala/dataset/tendencias-humanitarias-y-paz-dic-2015">Tendencias Humanitarias y Paz - Nov 2012 - Dic 2015</a> with expected update frequency: every six months<br><a href="http://lala/dataset/projected-ipc-population-estimates-february-june-2016">Projected IPC population Estimates February - June 2016</a> with expected update frequency: every six months<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'),
                     ([{'fullname': 'blahfull', 'sysadmin': False, 'email': 'blah@blah.com', 'id': 'blah',
                        'display_name': 'blahdisp', 'name': 'blahname'},
                       {'fullname': 'blah2full', 'name': 'blah2name', 'email': 'blah2@blah.com', 'sysadmin': True,
                        'id': 'blah2'}], 'Time to update your datasets on HDX',
-                     'Dear blah4disp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
-                     '<html>\n  <head></head>\n  <body>\n    <span>Dear blah4disp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'),
+                     'Dear blah4disp,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
+                     '<html>\n  <head></head>\n  <body>\n    <span>Dear blah4disp,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your <a href="https://data.humdata.org/dashboard/datasets">dashboard</a> on HDX.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'),
                     ([{'fullname': 'blahfull', 'sysadmin': False, 'email': 'blah@blah.com', 'id': 'blah',
                        'display_name': 'blahdisp', 'name': 'blahname'},
                       {'fullname': 'blah2full', 'name': 'blah2name', 'email': 'blah2@blah.com', 'sysadmin': True,
                        'id': 'blah2'}], 'Time to update your datasets on HDX',
-                     'Dear blah5full,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
-                     '<html>\n  <head></head>\n  <body>\n    <span>Dear blah5full,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). Log into the HDX platform now to update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+                     'Dear blah5full,\n\nThe dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your dashboard on HDX.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: every year\n\nTip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.\n\nBest wishes,\nHDX Team',
+                     '<html>\n  <head></head>\n  <body>\n    <span>Dear blah5full,<br><br>The dataset(s) listed below are due for an update on the Humanitarian Data Exchange (HDX). You can update all of these in your <a href="https://data.humdata.org/dashboard/datasets">dashboard</a> on HDX.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: every year<br><br>Tip: You can decrease the "Expected Update Frequency" by clicking "Edit" on the top right of the dataset.<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
 
             now = parser.parse('2017-01-31 19:07:30.333492')
             databasequeries = DatabaseQueries(session=session, now=now)
@@ -507,7 +516,7 @@ class TestDataFreshnessStatus:
         ignore_sysadmin_emails = ['blah3@blah.com']
         now = parser.parse('2017-02-02 19:07:30.333492')
         sheet = Sheet(now)
-        email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
+        email = Email(userclass=self.TestUser, send_emails=True)
         with Database(**database_maintainer) as session:
             datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
                                           ignore_sysadmin_emails=ignore_sysadmin_emails)
@@ -620,7 +629,7 @@ class TestDataFreshnessStatus:
         serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True, 'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
         now = parser.parse('2017-02-03 19:07:30.333492')
         sheet = Sheet(now)
-        email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
+        email = Email(userclass=self.TestUser, send_emails=True)
         with Database(**database_failure) as session:
             datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations)
             databasequeries = DatabaseQueries(session=session, now=now)
@@ -679,7 +688,7 @@ class TestDataFreshnessStatus:
         ignore_sysadmin_emails = ['blah3@blah.com']
         now = parser.parse('2017-02-03 19:07:30.333492')
         sheet = Sheet(now)
-        email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
+        email = Email(userclass=self.TestUser, send_emails=True)
         with Database(**database_noresources) as session:
             datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
                                           ignore_sysadmin_emails=ignore_sysadmin_emails)
@@ -714,21 +723,24 @@ class TestDataFreshnessStatus:
                  'every year', '2015-11-24T23:32:32.025059',
                  '2017-01-01T19:07:30.333492', 2, 'Peter', 'Done']]
 
-    def test_dataset_date(self, configuration, database_dataset_date, users, organizations):
+    def test_dataset_date(self, configuration, database_datasets_modified_yesterday, users, organizations):
         site_url = 'http://lala/'
         ignore_sysadmin_emails = ['blah3@blah.com']
         now = parser.parse('2017-02-02 19:07:30.333492')
         sheet = Sheet(now)
-        email = Email(userclass=TestDataFreshnessStatus.TestUser, send_emails=True)
-        with Database(**database_dataset_date) as session:
+        email = Email(userclass=self.TestUser, send_emails=True)
+        with Database(**database_datasets_modified_yesterday) as session:
             datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
                                           ignore_sysadmin_emails=ignore_sysadmin_emails)
             databasequeries = DatabaseQueries(session=session, now=now)
             freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
                                             sheet=sheet)
-            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_DatasetDate
+            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Empty
             sheet.dutyofficer = 'Sharon'
 
+            TestDataFreshnessStatus.email_users_result = list()
+            TestDataFreshnessStatus.cells_result = None
+            freshness.process_datasets_dataset_date()
             expected_result = \
                 [([{'email': 'blah4@blah.com', 'id': 'blah4', 'name': 'blah4name', 'sysadmin': True,
                     'fullname': 'blah4full', 'display_name': 'blah4disp'}],
@@ -747,12 +759,8 @@ class TestDataFreshnessStatus:
                   '', '',
                   'blah4disp,blah5full', 'blah4@blah.com,blah5@blah.com', '', 'every year',
                   '2017-02-02T10:07:30.333492', '2017-02-02T19:07:30.333492', 1, 'Sharon', '']]
-            TestDataFreshnessStatus.email_users_result = list()
-            TestDataFreshnessStatus.cells_result = None
-            freshness.process_datasets_dataset_date()
             assert TestDataFreshnessStatus.email_users_result == expected_result
             assert TestDataFreshnessStatus.cells_result == expected_cells_result
-            TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
             mikeuser = User(
@@ -767,3 +775,49 @@ class TestDataFreshnessStatus:
             assert TestDataFreshnessStatus.email_users_result == expected_result
             assert TestDataFreshnessStatus.cells_result == expected_cells_result
             TestDataFreshnessStatus.email_users_result = list()
+            TestDataFreshnessStatus.cells_result = None
+
+    def test_datasets_datagrid(self, configuration, database_datasets_modified_yesterday, users, organizations):
+        project_config_yaml = join('tests', 'fixtures', 'project_configuration.yml')
+        configuration = Configuration(hdx_site='prod', user_agent='test', hdx_read_only=True,
+                                      project_config_yaml=project_config_yaml)
+        site_url = 'http://lala/'
+        ignore_sysadmin_emails = ['blah3@blah.com']
+        now = parser.parse('2017-02-02 19:07:30.333492')
+        sheet = Sheet(now)
+        sheet.setup_input(configuration)
+        email = Email(userclass=self.TestUser, send_emails=True)
+        with Database(**database_datasets_modified_yesterday) as session:
+            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
+                                          ignore_sysadmin_emails=ignore_sysadmin_emails)
+            databasequeries = DatabaseQueries(session=session, now=now)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
+            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Empty
+            sheet.dutyofficer = 'Sharon'
+
+            TestDataFreshnessStatus.email_users_result = list()
+            freshness.process_datasets_datagrid(datasetclass=self.TestDataset)
+            expected_result = \
+                [([{'fullname': 'Godfrey', 'email': 'godfrey@abc.org'}, {'fullname': 'Peter', 'email': 'pete@abc.org'}],
+                  'Candidates for the datagrid',
+                  'Dear system administrator,\n\nThe new dataset(s) listed below are candidates for the data grid:\n\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
+                  '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The new dataset(s) listed below are candidates for the data grid:<br><br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'),
+                 ([{'fullname': 'Godfrey', 'email': 'godfrey@abc.org'}], 'Candidates for the datagrid',
+                  'Dear system administrator,\n\nThe new dataset(s) listed below are candidates for the data grid:\n\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
+                  '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The new dataset(s) listed below are candidates for the data grid:<br><br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n'),
+                 ([{'fullname': 'Peter', 'email': 'pete@abc.org'}], 'Candidates for the datagrid',
+                  'Dear system administrator,\n\nThe new dataset(s) listed below are candidates for the data grid:\n\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
+                  '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The new dataset(s) listed below are candidates for the data grid:<br><br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n')]
+            expected_cells_result = \
+                [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',
+                  'Dataset Date', 'Update Frequency', 'Latest of Modifieds', 'Date Added', 'No. Times', 'Assigned',
+                  'Status'],
+                 ['http://lala/dataset/ourairports-wsm', 'Airports in Samoa', 'OurAirports', '', '',
+                  'blah3disp,blah4disp,blah5full',
+                  'blah3@blah.com,blah4@blah.com,blah5@blah.com', '', 'every year', '2017-02-02T10:07:30.333492',
+                  '2017-02-02T19:07:30.333492', 1, 'Peter', '']]
+            assert TestDataFreshnessStatus.email_users_result == expected_result
+            assert TestDataFreshnessStatus.cells_result == expected_cells_result
+            TestDataFreshnessStatus.email_users_result = list()
+            TestDataFreshnessStatus.cells_result = None

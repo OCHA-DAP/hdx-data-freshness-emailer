@@ -18,6 +18,7 @@ from hdx.hdx_configuration import Configuration
 from hdx.utilities.database import Database
 from hdx.utilities.dictandlist import args_to_dict
 from hdx.utilities.easy_logging import setup_logging
+from hdx.utilities.encoding import base64_to_str
 from hdx.utilities.path import script_dir_plus_file
 
 from hdx.freshness.emailer.databasequeries import DatabaseQueries
@@ -56,43 +57,41 @@ def main(db_url, db_params, email_server, gsheet_auth, **ignore):
         now = datetime.datetime.utcnow()
         sheet = Sheet(now)
 
-        # Send failure messages to Serban and Mike only
-        mikeuser = User(
-            {'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans',
-             'display_name': 'Michael Rans'})
-        serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True,
-                           'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
+        failure_list = list()
+        for address in configuration['failure_emails']:
+            failure_list.append(User({'email': base64_to_str(address)}))
         error = sheet.setup_input(configuration)
         if error:
-            email.htmlify_send([mikeuser, serbanuser], 'Error reading DP duty roster or data grid curation sheet!',
+            email.htmlify_send(failure_list, 'Error reading DP duty roster or data grid curation sheet!',
                                error)
         else:
             error = sheet.setup_output(configuration, gsheet_auth)
             if error:
-                email.htmlify_send([mikeuser, serbanuser], 'Error accessing datasets with issues Google sheet!', error)
+                email.htmlify_send(failure_list, 'Error accessing datasets with issues Google sheet!', error)
             else:
                 datasethelper = DatasetHelper(site_url=configuration.get_hdx_site_url())
                 databasequeries = DatabaseQueries(session=session, now=now)
                 freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries,
                                                 email=email, sheet=sheet)
-                if not freshness.check_number_datasets(now, send_failures=[mikeuser, serbanuser]):
-                    freshness.process_broken()
-                    # temporarily send just to me
-                    # freshness.process_broken(sendto=[mikeuser])
-
-                    freshness.process_delinquent()
-
-                    freshness.process_overdue(sysadmins=[mikeuser])
-                    # temporarily send just to me
-                    # freshness.process_overdue(sendto=[mikeuser])
-
-                    freshness.process_maintainer_orgadmins()
-
-                    freshness.process_datasets_noresources()
-
-                    # freshness.process_datasets_dataset_date(sysadmins=[mikeuser])
-                    # temporarily send just to me
-                    freshness.process_datasets_dataset_date(sendto=[mikeuser], sysadmins=[mikeuser])
+                freshness.process_datasets_datagrid()
+                # if not freshness.check_number_datasets(now, send_failures=failure_list):
+                #     freshness.process_broken()
+                #     # temporarily send just to me
+                #     # freshness.process_broken(sendto=[failure_list[0]])
+                #
+                #     freshness.process_delinquent()
+                #
+                #     freshness.process_overdue(sysadmins=[failure_list[0]])
+                #     # temporarily send just to me
+                #     # freshness.process_overdue(sendto=[failure_list[0]])
+                #
+                #     freshness.process_maintainer_orgadmins()
+                #
+                #     freshness.process_datasets_noresources()
+                #
+                #     # freshness.process_datasets_dataset_date(sysadmins=[failure_list[0]])
+                #     # temporarily send just to me
+                #     freshness.process_datasets_dataset_date(sendto=[failure_list[0]], sysadmins=[failure_list[0]])
 
     logger.info('Freshness emailer completed!')
 

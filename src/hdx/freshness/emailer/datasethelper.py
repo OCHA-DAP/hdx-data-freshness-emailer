@@ -12,6 +12,7 @@ from hdx.data.organization import Organization
 from hdx.data.user import User
 from hdx.hdx_configuration import Configuration
 from hdx.utilities.dictandlist import dict_of_lists_add
+from hdx.utilities.encoding import base64_to_str
 
 from hdx.freshness.emailer.freshnessemail import Email
 
@@ -23,6 +24,8 @@ class DatasetHelper:
         self.site_url = site_url
         if ignore_sysadmin_emails is None:  # pragma: no cover
             ignore_sysadmin_emails = Configuration.read()['ignore_sysadmin_emails']
+            for i, email in enumerate(ignore_sysadmin_emails):
+                ignore_sysadmin_emails[i] = base64_to_str(email)
         if users is None:  # pragma: no cover
             users = User.get_all_users()
         self.users = dict()

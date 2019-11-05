@@ -1,8 +1,11 @@
 # Collector specific configuration
+failure_emails:
+  - "bWNhcmFuc0B5YWhvby5jby51aw=="
+  - "dGVvZG9yZXNjdS5zZXJiYW5AZ21haWwuY29t"
 ignore_sysadmin_emails:
-  - "hdx@un.org"
-  - "hdx.feedback@gmail.com"
-  - "fake@gmail.com"
+  - "aGR4QHVuLm9yZw=="
+  - "aGR4LmZlZWRiYWNrQGdtYWlsLmNvbQ=="
+  - "ZmFrZUBnbWFpbC5jb20="
 duty_roster_url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRu7AIaP1AaLM4Ci36tay3Nj6XSDtTmPjtdYdXYSNpvfyil1npJ8lfB2Q2WUk9BFTVb8_5lwkgQmetk/pub?gid=0&single=true&output=csv"
 # prod
 #issues_spreadsheet_url: "https://docs.google.com/spreadsheets/d/15Q6fZaQ4ZSe7XYme-fDifnVRyhwaDovrEQTi41txgko/edit"
