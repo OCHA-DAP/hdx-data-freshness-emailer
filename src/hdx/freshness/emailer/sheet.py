@@ -89,7 +89,7 @@ class Sheet:
         except Exception as ex:
             return str(ex)
 
-    def setup_output(self, configuration, gsheet_auth):
+    def setup_output(self, configuration, gsheet_auth, spreadsheet_test):
         if gsheet_auth:
             try:
                 logger.info('> GSheet Credentials: %s' % gsheet_auth)
@@ -97,7 +97,11 @@ class Sheet:
                 scopes = ['https://www.googleapis.com/auth/spreadsheets']
                 credentials = service_account.Credentials.from_service_account_info(info, scopes=scopes)
                 gc = pygsheets.authorize(custom_credentials=credentials)
-                self.spreadsheet = gc.open_by_url(configuration['issues_spreadsheet_url'])
+                if spreadsheet_test:  # use test not prod spreadsheet
+                    issues_spreadsheet = configuration['test_issues_spreadsheet_url']
+                else:
+                    issues_spreadsheet = configuration['prod_issues_spreadsheet_url']
+                self.spreadsheet = gc.open_by_url(issues_spreadsheet)
             except Exception as ex:
                 return str(ex)
         else:
