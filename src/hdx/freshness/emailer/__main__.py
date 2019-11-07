@@ -18,9 +18,12 @@ from hdx.hdx_configuration import Configuration
 from hdx.utilities.database import Database
 from hdx.utilities.dictandlist import args_to_dict
 from hdx.utilities.easy_logging import setup_logging
+from hdx.utilities.encoding import base64_to_str
 from hdx.utilities.path import script_dir_plus_file
 
+from hdx.freshness.emailer.databasequeries import DatabaseQueries
 from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
+from hdx.freshness.emailer.datasethelper import DatasetHelper
 from hdx.freshness.emailer.freshnessemail import Email
 from hdx.freshness.emailer.sheet import Sheet
 
@@ -28,7 +31,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-def main(db_url, db_params, email_server, gsheet_auth, **ignore):
+def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_test, **ignore):
     configuration = Configuration.read()
     if email_server:
         email_config = email_server.split(',')
@@ -54,37 +57,40 @@ def main(db_url, db_params, email_server, gsheet_auth, **ignore):
         now = datetime.datetime.utcnow()
         sheet = Sheet(now)
 
-        # Send failure messages to Serban and Mike only
-        mikeuser = User(
-            {'email': 'mcarans@yahoo.co.uk', 'name': 'mcarans', 'sysadmin': True, 'fullname': 'Michael Rans',
-             'display_name': 'Michael Rans'})
-        serbanuser = User({'email': 'teodorescu.serban@gmail.com', 'name': 'serban', 'sysadmin': True,
-                           'fullname': 'Serban Teodorescu', 'display_name': 'Serban Teodorescu'})
+        failure_list = list()
+        for address in configuration['failure_emails']:
+            failure_list.append(User({'email': base64_to_str(address)}))
         error = sheet.setup_input(configuration)
         if error:
-            email.htmlify_send([mikeuser, serbanuser], 'Error reading DP duty roster!', error)
+            email.htmlify_send(failure_list, 'Error reading DP duty roster or data grid curation sheet!',
+                               error)
         else:
-            error = sheet.setup_output(configuration, gsheet_auth)
+            error = sheet.setup_output(configuration, gsheet_auth, spreadsheet_test)
             if error:
-                email.htmlify_send([mikeuser, serbanuser], 'Error accessing datasets with issues Google sheet!', error)
+                email.htmlify_send(failure_list, 'Error accessing datasets with issues Google sheet!', error)
             else:
-                freshness = DataFreshnessStatus(now=now, site_url=configuration.get_hdx_site_url(), session=session,
+                datasethelper = DatasetHelper(site_url=configuration.get_hdx_site_url())
+                databasequeries = DatabaseQueries(session=session, now=now)
+                freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries,
                                                 email=email, sheet=sheet)
-
-                if not freshness.check_number_datasets(send_failures=[mikeuser, serbanuser]):
-                    freshness.process_broken()
-                    # temporarily send just to me
-                    # freshness.process_broken(sendto=[mikeuser])
-
-                    freshness.process_delinquent()
-
-                    freshness.process_overdue()
-                    # temporarily send just to me
-                    # freshness.process_overdue(sendto=[mikeuser])
-
-                    freshness.process_maintainer_orgadmins()
-
-                    freshness.process_datasets_noresources()
+                if not freshness.check_number_datasets(now, send_failures=failure_list):
+                    test_users = [failure_list[0]]
+                    if email_test:  # send just to test users
+                        freshness.process_broken(sendto=test_users)
+                        freshness.process_overdue(sendto=test_users, sysadmins=test_users)
+                        freshness.process_delinquent(sendto=test_users)
+                        freshness.process_maintainer_orgadmins(sendto=test_users)
+                        freshness.process_datasets_noresources(sendto=test_users)
+                        # freshness.process_datasets_dataset_date(sendto=test_users, sysadmins=test_users)
+                        # freshness.process_datasets_datagrid(sendto=test_users)
+                    else:
+                        freshness.process_broken()
+                        freshness.process_overdue(sysadmins=test_users)
+                        freshness.process_delinquent()
+                        freshness.process_maintainer_orgadmins()
+                        freshness.process_datasets_noresources()
+                        # freshness.process_datasets_dataset_date(sysadmins=test_users)
+                        # freshness.process_datasets_datagrid()
 
     logger.info('Freshness emailer completed!')
 
@@ -99,6 +105,10 @@ if __name__ == '__main__':
     parser.add_argument('-dp', '--db_params', default=None, help='Database connection parameters. Overrides --db_url.')
     parser.add_argument('-es', '--email_server', default=None, help='Email server to use')
     parser.add_argument('-gs', '--gsheet_auth', default=None, help='Credentials for accessing Google Sheets')
+    parser.add_argument('-et', '--email_test', default=False, action='store_true',
+                        help='Email only test users for testing purposes')
+    parser.add_argument('-st', '--spreadsheet_test', default=False, action='store_true',
+                        help='Use test instead of prod spreadsheet')
     args = parser.parse_args()
     hdx_key = args.hdx_key
     if hdx_key is None:
@@ -128,4 +138,5 @@ if __name__ == '__main__':
     project_config_yaml = script_dir_plus_file('project_configuration.yml', main)
     facade(main, hdx_key=hdx_key, user_agent=user_agent, preprefix=preprefix, hdx_site=hdx_site,
            project_config_yaml=project_config_yaml, db_url=db_url, db_params=args.db_params,
-           email_server=email_server, gsheet_auth=gsheet_auth)
+           email_server=email_server, gsheet_auth=gsheet_auth, email_test=args.email_test,
+           spreadsheet_test=args.spreadsheet_test)

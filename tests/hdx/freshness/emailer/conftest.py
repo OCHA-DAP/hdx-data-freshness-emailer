@@ -1,5 +1,7 @@
 # -*- coding: UTF-8 -*-
 """Global fixtures"""
+import os
+import shutil
 from os.path import join
 
 import pytest
@@ -12,3 +14,14 @@ def configuration():
     Configuration._create(hdx_site='prod', user_agent='test', hdx_read_only=True,
                           project_config_yaml=project_config_yaml)
 
+
+@pytest.fixture(scope='function')
+def database_failure():
+    dbfile = 'test_freshness_failure.db'
+    dbpath = join('tests', dbfile)
+    try:
+        os.remove(dbpath)
+    except FileNotFoundError:
+        pass
+    shutil.copyfile(join('tests', 'fixtures', dbfile), dbpath)
+    return {'driver': 'sqlite', 'database': dbpath}
