@@ -111,11 +111,8 @@ class Email:
         cls.output_newline(msg, htmlmsg)
 
     @staticmethod
-    def prepare_emails(datasethelper, include_datasetdate, datasets, nodatasetsmsg, sheet, sheetname):
+    def prepare_emails(datasethelper, include_datasetdate, datasets, sheet, sheetname):
         all_users_to_email = dict()
-        if len(datasets) == 0:
-            logger.info(nodatasetsmsg)
-            return all_users_to_email
         datasets_flat = list()
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
             maintainer, orgadmins, users_to_email = datasethelper.get_maintainer_orgadmins(dataset)
@@ -140,9 +137,10 @@ class Email:
 
     def email_users_send_summary(self, datasethelper, include_datasetdate, datasets, nodatasetsmsg, startmsg, endmsg,
                                  sendto, subject, sysadmins, summary_subject, sheet, sheetname):
-        all_users_to_email = self.prepare_emails(datasethelper, include_datasetdate, datasets, nodatasetsmsg, sheet,
-                                                 sheetname)
-
+        if len(datasets) == 0:
+            logger.info(nodatasetsmsg)
+            return
+        all_users_to_email = self.prepare_emails(datasethelper, include_datasetdate, datasets, sheet, sheetname)
         starthtmlmsg = self.html_start(self.convert_newlines(startmsg))
         if '$dashboard' in startmsg:
             startmsg = startmsg.replace('$dashboard', 'dashboard')
