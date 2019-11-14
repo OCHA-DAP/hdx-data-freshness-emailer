@@ -2,10 +2,9 @@
 failure_emails:
   - "bWNhcmFuc0B5YWhvby5jby51aw=="
   - "dGVvZG9yZXNjdS5zZXJiYW5AZ21haWwuY29t"
-ignore_sysadmin_emails:
+sysadmins_to_email:
   - "aGR4QHVuLm9yZw=="
-  - "aGR4LmZlZWRiYWNrQGdtYWlsLmNvbQ=="
-  - "ZmFrZUBnbWFpbC5jb20="
+  - "bWNhcmFuc0B5YWhvby5jby51aw=="
 duty_roster_url: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRu7AIaP1AaLM4Ci36tay3Nj6XSDtTmPjtdYdXYSNpvfyil1npJ8lfB2Q2WUk9BFTVb8_5lwkgQmetk/pub?gid=0&single=true&output=csv"
 prod_issues_spreadsheet_url: "https://docs.google.com/spreadsheets/d/15Q6fZaQ4ZSe7XYme-fDifnVRyhwaDovrEQTi41txgko/edit"
 test_issues_spreadsheet_url: "https://docs.google.com/spreadsheets/d/1ZiNRRBofxwwQQpqa_vdw_TSTY6_ytg6VZRTCq-5J92w/edit"

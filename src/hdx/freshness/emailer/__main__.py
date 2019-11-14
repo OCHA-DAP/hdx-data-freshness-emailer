@@ -12,7 +12,6 @@ import datetime
 import logging
 from os import getenv
 
-from hdx.data.user import User
 from hdx.facades.keyword_arguments import facade
 from hdx.hdx_configuration import Configuration
 from hdx.utilities.database import Database
@@ -41,10 +40,10 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
             email_config_dict['sender'] = email_config[5]
         configuration.setup_emailer(email_config_dict=email_config_dict)
         logger.info('> Email host: %s' % email_config[1])
-        send_emails = True
+        send_emails = configuration.emailer().send
     else:
         logger.info('> No email host!')
-        send_emails = False
+        send_emails = None
     if db_params:
         params = args_to_dict(db_params)
     elif db_url:
@@ -59,7 +58,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
 
         failure_list = list()
         for address in configuration['failure_emails']:
-            failure_list.append(User({'email': base64_to_str(address)}))
+            failure_list.append(base64_to_str(address))
         error = sheet.setup_input(configuration)
         if error:
             email.htmlify_send(failure_list, 'Error reading DP duty roster or data grid curation sheet!',

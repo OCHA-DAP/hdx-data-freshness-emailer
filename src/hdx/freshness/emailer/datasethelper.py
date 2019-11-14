@@ -20,24 +20,23 @@ from hdx.freshness.emailer.freshnessemail import Email
 class DatasetHelper:
     freshness_status = {0: 'Fresh', 1: 'Due', 2: 'Overdue', 3: 'Delinquent'}
 
-    def __init__(self, site_url, users=None, organizations=None, ignore_sysadmin_emails=None):
+    def __init__(self, site_url, users=None, organizations=None, sysadmins_to_email=None):
         self.site_url = site_url
-        if ignore_sysadmin_emails is None:  # pragma: no cover
-            ignore_sysadmin_emails = Configuration.read()['ignore_sysadmin_emails']
-            for i, email in enumerate(ignore_sysadmin_emails):
-                ignore_sysadmin_emails[i] = base64_to_str(email)
+        if sysadmins_to_email is None:  # pragma: no cover
+            self.sysadmins_to_email = Configuration.read()['sysadmins_to_email']
+            for i, email in enumerate(sysadmins_to_email):
+                self.sysadmins_to_email[i] = base64_to_str(email)
+        else:
+            self.sysadmins_to_email = sysadmins_to_email
         if users is None:  # pragma: no cover
             users = User.get_all_users()
         self.users = dict()
         self.sysadmins = dict()
-        self.sysadmins_to_email = list()
         for user in users:
             userid = user['id']
             self.users[userid] = user
             if user['sysadmin']:
                 self.sysadmins[userid] = user
-                if user['fullname'] and user['email'] not in ignore_sysadmin_emails:
-                    self.sysadmins_to_email.append(user)
 
         self.organizations = dict()
         if organizations is None:  # pragma: no cover

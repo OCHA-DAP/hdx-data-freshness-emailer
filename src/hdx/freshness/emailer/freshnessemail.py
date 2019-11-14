@@ -7,51 +7,49 @@ Utilities to handle creating email messages in raw text and HTML formats
 """
 import logging
 
-from hdx.data.user import User
 from hdx.utilities.dictandlist import dict_of_lists_add
 
 logger = logging.getLogger(__name__)
 
 
 class Email:
-    def __init__(self, userclass=User, send_emails=True):
-        self.userclass = userclass
+    def __init__(self, send_emails=None):
         self.send_emails = send_emails
 
-    def send(self, send_to, title, output, htmloutput):
-        if self.send_emails:
-            self.userclass.email_users(send_to, title, output, html_body=htmloutput)
+    def send(self, recipients, subject, text_body, html_body):
+        if self.send_emails is not None:
+            self.send_emails(recipients, subject, text_body, html_body=html_body)
         else:
             logger.warning('Not sending any email!')
 
-    def htmlify_send(self, send_to, title, msg):
-        output, htmloutput = Email.htmlify(msg)
-        self.send(send_to, title, output, htmloutput)
-        logger.info(output)
+    def htmlify_send(self, recipients, subject, msg):
+        text_body, html_body = Email.htmlify(msg)
+        self.send(recipients, subject, text_body, html_body)
+        logger.info(text_body)
 
-    def close_send(self, send_to, title, msg, htmlmsg, endmsg='', log=True):
-        output, htmloutput = Email.msg_close(msg, htmlmsg, endmsg)
-        self.send(send_to, title, output, htmloutput)
+    def close_send(self, recipients, subject, msg, htmlmsg, endmsg='', log=True):
+        text_body, html_body = Email.msg_close(msg, htmlmsg, endmsg)
+        self.send(recipients, subject, text_body, html_body)
         if log:
-            logger.info(output)
+            logger.info(text_body)
 
-    def send_sysadmin_summary(self, sysadmins, emails, title):
+    def send_sysadmin_summary(self, sysadmins, emails, subject):
         if sysadmins:
             startmsg = 'Dear system administrator,\n\n'
             msg = [startmsg]
             htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
             msg.extend(emails['plain'])
             htmlmsg.extend(emails['html'])
-            self.close_send(sysadmins, title, msg, htmlmsg, log=False)
+            self.close_send(sysadmins, subject, msg, htmlmsg, log=False)
 
     closure = '\nBest wishes,\nHDX Team'
 
     @classmethod
     def msg_close(cls, msg, htmlmsg, endmsg=''):
-        output = '%s%s%s' % (''.join(msg), endmsg, Email.closure)
-        htmloutput = cls.html_end('%s%s%s' % (''.join(htmlmsg), Email.convert_newlines(endmsg),
+        text_body = '%s%s%s' % (''.join(msg), endmsg, Email.closure)
+        html_body = cls.html_end('%s%s%s' % (''.join(htmlmsg), Email.convert_newlines(endmsg),
                                               Email.convert_newlines(Email.closure)))
-        return output, htmloutput
+        return text_body, html_body
 
     @staticmethod
     def convert_newlines(msg):
