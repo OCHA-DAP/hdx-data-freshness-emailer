@@ -25,8 +25,8 @@ class TestDataFreshnessStatus:
     cells_result = list()
 
     @staticmethod
-    def email_users(users_to_email, subject, output, html_body):
-        TestDataFreshnessStatus.email_users_result.append((users_to_email, subject, output, html_body))
+    def email_users(users_to_email, subject, text_body, html_body):
+        TestDataFreshnessStatus.email_users_result.append((users_to_email, subject, text_body, html_body))
 
     class TestDataset:
         @staticmethod
