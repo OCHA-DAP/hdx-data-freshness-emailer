@@ -22,9 +22,9 @@ class DatasetHelper:
 
     def __init__(self, site_url, users=None, organizations=None, sysadmins_to_email=None):
         self.site_url = site_url
-        if sysadmins_to_email is None:  # pragma: no cover
+        if sysadmins_to_email is None:
             self.sysadmins_to_email = Configuration.read()['sysadmins_to_email']
-            for i, email in enumerate(sysadmins_to_email):
+            for i, email in enumerate(self.sysadmins_to_email):
                 self.sysadmins_to_email[i] = base64_to_str(email)
         else:
             self.sysadmins_to_email = sysadmins_to_email

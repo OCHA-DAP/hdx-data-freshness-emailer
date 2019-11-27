@@ -11,7 +11,6 @@ from os.path import join
 import pytest
 from dateutil import parser
 from hdx.data.user import User
-from hdx.hdx_configuration import Configuration
 from hdx.utilities.database import Database
 
 from hdx.freshness.emailer.databasequeries import DatabaseQueries
@@ -599,8 +598,7 @@ class TestDataFreshnessStatus:
         sheet = Sheet(now)
         email = Email(send_emails=self.email_users)
         with Database(**database_failure) as session:
-            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations,
-                                          sysadmins_to_email=['blah2@blah.com', 'blah4@blah.com'])
+            datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations)
             databasequeries = DatabaseQueries(session=session, now=now)
             freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
                                             sheet=sheet)
@@ -723,9 +721,6 @@ class TestDataFreshnessStatus:
             TestDataFreshnessStatus.cells_result = None
 
     def test_datasets_datagrid(self, configuration, database_datasets_modified_yesterday, users, organizations):
-        project_config_yaml = join('tests', 'fixtures', 'project_configuration.yml')
-        configuration = Configuration(hdx_site='prod', user_agent='test', hdx_read_only=True,
-                                      project_config_yaml=project_config_yaml)
         site_url = 'http://lala/'
         sysadmins_to_email = ['blah3@blah.com']
         now = parser.parse('2017-02-02 19:07:30.333492')
