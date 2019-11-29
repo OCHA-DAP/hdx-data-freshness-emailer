@@ -25,7 +25,7 @@ class TestSheet:
         result = sheet.setup_input(configuration)
         if result:
             print(result)
-        assert sheet.dutyofficer == 'Davide Mmmmmm2'
+        assert sheet.dutyofficer == {'name': 'Davide Mmmmmm2', 'email': 'mmmmmmm2@ab.org'}
         assert sheet.datagrids == {'afg': {'datagrid': 'groups:afg',
                                            'administrative_divisions': '(vocab_Topics:"administrative divisions" AND has_geodata:True) ! (title:hotosm)',
                                            'idp': '(vocab_Topics:"internally displaced persons - idp" AND subnational:1) ! (name:whole-of-afghanistan-assessment-household-dataset-august-2018) ! (name:afghanistan-conflict-induced-displacements-in-2018) ! (name:whole-of-afghanistan-assessment-household-dataset-august-2018) ! (name:afghanistan-conflict-induced-displacements-in-2018) ! (name:afghanistan-protection-assessment-of-conflict-affected-populations-may-2018) ! (name:reach-dataset-afghanistan-north-flood-response-evaluation-assessment) ! (name:afghanistan-conflict-induced-displacements-in-2017) ! (name:reach-dataset-multi-cluster-needs-assessment-of-prolonged-idps-in-afghanistan) ! (name:afg-conflict-idps) ! (name:afghanistan-verified-estimates-of-idps-displaced-between-1-january-2014-and-1-march-2016) ! (name:afghanistan-joint-education-and-child-protection-needs-assessment)',

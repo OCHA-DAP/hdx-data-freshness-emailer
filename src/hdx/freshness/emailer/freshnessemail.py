@@ -16,20 +16,20 @@ class Email:
     def __init__(self, send_emails=None):
         self.send_emails = send_emails
 
-    def send(self, recipients, subject, text_body, html_body):
+    def send(self, recipients, subject, text_body, html_body=None, cc=None, bcc=None):
         if self.send_emails is not None:
-            self.send_emails(recipients, subject, text_body, html_body=html_body)
+            self.send_emails(recipients, subject, text_body, html_body=html_body, cc=cc, bcc=bcc)
         else:
             logger.warning('Not sending any email!')
 
-    def htmlify_send(self, recipients, subject, msg):
+    def htmlify_send(self, recipients, subject, msg, cc=None, bcc=None):
         text_body, html_body = Email.htmlify(msg)
-        self.send(recipients, subject, text_body, html_body)
+        self.send(recipients, subject, text_body, html_body, cc=cc, bcc=bcc)
         logger.info(text_body)
 
-    def close_send(self, recipients, subject, msg, htmlmsg, endmsg='', log=True):
+    def close_send(self, recipients, subject, msg, htmlmsg, endmsg='', cc=None, bcc=None, log=True):
         text_body, html_body = Email.msg_close(msg, htmlmsg, endmsg)
-        self.send(recipients, subject, text_body, html_body)
+        self.send(recipients, subject, text_body, html_body, cc=cc, bcc=bcc)
         if log:
             logger.info(text_body)
 

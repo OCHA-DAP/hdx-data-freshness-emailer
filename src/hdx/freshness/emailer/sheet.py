@@ -54,15 +54,20 @@ class Sheet:
     def setup_input(self, configuration):
         logger.info('--------------------------------------------------')
         try:
-            dutyofficers = hxl.data(configuration['duty_roster_url']).with_columns(['#date+start', '#contact+name'])
+            dutyofficers = hxl.data(configuration['duty_roster_url']).with_columns(['#date+start', '#contact+name',
+                                                                                    '#contact+email'])
             dutyofficers = dutyofficers.sort(keys=['#date+start'], reverse=True)
 
             for dutyofficer in dutyofficers:
                 startdate = dutyofficer.get('#date+start').strip()
                 if datetime.strptime(startdate, '%Y-%m-%d') <= self.now:
-                    self.dutyofficer = dutyofficer.get('#contact+name').strip()
-                    logger.info('Duty officer: %s' % self.dutyofficer)
-                    break
+                    dutyofficer_name = dutyofficer.get('#contact+name')
+                    if dutyofficer_name:
+                        dutyofficer_name = dutyofficer_name.strip()
+                        self.dutyofficer = {'name': dutyofficer_name,
+                                            'email': dutyofficer.get('#contact+email').strip()}
+                        logger.info('Duty officer: %s' % dutyofficer_name)
+                        break
             datagrids = hxl.data(configuration['datagrids_url']).cache()
             defaultgrid = dict()
             for row in datagrids.with_rows('#datagrid=default'):
@@ -146,7 +151,7 @@ class Sheet:
                 if dutyofficer is not None:
                     new_row[assigned_ind] = dutyofficer
                 else:
-                    new_row[assigned_ind] = self.dutyofficer
+                    new_row[assigned_ind] = self.dutyofficer['name']
                 current_values.append(new_row)
                 urls.append(url)
                 updated_notimes.add(url)
