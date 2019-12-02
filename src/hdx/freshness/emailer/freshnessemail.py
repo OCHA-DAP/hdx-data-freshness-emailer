@@ -46,6 +46,21 @@ class Email:
         if log:
             logger.info(text_body)
 
+    @staticmethod
+    def get_addressee(dutyofficer, recipients=None):
+        if dutyofficer and recipients is None:
+            return dutyofficer['name']
+        else:
+            return 'system administrator'
+
+    @staticmethod
+    def fill_addressee(msg, htmlmsg, dutyofficer, recipients):
+        if '%s' not in msg[0]:
+            return
+        addressee = Email.get_addressee(dutyofficer, recipients)
+        msg[0] = msg[0] % addressee
+        htmlmsg[0] = htmlmsg[0] % addressee
+
     def get_recipients_cc(self, dutyofficer, recipients=None):
         if recipients is None:
             if dutyofficer:
@@ -56,11 +71,11 @@ class Email:
             return recipients, None
 
     def get_recipients_close_send(self, dutyofficer, recipients, subject, msg, htmlmsg, endmsg='', log=True):
+        self.fill_addressee(msg, htmlmsg, dutyofficer, recipients)
         recipients, cc = self.get_recipients_cc(dutyofficer, recipients)
         self.close_send(recipients, subject, msg, htmlmsg, endmsg, cc=cc, log=log)
 
-    def send_sysadmin_summary(self, dutyofficer, sysadmins, emails, subject):
-        startmsg = 'Dear system administrator,\n\n'
+    def send_sysadmin_summary(self, dutyofficer, sysadmins, emails, subject, startmsg):
         msg = [startmsg]
         htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
         msg.extend(emails['plain'])
@@ -159,7 +174,8 @@ class Email:
         return all_users_to_email
 
     def email_users_send_summary(self, datasethelper, include_datasetdate, datasets, nodatasetsmsg, startmsg, endmsg,
-                                 recipients, subject, summary_subject, sheet, sheetname, sysadmins=None):
+                                 recipients, subject, summary_subject, summary_startmsg, sheet, sheetname,
+                                 sysadmins=None):
         if len(datasets) == 0:
             logger.info(nodatasetsmsg)
             return
@@ -188,7 +204,7 @@ class Email:
             else:
                 users_to_email = recipients
             self.close_send(users_to_email, subject, msg, htmlmsg, endmsg)
-        self.send_sysadmin_summary(sheet.dutyofficer, sysadmins, emails, summary_subject)
+        self.send_sysadmin_summary(sheet.dutyofficer, sysadmins, emails, summary_subject, summary_startmsg)
 
     def email_admins(self, datasethelper, datasets, nodatasetsmsg, startmsg, subject, sheet, sheetname, recipients=None,
                      dutyofficer=None):

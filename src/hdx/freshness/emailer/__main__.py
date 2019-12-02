@@ -84,7 +84,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
                         # freshness.process_datasets_datagrid(recipients=test_users)
                     else:
                         freshness.process_broken()
-                        freshness.process_overdue(sysadmins=test_users)
+                        freshness.process_overdue()
                         freshness.process_delinquent()
                         freshness.process_maintainer_orgadmins()
                         freshness.process_datasets_noresources()
