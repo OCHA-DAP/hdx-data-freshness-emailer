@@ -5,6 +5,7 @@ from codecs import open
 from os.path import join, abspath, realpath, dirname
 
 from hdx.utilities import CleanCommand, PackageCommand, PublishCommand
+from hdx.utilities.loader import load_file_to_str
 from setuptools import setup, find_packages
 
 
@@ -47,7 +48,7 @@ def get_readme():
 
 
 requirements = ['pygsheets',
-                'hdx-data-freshness>=1.4.2']
+                'hdx-data-freshness>=1.4.3']
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -61,12 +62,14 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
+PublishCommand.version = load_file_to_str(join('src', 'hdx', 'freshness', 'emailer', 'version.txt'), strip=True)
+
 setup(
     name='hdx-data-freshness-emailer',
     description='HDX Data Freshness Emailer',
     license='MIT',
     url='https://github.com/OCHA-DAP/hdx-data-freshness-emailer',
-    version='1.2.7',
+    version=PublishCommand.version,
     author='Michael Rans',
     author_email='rans@email.com',
     keywords=['HDX', 'fresh', 'freshness', 'data freshness emailer'],

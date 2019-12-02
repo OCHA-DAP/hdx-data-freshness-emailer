@@ -25,12 +25,14 @@ from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
 from hdx.freshness.emailer.datasethelper import DatasetHelper
 from hdx.freshness.emailer.freshnessemail import Email
 from hdx.freshness.emailer.sheet import Sheet
+from hdx.freshness.emailer.version import get_freshness_emailer_version
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
 
 def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_test, **ignore):
+    logger.info('> Data freshness emailer %s' % get_freshness_emailer_version())
     configuration = Configuration.read()
     if email_server:
         email_config = email_server.split(',')
