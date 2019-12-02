@@ -52,7 +52,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
         params = {'driver': 'sqlite', 'database': 'freshness.db'}
     logger.info('> Database parameters: %s' % params)
     with Database(**params) as session:
-        email = Email(send_emails=send_emails)
+        email = Email(send_emails=send_emails, configuration=configuration)
         now = datetime.datetime.utcnow()
         sheet = Sheet(now)
 
@@ -75,13 +75,13 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
                 if not freshness.check_number_datasets(now, send_failures=failure_list):
                     test_users = [failure_list[0]]
                     if email_test:  # send just to test users
-                        freshness.process_broken(sendto=test_users)
-                        freshness.process_overdue(sendto=test_users, sysadmins=test_users)
-                        freshness.process_delinquent(sendto=test_users)
-                        freshness.process_maintainer_orgadmins(sendto=test_users)
-                        freshness.process_datasets_noresources(sendto=test_users)
-                        # freshness.process_datasets_dataset_date(sendto=test_users, sysadmins=test_users)
-                        # freshness.process_datasets_datagrid(sendto=test_users)
+                        freshness.process_broken(recipients=test_users)
+                        freshness.process_overdue(recipients=test_users, sysadmins=test_users)
+                        freshness.process_delinquent(recipients=test_users)
+                        freshness.process_maintainer_orgadmins(recipients=test_users)
+                        freshness.process_datasets_noresources(recipients=test_users)
+                        # freshness.process_datasets_dataset_date(recipients=test_users, sysadmins=test_users)
+                        # freshness.process_datasets_datagrid(recipients=test_users)
                     else:
                         freshness.process_broken()
                         freshness.process_overdue(sysadmins=test_users)

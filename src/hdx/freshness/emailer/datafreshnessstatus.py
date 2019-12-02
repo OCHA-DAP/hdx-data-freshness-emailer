@@ -32,14 +32,15 @@ class DataFreshnessStatus:
         run_numbers = self.databasequeries.get_run_numbers()
         run_date = run_numbers[0][1]
         stop = True
+        cc = None
         if now < run_date:
-            title = 'FAILURE: Future run date!'
+            subject = 'FAILURE: Future run date!'
             msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
-            send_to = send_failures
+            recipients = send_failures
         elif now - run_date > datetime.timedelta(days=1):
-            title = 'FAILURE: No run today!'
+            subject = 'FAILURE: No run today!'
             msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
-            send_to = send_failures
+            recipients = send_failures
         elif len(run_numbers) == 2:
             datasets_today, datasets_previous = self.databasequeries.get_number_datasets()
             diff_datasets = datasets_previous - datasets_today
@@ -48,22 +49,22 @@ class DataFreshnessStatus:
                 logger.info('No issues with number of datasets.')
                 return False
             if percentage_diff == 1.0:
-                title = 'FAILURE: No datasets today!'
+                subject = 'FAILURE: No datasets today!'
                 msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
-                send_to = send_failures
+                recipients = send_failures
             else:
-                title = 'WARNING: Fall in datasets on HDX today!'
+                subject = 'WARNING: Fall in datasets on HDX today!'
                 msg = 'Dear system administrator,\n\nThere are %d (%d%%) fewer datasets today than yesterday on HDX!\n' % \
                       (diff_datasets, percentage_diff * 100)
-                send_to = self.datasethelper.sysadmins_to_email
+                recipients, cc = self.email.get_recipients_cc(self.sheet.dutyofficer)
                 stop = False
         else:
             logger.info('No issues with number of datasets.')
             return False
-        self.email.htmlify_send(send_to, title, msg)
+        self.email.htmlify_send(recipients, subject, msg, cc=cc)
         return stop
 
-    def process_broken(self, sendto=None):
+    def process_broken(self, recipients=None):
         logger.info('\n\n*** Checking for broken datasets ***')
         datasets = self.databasequeries.get_broken()
         if len(datasets) == 0:
@@ -137,14 +138,11 @@ class DataFreshnessStatus:
                     Email.output_newline(msg, htmlmsg)
             Email.output_newline(msg, htmlmsg)
 
-        if sendto is None:
-            users_to_email = self.datasethelper.sysadmins_to_email
-        else:
-            users_to_email = sendto
-        self.email.close_send(users_to_email, 'Broken datasets', msg, htmlmsg)
+        recipients, cc = self.email.get_recipients_cc(self.sheet.dutyofficer, recipients)
+        self.email.close_send(recipients, 'Broken datasets', msg, htmlmsg, cc=cc)
         self.sheet.update('Broken', datasets_flat)
 
-    def process_delinquent(self, sendto=None):
+    def process_delinquent(self, recipients=None):
         logger.info('\n\n*** Checking for delinquent datasets ***')
         nodatasetsmsg = 'No delinquent datasets found.'
         startmsg = 'Dear system administrator,\n\nThe following datasets have just become delinquent:\n\n'
@@ -152,9 +150,9 @@ class DataFreshnessStatus:
         sheetname = 'Delinquent'
         datasets = self.databasequeries.get_status(3)
         self.email.email_admins(self.datasethelper, datasets, nodatasetsmsg, startmsg, subject, self.sheet, sheetname,
-                                sendto)
+                                recipients)
 
-    def process_overdue(self, sendto=None, sysadmins=None):
+    def process_overdue(self, recipients=None, sysadmins=None):
         logger.info('\n\n*** Checking for overdue datasets ***')
         datasets = self.databasequeries.get_status(2)
         nodatasetsmsg = 'No overdue datasets found.'
@@ -164,17 +162,17 @@ class DataFreshnessStatus:
         summary_subject = 'All overdue dataset emails'
         sheetname = None
         self.email.email_users_send_summary(self.datasethelper, False, datasets, nodatasetsmsg, startmsg, endmsg,
-                                            sendto, subject, sysadmins, summary_subject, self.sheet, sheetname)
+                                            recipients, subject, sysadmins, summary_subject, self.sheet, sheetname)
 
-    def send_maintainer_email(self, datasets, sendto=None):
+    def send_maintainer_email(self, datasets, recipients=None):
         nodatasetsmsg = 'No invalid maintainers found.'
         startmsg = 'Dear system administrator,\n\nThe following datasets have an invalid maintainer:\n\n'
         subject = 'Datasets with invalid maintainer'
         sheetname = 'Maintainer'
         self.email.email_admins(self.datasethelper, datasets, nodatasetsmsg, startmsg, subject, self.sheet, sheetname,
-                                sendto)
+                                recipients)
 
-    def send_orgadmins_email(self, invalid_orgadmins, sendto=None):
+    def send_orgadmins_email(self, invalid_orgadmins, recipients=None):
         organizations_flat = list()
         if len(invalid_orgadmins) == 0:
             logger.info('No invalid organisation administrators found.')
@@ -194,23 +192,20 @@ class DataFreshnessStatus:
             # URL	Title	Problem
             row = {'URL': url, 'Title': title, 'Error': error}
             organizations_flat.append(row)
-        if sendto is None:
-            users_to_email = self.datasethelper.sysadmins_to_email
-        else:
-            users_to_email = sendto
-        self.email.close_send(users_to_email, 'Organizations with invalid admins', msg, htmlmsg)
+        recipients, cc = self.email.get_recipients_cc(self.sheet.dutyofficer, recipients)
+        self.email.close_send(recipients, 'Organizations with invalid admins', msg, htmlmsg, cc=cc)
         self.sheet.update('OrgAdmins', organizations_flat)
 
-    def process_maintainer_orgadmins(self, sendto=None):
+    def process_maintainer_orgadmins(self, recipients=None):
         logger.info('\n\n*** Checking for invalid maintainers and organisation administrators ***')
         invalid_maintainers, invalid_orgadmins = \
             self.databasequeries.get_invalid_maintainer_orgadmins(self.datasethelper.organizations,
                                                                   self.datasethelper.users,
                                                                   self.datasethelper.sysadmins)
-        self.send_maintainer_email(invalid_maintainers, sendto)
-        self.send_orgadmins_email(invalid_orgadmins, sendto)
+        self.send_maintainer_email(invalid_maintainers, recipients)
+        self.send_orgadmins_email(invalid_orgadmins, recipients)
 
-    def process_datasets_noresources(self, sendto=None):
+    def process_datasets_noresources(self, recipients=None):
         logger.info('\n\n*** Checking for datasets with no resources ***')
         nodatasetsmsg = 'No datasets with no resources found.'
         startmsg = 'Dear system administrator,\n\nThe following datasets have no resources:\n\n'
@@ -218,9 +213,9 @@ class DataFreshnessStatus:
         sheetname = 'NoResources'
         datasets = self.databasequeries.get_datasets_noresources()
         self.email.email_admins(self.datasethelper, datasets, nodatasetsmsg, startmsg, subject, self.sheet, sheetname,
-                                sendto)
+                                recipients)
 
-    def process_datasets_dataset_date(self, sendto=None, sysadmins=None):
+    def process_datasets_dataset_date(self, recipients=None, sysadmins=None):
         logger.info('\n\n*** Checking for datasets where date of dataset has not been updated ***')
         datasets = self.databasequeries.get_datasets_dataset_date()
         nodatasetsmsg = 'No datasets with date of dataset needing update found.'
@@ -229,10 +224,11 @@ class DataFreshnessStatus:
         subject = 'Check date of dataset for your datasets on HDX'
         summary_subject = 'All date of dataset emails'
         sheetname = 'DateofDatasets'
-        self.email.email_users_send_summary(self.datasethelper, True, datasets, nodatasetsmsg, startmsg, endmsg, sendto,
+        self.email.email_users_send_summary(self.datasethelper, True, datasets, nodatasetsmsg, startmsg, endmsg,
+                                            recipients,
                                             subject, sysadmins, summary_subject, self.sheet, sheetname)
 
-    def process_datasets_datagrid(self, datasetclass=Dataset, sendto=None):
+    def process_datasets_datagrid(self, datasetclass=Dataset, recipients=None):
         logger.info('\n\n*** Checking for datasets that are candidates for the datagrid ***')
         nodatasetsmsg = 'No dataset candidates for the data grid found.'
         startmsg = 'Dear system administrator,\n\nThe new dataset(s) listed below are candidates for the data grid:\n\n'
@@ -252,12 +248,13 @@ class DataFreshnessStatus:
                 datasetinfos = datasetclass.search_in_hdx(fq=query)
                 for datasetinfo in datasetinfos:
                     datasets.append(datasets_modified_yesterday[datasetinfo['id']])
-            curators = list()
-            for curator in sorted(datagrid['curators']):
-                curators.append({'fullname': curator[0], 'email': curator[1]})
-            if sendto is None:
-                users_to_email = curators
+            curators = sorted(datagrid['curators'])
+            curatoremails = list()
+            for curator in curators:
+                curatoremails.append(curator[1])
+            if recipients is None:
+                users_to_email = curatoremails
             else:
-                users_to_email = sendto
+                users_to_email = recipients
             self.email.email_admins(self.datasethelper, datasets, nodatasetsmsg, startmsg, subject, self.sheet,
-                                    sheetname, sendto=users_to_email, dutyofficer=curators[0]['fullname'])
+                                    sheetname, recipients=users_to_email, dutyofficer={'name': curators[0][0]})
