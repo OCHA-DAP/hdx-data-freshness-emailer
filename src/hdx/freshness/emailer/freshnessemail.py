@@ -46,14 +46,26 @@ class Email:
         if log:
             logger.info(text_body)
 
-    def send_sysadmin_summary(self, sysadmins, emails, subject):
-        if sysadmins:
-            startmsg = 'Dear system administrator,\n\n'
-            msg = [startmsg]
-            htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
-            msg.extend(emails['plain'])
-            htmlmsg.extend(emails['html'])
-            self.close_send(sysadmins, subject, msg, htmlmsg, log=False)
+    def get_recipients_cc(self, dutyofficer, recipients=None):
+        if recipients is None:
+            if dutyofficer:
+                return dutyofficer['email'], self.sysadmins_to_email
+            else:
+                return self.sysadmins_to_email, None
+        else:
+            return recipients, None
+
+    def get_recipients_close_send(self, dutyofficer, recipients, subject, msg, htmlmsg, endmsg='', log=True):
+        recipients, cc = self.get_recipients_cc(dutyofficer, recipients)
+        self.close_send(recipients, subject, msg, htmlmsg, endmsg, cc=cc, log=log)
+
+    def send_sysadmin_summary(self, dutyofficer, sysadmins, emails, subject):
+        startmsg = 'Dear system administrator,\n\n'
+        msg = [startmsg]
+        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
+        msg.extend(emails['plain'])
+        htmlmsg.extend(emails['html'])
+        self.get_recipients_close_send(dutyofficer, sysadmins, subject, msg, htmlmsg, log=False)
 
     closure = '\nBest wishes,\nHDX Team'
 
@@ -147,7 +159,7 @@ class Email:
         return all_users_to_email
 
     def email_users_send_summary(self, datasethelper, include_datasetdate, datasets, nodatasetsmsg, startmsg, endmsg,
-                                 recipients, subject, sysadmins, summary_subject, sheet, sheetname):
+                                 recipients, subject, summary_subject, sheet, sheetname, sysadmins=None):
         if len(datasets) == 0:
             logger.info(nodatasetsmsg)
             return
@@ -172,20 +184,11 @@ class Email:
                 dict_of_lists_add(emails, 'plain', dataset_string)
                 dict_of_lists_add(emails, 'html', dataset_html_string)
             if recipients is None:
-                users_to_email = [user]
+                users_to_email = [user['email']]
             else:
                 users_to_email = recipients
             self.close_send(users_to_email, subject, msg, htmlmsg, endmsg)
-        self.send_sysadmin_summary(sysadmins, emails, summary_subject)
-
-    def get_recipients_cc(self, dutyofficer, recipients=None):
-        if recipients is None:
-            if dutyofficer:
-                return dutyofficer['email'], self.sysadmins_to_email
-            else:
-                return self.sysadmins_to_email, None
-        else:
-            return recipients, None
+        self.send_sysadmin_summary(sheet.dutyofficer, sysadmins, emails, summary_subject)
 
     def email_admins(self, datasethelper, datasets, nodatasetsmsg, startmsg, subject, sheet, sheetname, recipients=None,
                      dutyofficer=None):
@@ -204,6 +207,5 @@ class Email:
             datasets_flat.append(sheet.construct_row(datasethelper, dataset, maintainer, orgadmins))
         if not dutyofficer:
             dutyofficer = sheet.dutyofficer
-        recipients, cc = self.get_recipients_cc(dutyofficer, recipients)
-        self.close_send(recipients, subject, msg, htmlmsg, cc=cc)
+        self.get_recipients_close_send(dutyofficer, recipients, subject, msg, htmlmsg)
         sheet.update(sheetname, datasets_flat, dutyofficer_name=dutyofficer['name'])

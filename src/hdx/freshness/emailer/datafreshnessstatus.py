@@ -138,8 +138,7 @@ class DataFreshnessStatus:
                     Email.output_newline(msg, htmlmsg)
             Email.output_newline(msg, htmlmsg)
 
-        recipients, cc = self.email.get_recipients_cc(self.sheet.dutyofficer, recipients)
-        self.email.close_send(recipients, 'Broken datasets', msg, htmlmsg, cc=cc)
+        self.email.get_recipients_close_send(self.sheet.dutyofficer, recipients, 'Broken datasets', msg, htmlmsg)
         self.sheet.update('Broken', datasets_flat)
 
     def process_delinquent(self, recipients=None):
@@ -152,7 +151,7 @@ class DataFreshnessStatus:
         self.email.email_admins(self.datasethelper, datasets, nodatasetsmsg, startmsg, subject, self.sheet, sheetname,
                                 recipients)
 
-    def process_overdue(self, recipients=None, sysadmins=None):
+    def process_overdue(self, recipients=None, dutyofficer=None, sysadmins=None):
         logger.info('\n\n*** Checking for overdue datasets ***')
         datasets = self.databasequeries.get_status(2)
         nodatasetsmsg = 'No overdue datasets found.'
@@ -162,7 +161,8 @@ class DataFreshnessStatus:
         summary_subject = 'All overdue dataset emails'
         sheetname = None
         self.email.email_users_send_summary(self.datasethelper, False, datasets, nodatasetsmsg, startmsg, endmsg,
-                                            recipients, subject, sysadmins, summary_subject, self.sheet, sheetname)
+                                            recipients, subject, summary_subject, self.sheet, sheetname,
+                                            sysadmins=sysadmins)
 
     def send_maintainer_email(self, datasets, recipients=None):
         nodatasetsmsg = 'No invalid maintainers found.'
@@ -192,8 +192,8 @@ class DataFreshnessStatus:
             # URL	Title	Problem
             row = {'URL': url, 'Title': title, 'Error': error}
             organizations_flat.append(row)
-        recipients, cc = self.email.get_recipients_cc(self.sheet.dutyofficer, recipients)
-        self.email.close_send(recipients, 'Organizations with invalid admins', msg, htmlmsg, cc=cc)
+        self.email.get_recipients_close_send(self.sheet.dutyofficer, recipients, 'Organizations with invalid admins',
+                                             msg, htmlmsg)
         self.sheet.update('OrgAdmins', organizations_flat)
 
     def process_maintainer_orgadmins(self, recipients=None):
@@ -225,8 +225,8 @@ class DataFreshnessStatus:
         summary_subject = 'All date of dataset emails'
         sheetname = 'DateofDatasets'
         self.email.email_users_send_summary(self.datasethelper, True, datasets, nodatasetsmsg, startmsg, endmsg,
-                                            recipients,
-                                            subject, sysadmins, summary_subject, self.sheet, sheetname)
+                                            recipients, subject, summary_subject, self.sheet, sheetname,
+                                            sysadmins=sysadmins)
 
     def process_datasets_datagrid(self, datasetclass=Dataset, recipients=None):
         logger.info('\n\n*** Checking for datasets that are candidates for the datagrid ***')
