@@ -1,6 +1,6 @@
-duty_roster_url: "https://raw.githubusercontent.com/OCHA-DAP/hdx-data-freshness-emailer/dataset_date_email/tests/fixtures/dutyroster.csv"
-curators_url: "https://raw.githubusercontent.com/OCHA-DAP/hdx-data-freshness-emailer/dataset_date_email/tests/fixtures/curators.csv"
-datagrids_url: "https://raw.githubusercontent.com/OCHA-DAP/hdx-data-freshness-emailer/dataset_date_email/tests/fixtures/datagrids.csv"
+duty_roster_url: "https://raw.githubusercontent.com/OCHA-DAP/hdx-data-freshness-emailer/master/tests/fixtures/dutyroster.csv"
+curators_url: "https://raw.githubusercontent.com/OCHA-DAP/hdx-data-freshness-emailer/master/tests/fixtures/curators.csv"
+datagrids_url: "https://raw.githubusercontent.com/OCHA-DAP/hdx-data-freshness-emailer/master/tests/fixtures/datagrids.csv"
 failure_emails:
   - "YmxhaEBibGFoLm9yZw=="
 sysadmins_to_email:
