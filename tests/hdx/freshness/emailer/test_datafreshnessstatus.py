@@ -30,7 +30,7 @@ class TestDataFreshnessStatus:
     class TestDataset:
         @staticmethod
         def search_in_hdx(fq):
-            if 'airport' in fq:
+            if 'airport' in fq and 'groups:wsm' in fq:
                 return [{'id': '34cb4297-36e2-40b0-b822-47320ea9314c'}]
             else:
                 return list()
