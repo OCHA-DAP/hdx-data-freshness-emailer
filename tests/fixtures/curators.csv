@@ -1,5 +1,5 @@
-Full Name    ,Email          ,DataGrid
-#contact+name,#contact+email ,#datagrid
-Godfrey      ,godfrey@abc.org,"afg,col,wsm"
-Peter        ,pete@abc.org   ,"afg,sdn"
-Nafi         ,nafi@abc.org   ,"wsm"
+Full Name    ,Email          ,DataGrid Owner ,Datagrid Cc
+#contact+name,#contact+email ,#datagrid+owner,#datagrid+cc
+Godfrey      ,godfrey@abc.org,               ,"afg,col,wsm"
+Peter        ,pete@abc.org   ,"afg,sdn"      ,
+Nafi         ,nafi@abc.org   ,"wsm"          ,
