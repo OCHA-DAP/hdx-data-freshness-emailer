@@ -51,6 +51,24 @@ class Sheet:
             query = '%s ! %s' % (query, exclude)
         grid[category] = query
 
+    def get_datagrid(self, dg, datagrids, defaultgrid):
+        datagridname = dg.strip()
+        if datagridname == '':
+            return None
+        datagrid = self.datagrids.get(datagridname)
+        if datagrid is None:
+            datagrid = dict()
+            self.datagrids[datagridname] = datagrid
+            for row in datagrids.with_rows('#datagrid=%s' % datagridname):
+                self.add_query(datagrid, row)
+            for key in defaultgrid:
+                if key not in datagrid:
+                    if key == 'datagrid':
+                        datagrid[key] = defaultgrid[key].replace('$datagrid', datagridname)
+                    else:
+                        datagrid[key] = defaultgrid[key]
+        return datagrid
+
     def setup_input(self, configuration):
         logger.info('--------------------------------------------------')
         try:
@@ -76,21 +94,25 @@ class Sheet:
             for curator in hxl.data(configuration['curators_url']):
                 curatorname = curator.get('#contact+name').strip()
                 curatoremail = curator.get('#contact+email').strip()
-                for dg in curator.get('#datagrid').strip().split(','):
-                    datagridname = dg.strip()
-                    datagrid = self.datagrids.get(datagridname)
-                    if datagrid is None:
-                        datagrid = dict()
-                        self.datagrids[datagridname] = datagrid
-                        for row in datagrids.with_rows('#datagrid=%s' % datagridname):
-                            self.add_query(datagrid, row)
-                        for key in defaultgrid:
-                            if key not in datagrid:
-                                if key == 'datagrid':
-                                    datagrid[key] = defaultgrid[key].replace('$datagrid', datagridname)
-                                else:
-                                    datagrid[key] = defaultgrid[key]
-                    dict_of_sets_add(datagrid, 'curators', (curatorname, curatoremail))
+                owner = curator.get('#datagrid+owner')
+                if owner is not None:
+                    for dg in owner.strip().split(','):
+                        datagrid = self.get_datagrid(dg, datagrids, defaultgrid)
+                        if datagrid is None:
+                            continue
+                        if datagrid.get('owner'):
+                            raise ValueError('There is more than one owner of datagrid %s!' % dg)
+                        datagrid['owner'] = {'name': curatorname, 'email': curatoremail}
+                cc = curator.get('#datagrid+cc')
+                if cc is not None:
+                    for dg in cc.strip().split(','):
+                        datagrid = self.get_datagrid(dg, datagrids, defaultgrid)
+                        if datagrid is None:
+                            continue
+                        dict_of_sets_add(datagrid, 'cc', (curatorname, curatoremail))
+            for datagridname in self.datagrids:
+                if 'owner' not in self.datagrids[datagridname]:
+                    raise ValueError('Datagrid %s does not have an owner!' % datagridname)
         except Exception as ex:
             return str(ex)
 

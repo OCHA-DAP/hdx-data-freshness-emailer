@@ -61,18 +61,25 @@ class Email:
         msg[0] = msg[0] % addressee
         htmlmsg[0] = htmlmsg[0] % addressee
 
-    def get_recipients_cc(self, dutyofficer, recipients=None):
+    def get_recipients_cc(self, dutyofficer, recipients=None, recipients_in_cc=False):
         if recipients is None:
             if dutyofficer:
                 return dutyofficer['email'], self.sysadmins_to_email
             else:
                 return self.sysadmins_to_email, None
         else:
-            return recipients, None
+            if recipients_in_cc:
+                if dutyofficer:
+                    return dutyofficer['email'], recipients
+                else:
+                    raise ValueError('Dutyofficer must be supplied if recipients are in cc!')
+            else:
+                return recipients, None
 
-    def get_recipients_close_send(self, dutyofficer, recipients, subject, msg, htmlmsg, endmsg='', log=True):
+    def get_recipients_close_send(self, dutyofficer, recipients, subject, msg, htmlmsg, endmsg='', log=True,
+                                  recipients_in_cc=False):
         self.fill_addressee(msg, htmlmsg, dutyofficer, recipients)
-        recipients, cc = self.get_recipients_cc(dutyofficer, recipients)
+        recipients, cc = self.get_recipients_cc(dutyofficer, recipients, recipients_in_cc=recipients_in_cc)
         self.close_send(recipients, subject, msg, htmlmsg, endmsg, cc=cc, log=log)
 
     def send_sysadmin_summary(self, dutyofficer, sysadmins, emails, subject, startmsg):
@@ -207,7 +214,7 @@ class Email:
         self.send_sysadmin_summary(sheet.dutyofficer, sysadmins, emails, summary_subject, summary_startmsg)
 
     def email_admins(self, datasethelper, datasets, nodatasetsmsg, startmsg, subject, sheet, sheetname, recipients=None,
-                     dutyofficer=None):
+                     dutyofficer=None, recipients_in_cc=False):
         datasets_flat = list()
         if len(datasets) == 0:
             logger.info(nodatasetsmsg)
@@ -223,5 +230,6 @@ class Email:
             datasets_flat.append(sheet.construct_row(datasethelper, dataset, maintainer, orgadmins))
         if not dutyofficer:
             dutyofficer = sheet.dutyofficer
-        self.get_recipients_close_send(dutyofficer, recipients, subject, msg, htmlmsg)
+        self.get_recipients_close_send(dutyofficer, recipients, subject, msg, htmlmsg,
+                                       recipients_in_cc=recipients_in_cc)
         sheet.update(sheetname, datasets_flat, dutyofficer_name=dutyofficer['name'])

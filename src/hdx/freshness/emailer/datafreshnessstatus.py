@@ -242,7 +242,7 @@ class DataFreshnessStatus:
             datasets = list()
             datagrid = self.sheet.datagrids[datagridname]
             for category in datagrid:
-                if category == 'datagrid' or category == 'curators':
+                if category in ['datagrid', 'owner', 'cc']:
                     continue
                 runyesterday = self.databasequeries.run_numbers[1][1].isoformat()
                 runtoday = self.databasequeries.run_numbers[0][1].isoformat()
@@ -250,14 +250,14 @@ class DataFreshnessStatus:
                                                                            datagrid[category])
                 datasetinfos = datasetclass.search_in_hdx(fq=query)
                 for datasetinfo in datasetinfos:
+                    #                    if datasetinfo['id'] not in datasets_modified_yesterday:  # REMOVE!!!
+                    #                        continue
                     datasets.append(datasets_modified_yesterday[datasetinfo['id']])
-            curators = sorted(datagrid['curators'])
-            curatoremails = list()
-            for curator in curators:
-                curatoremails.append(curator[1])
-            if recipients is None:
-                users_to_email = curatoremails
+            cc = datagrid.get('cc')
+            if recipients is None and cc is not None:
+                users_to_email = [curator[1] for curator in sorted(cc)]
             else:
                 users_to_email = recipients
             self.email.email_admins(self.datasethelper, datasets, nodatasetsmsg, startmsg, subject, self.sheet,
-                                    sheetname, recipients=users_to_email, dutyofficer={'name': curators[0][0]})
+                                    sheetname, recipients=users_to_email, dutyofficer=datagrid['owner'],
+                                    recipients_in_cc=True)

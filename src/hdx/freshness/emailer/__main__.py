@@ -68,7 +68,8 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
         else:
             error = sheet.setup_output(configuration, gsheet_auth, spreadsheet_test)
             if error:
-                email.htmlify_send(failure_list, 'Error accessing datasets with issues Google sheet!', error)
+                email.htmlify_send(failure_list, 'Error accessing datasets with issues and/or datagrid Google sheet!',
+                                   error)
             else:
                 datasethelper = DatasetHelper(site_url=configuration.get_hdx_site_url())
                 databasequeries = DatabaseQueries(session=session, now=now)
@@ -77,11 +78,11 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
                 if not freshness.check_number_datasets(now, send_failures=failure_list):
                     test_users = [failure_list[0]]
                     if email_test:  # send just to test users
-                        freshness.process_broken(recipients=test_users)
-                        freshness.process_overdue(recipients=test_users, sysadmins=test_users)
-                        freshness.process_delinquent(recipients=test_users)
-                        freshness.process_maintainer_orgadmins(recipients=test_users)
-                        freshness.process_datasets_noresources(recipients=test_users)
+                        # freshness.process_broken(recipients=test_users)
+                        # freshness.process_overdue(recipients=test_users, sysadmins=test_users)
+                        # freshness.process_delinquent(recipients=test_users)
+                        # freshness.process_maintainer_orgadmins(recipients=test_users)
+                        # freshness.process_datasets_noresources(recipients=test_users)
                         # freshness.process_datasets_dataset_date(recipients=test_users, sysadmins=test_users)
                         freshness.process_datasets_datagrid(recipients=test_users)
                     else:
