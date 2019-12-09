@@ -12,7 +12,6 @@ from datetime import datetime
 import hxl
 import pygsheets
 from google.oauth2 import service_account
-from hdx.utilities.dictandlist import dict_of_sets_add
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +26,7 @@ class Sheet:
         self.spreadsheet = None
         self.dutyofficer = None
         self.datagrids = dict()
+        self.datagridccs = list()
 
     @staticmethod
     def add_query(grid, row):
@@ -53,7 +53,7 @@ class Sheet:
 
     def get_datagrid(self, dg, datagrids, defaultgrid):
         datagridname = dg.strip()
-        if datagridname == '':
+        if datagridname == '' or datagridname == 'cc':
             return None
         datagrid = self.datagrids.get(datagridname)
         if datagrid is None:
@@ -91,10 +91,17 @@ class Sheet:
             for row in datagrids.with_rows('#datagrid=default'):
                 self.add_query(defaultgrid, row)
 
-            for curator in hxl.data(configuration['curators_url']):
+            curators = hxl.data(configuration['curators_url']).cache()
+            for curator in curators:
+                curatoremail = curator.get('#contact+email').strip()
+                owner = curator.get('#datagrid')
+                for dg in owner.strip().split(','):
+                    if dg.strip() == 'cc':
+                        self.datagridccs.append(curatoremail)
+            for curator in curators:
                 curatorname = curator.get('#contact+name').strip()
                 curatoremail = curator.get('#contact+email').strip()
-                owner = curator.get('#datagrid+owner')
+                owner = curator.get('#datagrid')
                 if owner is not None:
                     for dg in owner.strip().split(','):
                         datagrid = self.get_datagrid(dg, datagrids, defaultgrid)
@@ -103,13 +110,6 @@ class Sheet:
                         if datagrid.get('owner'):
                             raise ValueError('There is more than one owner of datagrid %s!' % dg)
                         datagrid['owner'] = {'name': curatorname, 'email': curatoremail}
-                cc = curator.get('#datagrid+cc')
-                if cc is not None:
-                    for dg in cc.strip().split(','):
-                        datagrid = self.get_datagrid(dg, datagrids, defaultgrid)
-                        if datagrid is None:
-                            continue
-                        dict_of_sets_add(datagrid, 'cc', (curatorname, curatoremail))
             for datagridname in self.datagrids:
                 if 'owner' not in self.datagrids[datagridname]:
                     raise ValueError('Datagrid %s does not have an owner!' % datagridname)

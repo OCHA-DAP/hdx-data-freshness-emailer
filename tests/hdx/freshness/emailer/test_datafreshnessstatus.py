@@ -255,7 +255,7 @@ class TestDataFreshnessStatus:
         return {'driver': 'sqlite', 'database': dbpath}
 
     def test_freshnessbroken(self, configuration, database_broken, users, organizations):
-        site_url = 'http://lala/'
+        site_url = 'http://lala'
         sysadmins_to_email = ['blah3@blah.com', 'blah4@blah.com']
         now = parser.parse('2017-02-03 19:07:30.333492')
         sheet = Sheet(now)
@@ -390,7 +390,7 @@ class TestDataFreshnessStatus:
             assert TestDataFreshnessStatus.cells_result is None
 
     def test_freshnessstatus(self, configuration, database_status, users, organizations):
-        site_url = 'http://lala/'
+        site_url = 'http://lala'
         sysadmins_to_email = ['blah2@blah.com', 'blah4@blah.com']
         now = parser.parse('2017-02-02 19:07:30.333492')
         sheet = Sheet(now)
@@ -504,7 +504,7 @@ class TestDataFreshnessStatus:
             assert TestDataFreshnessStatus.email_users_result == list()
 
     def test_freshnessmaintainerorgadmins(self, configuration, database_maintainer, users, organizations):
-        site_url = 'http://lala/'
+        site_url = 'http://lala'
         sysadmins_to_email = ['blah2@blah.com', 'blah4@blah.com']
         now = parser.parse('2017-02-02 19:07:30.333492')
         sheet = Sheet(now)
@@ -642,7 +642,7 @@ class TestDataFreshnessStatus:
                                                                    None, None)]
 
     def test_freshnessdatasetsnoresources(self, configuration, database_noresources, users, organizations):
-        site_url = 'http://lala/'
+        site_url = 'http://lala'
         sysadmins_to_email = ['blah2@blah.com', 'blah4@blah.com']
         now = parser.parse('2017-02-03 19:07:30.333492')
         sheet = Sheet(now)
@@ -680,7 +680,7 @@ class TestDataFreshnessStatus:
                  '2017-01-01T19:07:30.333492', 2, 'Peter', 'Done']]
 
     def test_dataset_date(self, configuration, database_datasets_modified_yesterday, users, organizations):
-        site_url = 'http://lala/'
+        site_url = 'http://lala'
         sysadmins_to_email = ['blah3@blah.com']
         now = parser.parse('2017-02-02 19:07:30.333492')
         sheet = Sheet(now)
@@ -733,7 +733,7 @@ class TestDataFreshnessStatus:
             TestDataFreshnessStatus.cells_result = None
 
     def test_datasets_datagrid(self, configuration, database_datasets_modified_yesterday, users, organizations):
-        site_url = 'http://lala/'
+        site_url = 'http://lala'
         sysadmins_to_email = ['blah3@blah.com']
         now = parser.parse('2017-02-02 19:07:30.333492')
         sheet = Sheet(now)
@@ -752,8 +752,8 @@ class TestDataFreshnessStatus:
             freshness.process_datasets_datagrid(datasetclass=self.TestDataset)
             expected_result = \
                 [(['nafi@abc.org'], 'Candidates for the datagrid',
-                  'Dear system administrator,\n\nThe new datasets listed below are candidates for the data grid that you can investigate:\n\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
-                  '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The new datasets listed below are candidates for the data grid that you can investigate:<br><br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n',
+                  'Dear system administrator,\n\nThe new datasets listed below are candidates for the data grid that you can investigate:\n\n\nDatagrid wsm:\n\nAirports in Samoa (http://lala/dataset/ourairports-wsm) from OurAirports with missing maintainer and organization administrators blah3disp (blah3@blah.com), blah4disp (blah4@blah.com), blah5full (blah5@blah.com) with expected update frequency: every year\n\nBest wishes,\nHDX Team',
+                  '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>The new datasets listed below are candidates for the data grid that you can investigate:<br><br><br>Datagrid wsm:<br><br><a href="http://lala/dataset/ourairports-wsm">Airports in Samoa</a> from OurAirports with missing maintainer and organization administrators <a href="mailto:blah3@blah.com">blah3disp</a>, <a href="mailto:blah4@blah.com">blah4disp</a>, <a href="mailto:blah5@blah.com">blah5full</a> with expected update frequency: every year<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n',
                   ['godfrey@abc.org'], None)]
             expected_cells_result = \
                 [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins', 'Org Admin Emails',

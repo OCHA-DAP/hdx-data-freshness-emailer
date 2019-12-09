@@ -11,6 +11,7 @@ import datetime
 import logging
 
 from hdx.data.dataset import Dataset
+from hdx.utilities.dictandlist import dict_of_lists_add
 
 from hdx.freshness.emailer.freshnessemail import Email
 
@@ -233,16 +234,18 @@ class DataFreshnessStatus:
 
     def process_datasets_datagrid(self, datasetclass=Dataset, recipients=None):
         logger.info('\n\n*** Checking for datasets that are candidates for the datagrid ***')
-        nodatasetsmsg = 'No dataset candidates for the data grid found.'
+        nodatasetsmsg = 'No dataset candidates for the data grid %s found.'
         startmsg = 'Dear %s,\n\nThe new datasets listed below are candidates for the data grid that you can investigate:\n\n'
+        datagridstartmsg = '\nDatagrid %s:\n\n'
         subject = 'Candidates for the datagrid'
         sheetname = 'Datagrid'
         datasets_modified_yesterday = self.databasequeries.get_datasets_modified_yesterday()
+        emails = dict()
         for datagridname in self.sheet.datagrids:
             datasets = list()
             datagrid = self.sheet.datagrids[datagridname]
             for category in datagrid:
-                if category in ['datagrid', 'owner', 'cc']:
+                if category in ['datagrid', 'owner']:
                     continue
                 runyesterday = self.databasequeries.run_numbers[1][1].isoformat()
                 runtoday = self.databasequeries.run_numbers[0][1].isoformat()
@@ -250,14 +253,28 @@ class DataFreshnessStatus:
                                                                            datagrid[category])
                 datasetinfos = datasetclass.search_in_hdx(fq=query)
                 for datasetinfo in datasetinfos:
-                    #                    if datasetinfo['id'] not in datasets_modified_yesterday:  # REMOVE!!!
-                    #                        continue
                     datasets.append(datasets_modified_yesterday[datasetinfo['id']])
-            cc = datagrid.get('cc')
-            if recipients is None and cc is not None:
-                users_to_email = [curator[1] for curator in sorted(cc)]
-            else:
-                users_to_email = recipients
-            self.email.email_admins(self.datasethelper, datasets, nodatasetsmsg, startmsg, subject, self.sheet,
-                                    sheetname, recipients=users_to_email, dutyofficer=datagrid['owner'],
-                                    recipients_in_cc=True)
+            if len(datasets) == 0:
+                logger.info(nodatasetsmsg % datagridname)
+                continue
+            owner = datagrid['owner']
+            datagridmsg = datagridstartmsg % datagridname
+            msg, htmlmsg = self.email.prepare_admin_emails(self.datasethelper, datasets, datagridmsg, self.sheet,
+                                                           sheetname, dutyofficer=owner)
+            if msg is not None:
+                ownertuple = (owner['name'], owner['email'])
+                owneremails = emails.get(ownertuple, dict())
+                for submsg in msg:
+                    dict_of_lists_add(owneremails, 'plain', submsg)
+                for subhtmlmsg in htmlmsg:
+                    dict_of_lists_add(owneremails, 'html', subhtmlmsg)
+                emails[ownertuple] = owneremails
+        if recipients is None and len(self.sheet.datagridccs) != 0:
+            users_to_email = self.sheet.datagridccs
+        else:
+            users_to_email = recipients
+        for ownertuple in sorted(emails):
+            owneremails = emails[ownertuple]
+            owner = {'name': ownertuple[0], 'email': ownertuple[1]}
+            self.email.send_admin_summary(owner, users_to_email, owneremails, subject, startmsg, log=True,
+                                          recipients_in_cc=True)

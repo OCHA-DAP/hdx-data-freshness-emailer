@@ -82,12 +82,13 @@ class Email:
         recipients, cc = self.get_recipients_cc(dutyofficer, recipients, recipients_in_cc=recipients_in_cc)
         self.close_send(recipients, subject, msg, htmlmsg, endmsg, cc=cc, log=log)
 
-    def send_sysadmin_summary(self, dutyofficer, sysadmins, emails, subject, startmsg):
+    def send_admin_summary(self, dutyofficer, recipients, emails, subject, startmsg, log=False, recipients_in_cc=False):
         msg = [startmsg]
         htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
         msg.extend(emails['plain'])
         htmlmsg.extend(emails['html'])
-        self.get_recipients_close_send(dutyofficer, sysadmins, subject, msg, htmlmsg, log=False)
+        self.get_recipients_close_send(dutyofficer, recipients, subject, msg, htmlmsg, log=log,
+                                       recipients_in_cc=recipients_in_cc)
 
     closure = '\nBest wishes,\nHDX Team'
 
@@ -156,7 +157,7 @@ class Email:
         cls.output_newline(msg, htmlmsg)
 
     @staticmethod
-    def prepare_emails(datasethelper, include_datasetdate, datasets, sheet, sheetname):
+    def prepare_user_emails(datasethelper, include_datasetdate, datasets, sheet, sheetname):
         all_users_to_email = dict()
         datasets_flat = list()
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
@@ -186,7 +187,7 @@ class Email:
         if len(datasets) == 0:
             logger.info(nodatasetsmsg)
             return
-        all_users_to_email = self.prepare_emails(datasethelper, include_datasetdate, datasets, sheet, sheetname)
+        all_users_to_email = self.prepare_user_emails(datasethelper, include_datasetdate, datasets, sheet, sheetname)
         starthtmlmsg = self.html_start(self.convert_newlines(startmsg))
         if '$dashboard' in startmsg:
             startmsg = startmsg.replace('$dashboard', 'dashboard')
@@ -211,16 +212,13 @@ class Email:
             else:
                 users_to_email = recipients
             self.close_send(users_to_email, subject, msg, htmlmsg, endmsg)
-        self.send_sysadmin_summary(sheet.dutyofficer, sysadmins, emails, summary_subject, summary_startmsg)
+        self.send_admin_summary(sheet.dutyofficer, sysadmins, emails, summary_subject, summary_startmsg)
 
-    def email_admins(self, datasethelper, datasets, nodatasetsmsg, startmsg, subject, sheet, sheetname, recipients=None,
-                     dutyofficer=None, recipients_in_cc=False):
+    @staticmethod
+    def prepare_admin_emails(datasethelper, datasets, startmsg, sheet, sheetname, dutyofficer=None):
         datasets_flat = list()
-        if len(datasets) == 0:
-            logger.info(nodatasetsmsg)
-            return
         msg = [startmsg]
-        htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
+        htmlmsg = [Email.convert_newlines(startmsg)]
         for dataset in sorted(datasets, key=lambda d: (d['organization_title'], d['name'])):
             maintainer, orgadmins, _ = datasethelper.get_maintainer_orgadmins(dataset)
             dataset_string, dataset_html_string = datasethelper.create_dataset_string(dataset, maintainer, orgadmins,
@@ -228,8 +226,18 @@ class Email:
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
             datasets_flat.append(sheet.construct_row(datasethelper, dataset, maintainer, orgadmins))
+        sheet.update(sheetname, datasets_flat, dutyofficer_name=dutyofficer['name'])
+        return msg, htmlmsg
+
+    def email_admins(self, datasethelper, datasets, nodatasetsmsg, startmsg, subject, sheet, sheetname, recipients=None,
+                     dutyofficer=None, recipients_in_cc=False):
+        if len(datasets) == 0:
+            logger.info(nodatasetsmsg)
+            return
         if not dutyofficer:
             dutyofficer = sheet.dutyofficer
+        msg, htmlmsg = self.prepare_admin_emails(datasethelper, datasets, startmsg, sheet, sheetname, dutyofficer)
+        htmlmsg[0] = Email.html_start(htmlmsg[0])
+
         self.get_recipients_close_send(dutyofficer, recipients, subject, msg, htmlmsg,
                                        recipients_in_cc=recipients_in_cc)
-        sheet.update(sheetname, datasets_flat, dutyofficer_name=dutyofficer['name'])

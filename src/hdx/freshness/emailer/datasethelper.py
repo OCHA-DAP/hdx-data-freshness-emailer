@@ -97,10 +97,10 @@ class DatasetHelper:
         return user_name
 
     def get_dataset_url(self, dataset):
-        return '%sdataset/%s' % (self.site_url, dataset['name'])
+        return '%s/dataset/%s' % (self.site_url, dataset['name'])
 
     def get_organization_url(self, organization):
-        return '%sorganization/%s' % (self.site_url, organization['name'])
+        return '%s/organization/%s' % (self.site_url, organization['name'])
 
     def create_dataset_string(self, dataset, maintainer, orgadmins, sysadmin=False, include_org=True,
                               include_freshness=False, include_datasetdate=False):

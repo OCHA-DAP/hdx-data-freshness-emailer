@@ -78,11 +78,11 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
                 if not freshness.check_number_datasets(now, send_failures=failure_list):
                     test_users = [failure_list[0]]
                     if email_test:  # send just to test users
-                        # freshness.process_broken(recipients=test_users)
-                        # freshness.process_overdue(recipients=test_users, sysadmins=test_users)
-                        # freshness.process_delinquent(recipients=test_users)
-                        # freshness.process_maintainer_orgadmins(recipients=test_users)
-                        # freshness.process_datasets_noresources(recipients=test_users)
+                        freshness.process_broken(recipients=test_users)
+                        freshness.process_overdue(recipients=test_users, sysadmins=test_users)
+                        freshness.process_delinquent(recipients=test_users)
+                        freshness.process_maintainer_orgadmins(recipients=test_users)
+                        freshness.process_datasets_noresources(recipients=test_users)
                         # freshness.process_datasets_dataset_date(recipients=test_users, sysadmins=test_users)
                         freshness.process_datasets_datagrid(recipients=test_users)
                     else:
@@ -92,7 +92,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
                         freshness.process_maintainer_orgadmins()
                         freshness.process_datasets_noresources()
                         # freshness.process_datasets_dataset_date(sysadmins=test_users)
-                        # freshness.process_datasets_datagrid()
+                        freshness.process_datasets_datagrid()
 
     logger.info('Freshness emailer completed!')
 
