@@ -82,7 +82,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
                         freshness.process_overdue(recipients=test_users, sysadmins=test_users)
                         freshness.process_delinquent(recipients=test_users)
                         freshness.process_maintainer_orgadmins(recipients=test_users)
-                        # freshness.process_datasets_noresources(recipients=test_users)
+                        freshness.process_datasets_noresources(recipients=test_users)
                         # freshness.process_datasets_dataset_date(recipients=test_users, sysadmins=test_users)
                         freshness.process_datasets_datagrid(recipients=test_users)
                     else:
@@ -90,7 +90,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
                         freshness.process_overdue()
                         freshness.process_delinquent()
                         freshness.process_maintainer_orgadmins()
-                        # freshness.process_datasets_noresources()
+                        freshness.process_datasets_noresources()
                         # freshness.process_datasets_dataset_date(sysadmins=test_users)
                         freshness.process_datasets_datagrid()
 
