@@ -54,8 +54,8 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
         params = {'driver': 'sqlite', 'database': 'freshness.db'}
     logger.info('> Database parameters: %s' % params)
     with Database(**params) as session:
-        email = Email(send_emails=send_emails, configuration=configuration)
         now = datetime.datetime.utcnow()
+        email = Email(now, send_emails=send_emails, configuration=configuration)
         sheet = Sheet(now)
 
         failure_list = list()

@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 
 class Email:
-    def __init__(self, send_emails=None, sysadmins_to_email=None, configuration=None):
+    def __init__(self, now, send_emails=None, sysadmins_to_email=None, configuration=None):
+        self.now = now
         self.send_emails = send_emails
         if sysadmins_to_email is None:
             self.sysadmins_to_email = configuration['sysadmins_to_email']
@@ -31,6 +32,7 @@ class Email:
                 cc = [cc]
             if isinstance(bcc, str):
                 bcc = [bcc]
+            subject = '%s (%s)' % (subject, self.now.strftime('%d/%m/%Y'))
             self.send_emails(recipients, subject, text_body, html_body=html_body, cc=cc, bcc=bcc)
         else:
             logger.warning('Not sending any email!')
