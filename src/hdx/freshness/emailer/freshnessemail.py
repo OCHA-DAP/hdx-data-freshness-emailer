@@ -49,17 +49,17 @@ class Email:
             logger.info(text_body)
 
     @staticmethod
-    def get_addressee(dutyofficer, recipients=None):
-        if dutyofficer and recipients is None:
+    def get_addressee(dutyofficer, recipients=None, recipients_in_cc=False):
+        if dutyofficer and (recipients is None or recipients_in_cc is True):
             return dutyofficer['name']
         else:
             return 'system administrator'
 
     @staticmethod
-    def fill_addressee(msg, htmlmsg, dutyofficer, recipients):
+    def fill_addressee(msg, htmlmsg, dutyofficer, recipients, recipients_in_cc=False):
         if '%s' not in msg[0]:
             return
-        addressee = Email.get_addressee(dutyofficer, recipients)
+        addressee = Email.get_addressee(dutyofficer, recipients, recipients_in_cc=recipients_in_cc)
         msg[0] = msg[0] % addressee
         htmlmsg[0] = htmlmsg[0] % addressee
 
@@ -80,7 +80,7 @@ class Email:
 
     def get_recipients_close_send(self, dutyofficer, recipients, subject, msg, htmlmsg, endmsg='', log=True,
                                   recipients_in_cc=False):
-        self.fill_addressee(msg, htmlmsg, dutyofficer, recipients)
+        self.fill_addressee(msg, htmlmsg, dutyofficer, recipients, recipients_in_cc=recipients_in_cc)
         recipients, cc = self.get_recipients_cc(dutyofficer, recipients, recipients_in_cc=recipients_in_cc)
         self.close_send(recipients, subject, msg, htmlmsg, endmsg, cc=cc, log=log)
 
