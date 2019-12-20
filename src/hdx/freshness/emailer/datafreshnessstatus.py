@@ -253,7 +253,9 @@ class DataFreshnessStatus:
                                                                            datagrid[category])
                 datasetinfos = datasetclass.search_in_hdx(fq=query)
                 for datasetinfo in datasetinfos:
-                    datasets.append(datasets_modified_yesterday[datasetinfo['id']])
+                    dataset_id = datasetinfo['id']
+                    if dataset_id not in [dataset['id'] for dataset in datasets]:
+                        datasets.append(datasets_modified_yesterday[dataset_id])
             if len(datasets) == 0:
                 logger.info(nodatasetsmsg % datagridname)
                 continue
