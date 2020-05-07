@@ -48,7 +48,7 @@ def get_readme():
 
 
 requirements = ['pygsheets',
-                'hdx-data-freshness>=1.4.8']
+                'hdx-data-freshness>=1.4.9']
 
 classifiers = [
     "Development Status :: 5 - Production/Stable",
