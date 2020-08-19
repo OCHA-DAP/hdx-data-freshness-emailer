@@ -201,14 +201,12 @@ class DatabaseQueries:
         no_runs = len(self.run_numbers)
         if no_runs == 0:
             return datasets_noresources
-        subquery = self.session.query(DBResource.dataset_id).distinct().filter(
-            DBResource.run_number == self.run_numbers[0][0])
         columns = [DBInfoDataset.id, DBInfoDataset.name, DBInfoDataset.title, DBInfoDataset.maintainer,
                    DBOrganization.id.label('organization_id'), DBOrganization.name.label('organization_name'),
                    DBOrganization.title.label('organization_title'),
                    DBDataset.update_frequency, DBDataset.latest_of_modifieds, DBDataset.what_updated]
         filters = [DBDataset.id == DBInfoDataset.id, DBInfoDataset.organization_id == DBOrganization.id,
-                   DBDataset.run_number == self.run_numbers[0][0], ~DBDataset.id.in_(subquery)]
+                   DBDataset.run_number == self.run_numbers[0][0], DBDataset.what_updated == 'no resources']
         query = self.session.query(*columns).filter(and_(*filters))
         norows = 0
         for norows, result in enumerate(query):

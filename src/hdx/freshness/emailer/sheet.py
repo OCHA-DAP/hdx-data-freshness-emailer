@@ -12,7 +12,6 @@ from datetime import datetime
 import hxl
 import pygsheets
 from google.oauth2 import service_account
-from hdx.utilities.dictandlist import dict_of_sets_add
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +26,7 @@ class Sheet:
         self.spreadsheet = None
         self.dutyofficer = None
         self.datagrids = dict()
+        self.datagridccs = list()
 
     @staticmethod
     def add_query(grid, row):
@@ -51,41 +51,68 @@ class Sheet:
             query = '%s ! %s' % (query, exclude)
         grid[category] = query
 
+    def get_datagrid(self, dg, datagrids, defaultgrid):
+        datagridname = dg.strip()
+        if datagridname == '' or datagridname == 'cc':
+            return None
+        datagrid = self.datagrids.get(datagridname)
+        if datagrid is None:
+            datagrid = dict()
+            self.datagrids[datagridname] = datagrid
+            for row in datagrids.with_rows('#datagrid=%s' % datagridname):
+                self.add_query(datagrid, row)
+            for key in defaultgrid:
+                if key not in datagrid:
+                    if key == 'datagrid':
+                        datagrid[key] = defaultgrid[key].replace('$datagrid', datagridname)
+                    else:
+                        datagrid[key] = defaultgrid[key]
+        return datagrid
+
     def setup_input(self, configuration):
         logger.info('--------------------------------------------------')
         try:
-            dutyofficers = hxl.data(configuration['duty_roster_url']).with_columns(['#date+start', '#contact+name'])
+            dutyofficers = hxl.data(configuration['duty_roster_url']).with_columns(['#date+start', '#contact+name',
+                                                                                    '#contact+email'])
             dutyofficers = dutyofficers.sort(keys=['#date+start'], reverse=True)
 
             for dutyofficer in dutyofficers:
                 startdate = dutyofficer.get('#date+start').strip()
                 if datetime.strptime(startdate, '%Y-%m-%d') <= self.now:
-                    self.dutyofficer = dutyofficer.get('#contact+name').strip()
-                    logger.info('Duty officer: %s' % self.dutyofficer)
-                    break
+                    dutyofficer_name = dutyofficer.get('#contact+name')
+                    if dutyofficer_name:
+                        dutyofficer_name = dutyofficer_name.strip()
+                        self.dutyofficer = {'name': dutyofficer_name,
+                                            'email': dutyofficer.get('#contact+email').strip()}
+                        logger.info('Duty officer: %s' % dutyofficer_name)
+                        break
             datagrids = hxl.data(configuration['datagrids_url']).cache()
             defaultgrid = dict()
             for row in datagrids.with_rows('#datagrid=default'):
                 self.add_query(defaultgrid, row)
 
-            for curator in hxl.data(configuration['curators_url']):
+            curators = hxl.data(configuration['curators_url']).cache()
+            for curator in curators:
+                curatoremail = curator.get('#contact+email').strip()
+                owner = curator.get('#datagrid')
+                for dg in owner.strip().split(','):
+                    if dg.strip() == 'cc':
+                        self.datagridccs.append(curatoremail)
+            for curator in curators:
                 curatorname = curator.get('#contact+name').strip()
                 curatoremail = curator.get('#contact+email').strip()
-                for dg in curator.get('#datagrid').strip().split(','):
-                    datagridname = dg.strip()
-                    datagrid = self.datagrids.get(datagridname)
-                    if datagrid is None:
-                        datagrid = dict()
-                        self.datagrids[datagridname] = datagrid
-                        for row in datagrids.with_rows('#datagrid=%s' % datagridname):
-                            self.add_query(datagrid, row)
-                        for key in defaultgrid:
-                            if key not in datagrid:
-                                if key == 'datagrid':
-                                    datagrid[key] = defaultgrid[key].replace('$datagrid', datagridname)
-                                else:
-                                    datagrid[key] = defaultgrid[key]
-                    dict_of_sets_add(datagrid, 'curators', (curatorname, curatoremail))
+                owner = curator.get('#datagrid')
+                if owner is not None:
+                    for dg in owner.strip().split(','):
+                        datagrid = self.get_datagrid(dg, datagrids, defaultgrid)
+                        if datagrid is None:
+                            continue
+                        if datagrid.get('owner'):
+                            raise ValueError('There is more than one owner of datagrid %s!' % dg)
+                        datagrid['owner'] = {'name': curatorname, 'email': curatoremail}
+            for datagridname in self.datagrids:
+                if 'owner' not in self.datagrids[datagridname]:
+                    raise ValueError('Datagrid %s does not have an owner!' % datagridname)
         except Exception as ex:
             return str(ex)
 
@@ -109,9 +136,9 @@ class Sheet:
             self.spreadsheet = None
         return None
 
-    def update(self, sheetname, datasets, dutyofficer=None):
+    def update(self, sheetname, datasets, dutyofficer_name=None):
         # sheet must have been set up!
-        if self.spreadsheet is None or self.dutyofficer is None:
+        if self.spreadsheet is None or (self.dutyofficer is None and dutyofficer_name is None):
             logger.warning('Cannot update Google spreadsheet!')
             return
         logger.info('Updating Google spreadsheet.')
@@ -143,10 +170,10 @@ class Sheet:
             except ValueError:
                 new_row[dateadded_ind] = self.now.isoformat()
                 new_row[no_times_ind] = 1
-                if dutyofficer is not None:
-                    new_row[assigned_ind] = dutyofficer
+                if dutyofficer_name is not None:
+                    new_row[assigned_ind] = dutyofficer_name
                 else:
-                    new_row[assigned_ind] = self.dutyofficer
+                    new_row[assigned_ind] = self.dutyofficer['name']
                 current_values.append(new_row)
                 urls.append(url)
                 updated_notimes.add(url)

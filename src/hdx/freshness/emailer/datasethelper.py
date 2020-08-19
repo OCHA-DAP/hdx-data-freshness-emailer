@@ -10,9 +10,7 @@ from datetime import datetime
 from hdx.data.dataset import Dataset
 from hdx.data.organization import Organization
 from hdx.data.user import User
-from hdx.hdx_configuration import Configuration
 from hdx.utilities.dictandlist import dict_of_lists_add
-from hdx.utilities.encoding import base64_to_str
 
 from hdx.freshness.emailer.freshnessemail import Email
 
@@ -20,24 +18,17 @@ from hdx.freshness.emailer.freshnessemail import Email
 class DatasetHelper:
     freshness_status = {0: 'Fresh', 1: 'Due', 2: 'Overdue', 3: 'Delinquent'}
 
-    def __init__(self, site_url, users=None, organizations=None, ignore_sysadmin_emails=None):
+    def __init__(self, site_url, users=None, organizations=None):
         self.site_url = site_url
-        if ignore_sysadmin_emails is None:  # pragma: no cover
-            ignore_sysadmin_emails = Configuration.read()['ignore_sysadmin_emails']
-            for i, email in enumerate(ignore_sysadmin_emails):
-                ignore_sysadmin_emails[i] = base64_to_str(email)
         if users is None:  # pragma: no cover
             users = User.get_all_users()
         self.users = dict()
         self.sysadmins = dict()
-        self.sysadmins_to_email = list()
         for user in users:
             userid = user['id']
             self.users[userid] = user
             if user['sysadmin']:
                 self.sysadmins[userid] = user
-                if user['fullname'] and user['email'] not in ignore_sysadmin_emails:
-                    self.sysadmins_to_email.append(user)
 
         self.organizations = dict()
         if organizations is None:  # pragma: no cover
@@ -106,10 +97,10 @@ class DatasetHelper:
         return user_name
 
     def get_dataset_url(self, dataset):
-        return '%sdataset/%s' % (self.site_url, dataset['name'])
+        return '%s/dataset/%s' % (self.site_url, dataset['name'])
 
     def get_organization_url(self, organization):
-        return '%sorganization/%s' % (self.site_url, organization['name'])
+        return '%s/organization/%s' % (self.site_url, organization['name'])
 
     def create_dataset_string(self, dataset, maintainer, orgadmins, sysadmin=False, include_org=True,
                               include_freshness=False, include_datasetdate=False):

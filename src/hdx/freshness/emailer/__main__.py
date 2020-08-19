@@ -12,7 +12,6 @@ import datetime
 import logging
 from os import getenv
 
-from hdx.data.user import User
 from hdx.facades.keyword_arguments import facade
 from hdx.hdx_configuration import Configuration
 from hdx.utilities.database import Database
@@ -26,12 +25,14 @@ from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
 from hdx.freshness.emailer.datasethelper import DatasetHelper
 from hdx.freshness.emailer.freshnessemail import Email
 from hdx.freshness.emailer.sheet import Sheet
+from hdx.freshness.emailer.version import get_freshness_emailer_version
 
 setup_logging()
 logger = logging.getLogger(__name__)
 
 
 def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_test, **ignore):
+    logger.info('> Data freshness emailer %s' % get_freshness_emailer_version())
     configuration = Configuration.read()
     if email_server:
         email_config = email_server.split(',')
@@ -41,10 +42,10 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
             email_config_dict['sender'] = email_config[5]
         configuration.setup_emailer(email_config_dict=email_config_dict)
         logger.info('> Email host: %s' % email_config[1])
-        send_emails = True
+        send_emails = configuration.emailer().send
     else:
         logger.info('> No email host!')
-        send_emails = False
+        send_emails = None
     if db_params:
         params = args_to_dict(db_params)
     elif db_url:
@@ -53,13 +54,13 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
         params = {'driver': 'sqlite', 'database': 'freshness.db'}
     logger.info('> Database parameters: %s' % params)
     with Database(**params) as session:
-        email = Email(send_emails=send_emails)
         now = datetime.datetime.utcnow()
+        email = Email(now, send_emails=send_emails, configuration=configuration)
         sheet = Sheet(now)
 
         failure_list = list()
         for address in configuration['failure_emails']:
-            failure_list.append(User({'email': base64_to_str(address)}))
+            failure_list.append(base64_to_str(address))
         error = sheet.setup_input(configuration)
         if error:
             email.htmlify_send(failure_list, 'Error reading DP duty roster or data grid curation sheet!',
@@ -67,7 +68,8 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
         else:
             error = sheet.setup_output(configuration, gsheet_auth, spreadsheet_test)
             if error:
-                email.htmlify_send(failure_list, 'Error accessing datasets with issues Google sheet!', error)
+                email.htmlify_send(failure_list, 'Error accessing datasets with issues and/or datagrid Google sheet!',
+                                   error)
             else:
                 datasethelper = DatasetHelper(site_url=configuration.get_hdx_site_url())
                 databasequeries = DatabaseQueries(session=session, now=now)
@@ -76,21 +78,21 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
                 if not freshness.check_number_datasets(now, send_failures=failure_list):
                     test_users = [failure_list[0]]
                     if email_test:  # send just to test users
-                        freshness.process_broken(sendto=test_users)
-                        freshness.process_overdue(sendto=test_users, sysadmins=test_users)
-                        freshness.process_delinquent(sendto=test_users)
-                        freshness.process_maintainer_orgadmins(sendto=test_users)
-                        freshness.process_datasets_noresources(sendto=test_users)
-                        # freshness.process_datasets_dataset_date(sendto=test_users, sysadmins=test_users)
-                        # freshness.process_datasets_datagrid(sendto=test_users)
+                        freshness.process_broken(recipients=test_users)
+                        freshness.process_overdue(recipients=test_users, sysadmins=test_users)
+                        freshness.process_delinquent(recipients=test_users)
+                        freshness.process_maintainer_orgadmins(recipients=test_users)
+                        freshness.process_datasets_noresources(recipients=test_users)
+                        # freshness.process_datasets_dataset_date(recipients=test_users, sysadmins=test_users)
+                        freshness.process_datasets_datagrid(recipients=test_users)
                     else:
                         freshness.process_broken()
-                        freshness.process_overdue(sysadmins=test_users)
+                        freshness.process_overdue()
                         freshness.process_delinquent()
                         freshness.process_maintainer_orgadmins()
                         freshness.process_datasets_noresources()
                         # freshness.process_datasets_dataset_date(sysadmins=test_users)
-                        # freshness.process_datasets_datagrid()
+                        freshness.process_datasets_datagrid()
 
     logger.info('Freshness emailer completed!')
 
