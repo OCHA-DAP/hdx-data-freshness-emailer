@@ -3,6 +3,7 @@
 Unit tests for sheet code.
 
 '''
+from os import getenv
 from os.path import join
 
 import pytest
@@ -19,10 +20,17 @@ class TestSheet:
         return Configuration(hdx_site='prod', user_agent='test', hdx_read_only=True,
                              project_config_yaml=project_config_yaml)
 
+    @pytest.fixture(scope='function')
+    def configuration_multiple(self):
+        project_config_yaml = join('tests', 'fixtures', 'project_configuration_multiple.yml')
+        return Configuration(hdx_site='prod', user_agent='test', hdx_read_only=True,
+                             project_config_yaml=project_config_yaml)
+
     def test_setup_input(self, configuration):
         now = parser.parse('2019-10-24 19:07:30.333492')
         sheet = Sheet(now)
-        result = sheet.setup_input(configuration)
+        sheet.setup_gsheet(configuration, getenv('GSHEET_AUTH'), True)
+        result = sheet.setup_input()
         if result:
             print(result)
         assert sheet.dutyofficer == {'name': 'Davide Mmmmmm2', 'email': 'mmmmmmm2@ab.org'}
@@ -111,8 +119,10 @@ class TestSheet:
                                            'baseline_population_sadd': '(vocab_Topics:"baseline population" AND vocab_Topics:"sex and age disaggregated data - sadd" AND subnational:1) ! (organization:afdb) #African Development Bank Group datasets are not subnational ! (name:estimated-population-of-afghanistan-2015-2016)',
                                            'poverty_rate': '(vocab_Topics:poverty AND subnational:1)',
                                            'owner': {'name': 'Nafi', 'email': 'nafi@abc.org'}}}
-        configuration['curators_url'] = configuration['curators_url'].replace('curators.csv',
-                                                                              'curators_multipleowners.csv')
+
+    def test_setup_input_multiple(self, configuration_multiple):
+        now = parser.parse('2019-10-24 19:07:30.333492')
         sheet = Sheet(now)
-        error = sheet.setup_input(configuration)
+        sheet.setup_gsheet(configuration_multiple, getenv('GSHEET_AUTH'), True)
+        error = sheet.setup_input()
         assert error == 'There is more than one owner of datagrid sdn!'

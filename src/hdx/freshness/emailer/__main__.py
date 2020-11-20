@@ -61,15 +61,13 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
         failure_list = list()
         for address in configuration['failure_emails']:
             failure_list.append(base64_to_str(address))
-        error = sheet.setup_input(configuration)
+        error = sheet.setup_gsheet(configuration, gsheet_auth, spreadsheet_test)
         if error:
-            email.htmlify_send(failure_list, 'Error reading DP duty roster or data grid curation sheet!',
-                               error)
+            email.htmlify_send(failure_list, 'Error opening Google sheets!', error)
         else:
-            error = sheet.setup_output(configuration, gsheet_auth, spreadsheet_test)
+            error = sheet.setup_input()
             if error:
-                email.htmlify_send(failure_list, 'Error accessing datasets with issues and/or datagrid Google sheet!',
-                                   error)
+                email.htmlify_send(failure_list, 'Error reading DP duty roster or data grid curation sheet!', error)
             else:
                 datasethelper = DatasetHelper(site_url=configuration.get_hdx_site_url())
                 databasequeries = DatabaseQueries(session=session, now=now)
@@ -110,7 +108,7 @@ if __name__ == '__main__':
     parser.add_argument('-et', '--email_test', default=False, action='store_true',
                         help='Email only test users for testing purposes')
     parser.add_argument('-st', '--spreadsheet_test', default=False, action='store_true',
-                        help='Use test instead of prod spreadsheet')
+                        help='Use test instead of prod issues spreadsheet')
     args = parser.parse_args()
     hdx_key = args.hdx_key
     if hdx_key is None:

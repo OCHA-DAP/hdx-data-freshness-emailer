@@ -266,7 +266,7 @@ class TestDataFreshnessStatus:
             freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
                                             sheet=sheet)
 
-            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken1
+            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken1
             sheet.dutyofficer = {'name': 'Peter', 'email': 'peter@lala.org'}
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
@@ -320,7 +320,7 @@ class TestDataFreshnessStatus:
                  'Delinquent', 'Server Error (may be temporary)', 'Admin-0.zip:Fail\nAdmin-3.zip:Fail',
                  '2017-01-02T19:07:30.333492', 4, 'Andrew', 'Contacted Maintainer']]
 
-            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken2
+            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken2
             sheet.dutyofficer = {'name': 'John', 'email': 'john@lala.org'}
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
@@ -381,7 +381,7 @@ class TestDataFreshnessStatus:
             freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
                                             sheet=sheet)
 
-            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken1
+            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken1
             sheet.dutyofficer = {'name': 'Peter', 'email': 'peter@lala.org'}
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
@@ -400,7 +400,7 @@ class TestDataFreshnessStatus:
             databasequeries = DatabaseQueries(session=session, now=now)
             freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
                                             sheet=sheet)
-            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_OverdueDelinquent
+            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_OverdueDelinquent
             sheet.dutyofficer = {'name': 'Sharon', 'email': 'sharon@lala.org'}
 
             TestDataFreshnessStatus.email_users_result = list()
@@ -491,7 +491,7 @@ class TestDataFreshnessStatus:
             databasequeries = DatabaseQueries(session=session, now=now)
             freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
                                             sheet=sheet)
-            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_OverdueDelinquent
+            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_OverdueDelinquent
             sheet.dutyofficer = {'name': 'Sharon', 'email': 'sharon@lala.org'}
 
             TestDataFreshnessStatus.email_users_result = list()
@@ -515,7 +515,7 @@ class TestDataFreshnessStatus:
             databasequeries = DatabaseQueries(session=session, now=now)
             freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
                                             sheet=sheet)
-            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_MaintainerOrgAdmins
+            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_MaintainerOrgAdmins
             sheet.dutyofficer = {'name': 'Aaron', 'email': 'aaron@lala.org'}
 
             TestDataFreshnessStatus.email_users_result = list()
@@ -654,7 +654,7 @@ class TestDataFreshnessStatus:
             databasequeries = DatabaseQueries(session=session, now=now)
             freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
                                             sheet=sheet)
-            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_NoResources
+            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_NoResources
             sheet.dutyofficer = {'name': 'Andrew', 'email': 'andrew@lala.org'}
 
             TestDataFreshnessStatus.email_users_result = list()
@@ -692,7 +692,7 @@ class TestDataFreshnessStatus:
             databasequeries = DatabaseQueries(session=session, now=now)
             freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
                                             sheet=sheet)
-            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Empty
+            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Empty
             sheet.dutyofficer = {'name': 'Sharon', 'email': 'sharon@lala.org'}
 
             TestDataFreshnessStatus.email_users_result = list()
@@ -739,7 +739,9 @@ class TestDataFreshnessStatus:
         sysadmins_to_email = ['blah3@blah.com']
         now = parser.parse('2017-02-02 19:07:30.333492')
         sheet = Sheet(now)
-        error = sheet.setup_input(configuration)
+        error = sheet.setup_gsheet(configuration, os.getenv('GSHEET_AUTH'), True)
+        assert error is None
+        error = sheet.setup_input()
         assert error is None
         email = Email(now, send_emails=self.email_users, sysadmins_to_email=sysadmins_to_email,
                       configuration=configuration)
@@ -748,7 +750,7 @@ class TestDataFreshnessStatus:
             databasequeries = DatabaseQueries(session=session, now=now)
             freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
                                             sheet=sheet)
-            sheet.spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Empty
+            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Empty
             sheet.dutyofficer = {'name': 'Sharon', 'email': 'sharon@lala.org'}
 
             TestDataFreshnessStatus.email_users_result = list()

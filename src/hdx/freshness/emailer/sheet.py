@@ -9,7 +9,6 @@ import json
 import logging
 from datetime import datetime
 
-import hxl
 import pygsheets
 from google.oauth2 import service_account
 
@@ -23,18 +22,20 @@ def get_date(datestr):
 class Sheet:
     def __init__(self, now):
         self.now = now
-        self.spreadsheet = None
+        self.dutyofficers_spreadsheet = None
+        self.datagrids_spreadsheet = None
+        self.issues_spreadsheet = None
         self.dutyofficer = None
         self.datagrids = dict()
         self.datagridccs = list()
 
     @staticmethod
-    def add_query(grid, row):
-        category = row.get('#category').strip()
-        include = row.get('#include')
+    def add_query(hxltags, grid, row):
+        category = row[hxltags['#category']].strip()
+        include = row[hxltags['#include']]
         if include:
             include = include.strip()
-        exclude = row.get('#exclude')
+        exclude = row[hxltags['#exclude']]
         if exclude:
             exclude = exclude.strip()
         query = grid.get(category, '')
@@ -51,7 +52,7 @@ class Sheet:
             query = '%s ! %s' % (query, exclude)
         grid[category] = query
 
-    def get_datagrid(self, dg, datagrids, defaultgrid):
+    def get_datagrid(self, hxltags, dg, datagrids, defaultgrid):
         datagridname = dg.strip()
         if datagridname == '' or datagridname == 'cc':
             return None
@@ -59,8 +60,9 @@ class Sheet:
         if datagrid is None:
             datagrid = dict()
             self.datagrids[datagridname] = datagrid
-            for row in datagrids.with_rows('#datagrid=%s' % datagridname):
-                self.add_query(datagrid, row)
+            for row in datagrids:
+                if row[hxltags['#datagrid']] == datagridname:
+                    self.add_query(hxltags, datagrid, row)
             for key in defaultgrid:
                 if key not in datagrid:
                     if key == 'datagrid':
@@ -69,42 +71,74 @@ class Sheet:
                         datagrid[key] = defaultgrid[key]
         return datagrid
 
-    def setup_input(self, configuration):
+    def setup_gsheet(self, configuration, gsheet_auth, spreadsheet_test):
+        if not gsheet_auth:
+            return 'No GSheet Credentials!'
+        try:
+            logger.info('> GSheet Credentials: %s' % gsheet_auth)
+            info = json.loads(gsheet_auth)
+            scopes = ['https://www.googleapis.com/auth/spreadsheets']
+            credentials = service_account.Credentials.from_service_account_info(info, scopes=scopes)
+            gc = pygsheets.authorize(custom_credentials=credentials)
+            if spreadsheet_test:  # use test not prod spreadsheet
+                issues_spreadsheet = configuration['test_issues_spreadsheet_url']
+            else:
+                issues_spreadsheet = configuration['prod_issues_spreadsheet_url']
+            logger.info('Opening duty officers gsheet')
+            self.dutyofficers_spreadsheet = gc.open_by_url(configuration['dutyofficers_url'])
+            logger.info('Opening datagrids gsheet')
+            self.datagrids_spreadsheet = gc.open_by_url(configuration['datagrids_url'])
+            logger.info('Opening issues gsheet')
+            self.issues_spreadsheet = gc.open_by_url(issues_spreadsheet)
+        except Exception as ex:
+            return str(ex)
+        return None
+
+    def setup_input(self):
         logger.info('--------------------------------------------------')
         try:
-            dutyofficers = hxl.data(configuration['duty_roster_url']).with_columns(['#date+start', '#contact+name',
-                                                                                    '#contact+email'])
-            dutyofficers = dutyofficers.sort(keys=['#date+start'], reverse=True)
-
-            for dutyofficer in dutyofficers:
-                startdate = dutyofficer.get('#date+start').strip()
+            sheet = self.dutyofficers_spreadsheet.worksheet_by_title('DutyRoster')
+            current_values = sheet.get_all_values(returnas='matrix')
+            hxltags = {tag: i for i, tag in enumerate(current_values[1])}
+            startdate_ind = hxltags['#date+start']
+            contactname_ind = hxltags['#contact+name']
+            contactemail_ind = hxltags['#contact+email']
+            for row in sorted(current_values[2:], key=lambda x: x[startdate_ind], reverse=True):
+                startdate = row[startdate_ind].strip()
                 if datetime.strptime(startdate, '%Y-%m-%d') <= self.now:
-                    dutyofficer_name = dutyofficer.get('#contact+name')
+                    dutyofficer_name = row[contactname_ind]
                     if dutyofficer_name:
                         dutyofficer_name = dutyofficer_name.strip()
-                        self.dutyofficer = {'name': dutyofficer_name,
-                                            'email': dutyofficer.get('#contact+email').strip()}
+                        self.dutyofficer = {'name': dutyofficer_name, 'email': row[contactemail_ind].strip()}
                         logger.info('Duty officer: %s' % dutyofficer_name)
                         break
-            datagrids = hxl.data(configuration['datagrids_url']).cache()
-            defaultgrid = dict()
-            for row in datagrids.with_rows('#datagrid=default'):
-                self.add_query(defaultgrid, row)
 
-            curators = hxl.data(configuration['curators_url']).cache()
-            for curator in curators:
-                curatoremail = curator.get('#contact+email').strip()
-                owner = curator.get('#datagrid')
+            sheet = self.datagrids_spreadsheet.worksheet_by_title('DataGrids')
+            current_values = sheet.get_all_values(returnas='matrix')
+            hxltags = {tag: i for i, tag in enumerate(current_values[1])}
+            datagrids = current_values[2:]
+            defaultgrid = dict()
+            for row in datagrids:
+                if row[hxltags['#datagrid']] == 'default':
+                    self.add_query(hxltags, defaultgrid, row)
+
+            sheet = self.datagrids_spreadsheet.worksheet_by_title('Curators')
+            current_values = sheet.get_all_values(returnas='matrix')
+            curators_hxltags = {tag: i for i, tag in enumerate(current_values[1])}
+            curators = current_values[2:]
+            for row in curators:
+                curatoremail = row[curators_hxltags['#contact+email']].strip()
+                owner = row[curators_hxltags['#datagrid']]
                 for dg in owner.strip().split(','):
                     if dg.strip() == 'cc':
                         self.datagridccs.append(curatoremail)
-            for curator in curators:
-                curatorname = curator.get('#contact+name').strip()
-                curatoremail = curator.get('#contact+email').strip()
-                owner = curator.get('#datagrid')
+            for row in curators:
+                curatorname = row[curators_hxltags['#contact+name']].strip()
+                curatoremail = row[curators_hxltags['#contact+email']].strip()
+                owner = row[curators_hxltags['#datagrid']]
                 if owner is not None:
                     for dg in owner.strip().split(','):
-                        datagrid = self.get_datagrid(dg, datagrids, defaultgrid)
+                        datagrid = self.get_datagrid(hxltags, dg, datagrids, defaultgrid)
                         if datagrid is None:
                             continue
                         if datagrid.get('owner'):
@@ -116,33 +150,13 @@ class Sheet:
         except Exception as ex:
             return str(ex)
 
-    def setup_output(self, configuration, gsheet_auth, spreadsheet_test):
-        if gsheet_auth:
-            try:
-                logger.info('> GSheet Credentials: %s' % gsheet_auth)
-                info = json.loads(gsheet_auth)
-                scopes = ['https://www.googleapis.com/auth/spreadsheets']
-                credentials = service_account.Credentials.from_service_account_info(info, scopes=scopes)
-                gc = pygsheets.authorize(custom_credentials=credentials)
-                if spreadsheet_test:  # use test not prod spreadsheet
-                    issues_spreadsheet = configuration['test_issues_spreadsheet_url']
-                else:
-                    issues_spreadsheet = configuration['prod_issues_spreadsheet_url']
-                self.spreadsheet = gc.open_by_url(issues_spreadsheet)
-            except Exception as ex:
-                return str(ex)
-        else:
-            logger.info('> No GSheet Credentials!')
-            self.spreadsheet = None
-        return None
-
     def update(self, sheetname, datasets, dutyofficer_name=None):
         # sheet must have been set up!
-        if self.spreadsheet is None or (self.dutyofficer is None and dutyofficer_name is None):
+        if self.issues_spreadsheet is None or (self.dutyofficer is None and dutyofficer_name is None):
             logger.warning('Cannot update Google spreadsheet!')
             return
         logger.info('Updating Google spreadsheet.')
-        sheet = self.spreadsheet.worksheet_by_title(sheetname)
+        sheet = self.issues_spreadsheet.worksheet_by_title(sheetname)
         current_values = sheet.get_all_values(returnas='matrix')
         keys = current_values[0]
         url_ind = keys.index('URL')
