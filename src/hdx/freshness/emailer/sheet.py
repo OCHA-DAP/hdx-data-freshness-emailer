@@ -75,7 +75,6 @@ class Sheet:
         if not gsheet_auth:
             return 'No GSheet Credentials!'
         try:
-            logger.info('> GSheet Credentials: %s' % gsheet_auth)
             info = json.loads(gsheet_auth)
             scopes = ['https://www.googleapis.com/auth/spreadsheets']
             credentials = service_account.Credentials.from_service_account_info(info, scopes=scopes)
