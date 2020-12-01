@@ -78,6 +78,8 @@ class DatabaseQueries:
                 row[column.key] = result[i]
             regex = '.Client(.*)Error '
             error = row['error']
+            if error == 'File too large to hash!':
+                continue
             search_exception = re.search(regex, error)
             if search_exception:
                 exception_string = search_exception.group(0)[1:-1]
