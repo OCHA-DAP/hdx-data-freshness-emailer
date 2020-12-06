@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class DatabaseQueries:
+    format_mismatch_msg = 'Format Mismatch'
     other_error_msg = 'Server Error (may be temporary)'
 
     def __init__(self, session, now):
@@ -80,11 +81,14 @@ class DatabaseQueries:
             error = row['error']
             if error == 'File too large to hash!':
                 continue
-            search_exception = re.search(regex, error)
-            if search_exception:
-                exception_string = search_exception.group(0)[1:-1]
+            if 'does not match HDX format' in error:
+                exception_string = self.format_mismatch_msg
             else:
-                exception_string = self.other_error_msg
+                search_exception = re.search(regex, error)
+                if search_exception:
+                    exception_string = search_exception.group(0)[1:-1]
+                else:
+                    exception_string = self.other_error_msg
             datasets_error = datasets.get(exception_string, dict())
             datasets[exception_string] = datasets_error
 
