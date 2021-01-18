@@ -10,7 +10,7 @@ from os.path import join
 
 import pytest
 from dateutil import parser
-from hdx.utilities.database import Database
+from hdx.database import Database
 
 from hdx.freshness.emailer.databasequeries import DatabaseQueries
 from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus

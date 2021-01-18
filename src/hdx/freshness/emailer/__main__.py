@@ -12,9 +12,9 @@ import datetime
 import logging
 from os import getenv
 
+from hdx.database import Database
 from hdx.facades.keyword_arguments import facade
 from hdx.hdx_configuration import Configuration
-from hdx.utilities.database import Database
 from hdx.utilities.dictandlist import args_to_dict
 from hdx.utilities.easy_logging import setup_logging
 from hdx.utilities.encoding import base64_to_str

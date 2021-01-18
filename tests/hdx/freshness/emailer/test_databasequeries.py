@@ -4,7 +4,7 @@ Unit tests for database queries code.
 
 '''
 from dateutil import parser
-from hdx.utilities.database import Database
+from hdx.database import Database
 
 from hdx.freshness.emailer.databasequeries import DatabaseQueries
 
