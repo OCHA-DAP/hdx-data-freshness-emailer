@@ -47,7 +47,7 @@ def get_readme():
     return readme_file.read()
 
 
-requirements = ['hdx-data-freshness>=1.6.1',
+requirements = ['hdx-data-freshness>=1.6.2',
                 'pygsheets'
                 ]
 
