@@ -643,6 +643,23 @@ class TestDataFreshnessStatus:
                                                                    'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n\nBest wishes,\nHDX Team',
                                                                    '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>It is highly probable that data freshness has failed!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n',
                                                                    None, None)]
+            TestDataFreshnessStatus.email_users_result = list()
+            now = parser.parse('2017-02-04 19:07:30.333492')
+            # insert new run and dataset
+            session.execute(
+                "INSERT INTO dbruns(run_number,run_date) VALUES (3,'2017-02-04 9:07:30.333492');")
+            session.execute(
+                "INSERT INTO dbdatasets(run_number,id,last_modified,metadata_modified,latest_of_modifieds,what_updated,last_resource_updated,last_resource_modified,error) VALUES (3,'lala','2017-02-04 9:07:30.333492','2017-02-04 9:07:30.333492','2017-02-04 9:07:30.333492','lala','lala','2017-02-04 9:07:30.333492',False);")
+            databasequeries = DatabaseQueries(session=session, now=now)
+            freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+                                            sheet=sheet)
+
+            freshness.check_number_datasets(now, send_failures=['blah2@blah.com', 'blah4@blah.com'])
+            assert TestDataFreshnessStatus.email_users_result == [(['blah2@blah.com', 'blah4@blah.com'],
+                                                                   'FAILURE: Previous run corrupted! (03/02/2017)',
+                                                                   'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n\nBest wishes,\nHDX Team',
+                                                                   '<html>\n  <head></head>\n  <body>\n    <span>Dear system administrator,<br><br>It is highly probable that data freshness has failed!<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n',
+                                                                   None, None)]
 
     def test_freshnessdatasetsnoresources(self, configuration, database_noresources, users, organizations):
         site_url = 'http://lala'

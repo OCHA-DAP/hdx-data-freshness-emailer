@@ -44,22 +44,31 @@ class DataFreshnessStatus:
             recipients = send_failures
         elif len(run_numbers) == 2:
             datasets_today, datasets_previous = self.databasequeries.get_number_datasets()
-            diff_datasets = datasets_previous - datasets_today
-            percentage_diff = diff_datasets / datasets_previous
-            if percentage_diff <= 0.02:
-                logger.info('No issues with number of datasets.')
-                return False
-            if percentage_diff == 1.0:
+            if datasets_today == 0:
                 subject = 'FAILURE: No datasets today!'
                 msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
                 recipients = send_failures
+            elif datasets_previous == 0:
+                subject = 'FAILURE: Previous run corrupted!'
+                msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
+                recipients = send_failures
             else:
-                subject = 'WARNING: Fall in datasets on HDX today!'
-                startmsg = 'Dear %s,\n\n' % Email.get_addressee(self.sheet.dutyofficer)
-                msg = '%sThere are %d (%d%%) fewer datasets today than yesterday on HDX which may indicate a serious problem so should be investigated!\n' % \
-                      (startmsg, diff_datasets, percentage_diff * 100)
-                recipients, cc = self.email.get_recipients_cc(self.sheet.dutyofficer)
-                stop = False
+                diff_datasets = datasets_previous - datasets_today
+                percentage_diff = diff_datasets / datasets_previous
+                if percentage_diff <= 0.02:
+                    logger.info('No issues with number of datasets.')
+                    return False
+                if percentage_diff > 0.5:
+                    subject = 'FAILURE: No datasets today!'
+                    msg = 'Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n'
+                    recipients = send_failures
+                else:
+                    subject = 'WARNING: Fall in datasets on HDX today!'
+                    startmsg = 'Dear %s,\n\n' % Email.get_addressee(self.sheet.dutyofficer)
+                    msg = '%sThere are %d (%d%%) fewer datasets today than yesterday on HDX which may indicate a serious problem so should be investigated!\n' % \
+                          (startmsg, diff_datasets, percentage_diff * 100)
+                    recipients, cc = self.email.get_recipients_cc(self.sheet.dutyofficer)
+                    stop = False
         else:
             logger.info('No issues with number of datasets.')
             return False
