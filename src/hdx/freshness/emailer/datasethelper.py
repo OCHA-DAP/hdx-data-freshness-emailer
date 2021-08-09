@@ -5,9 +5,8 @@ DatasetHelper
 
 Dataset helper functions
 """
-from datetime import datetime
-
 from hdx.data.dataset import Dataset
+from hdx.data.date_helper import DateHelper
 from hdx.data.organization import Organization
 from hdx.data.user import User
 from hdx.utilities.dictandlist import dict_of_lists_add
@@ -44,11 +43,8 @@ class DatasetHelper:
         dataset_date = dataset['dataset_date']
         if not dataset_date:
             return None, None
-        if '-' in dataset_date:
-            date_start, date_end = dataset_date.split('-')
-        else:
-            date_start = date_end = dataset_date
-        return datetime.strptime(date_start, '%m/%d/%Y'), datetime.strptime(date_end, '%m/%d/%Y')
+        date_info = DateHelper.get_date_info(dataset_date)
+        return date_info['startdate'], date_info['enddate']
 
     def get_maintainer(self, dataset):
         maintainer = dataset['maintainer']

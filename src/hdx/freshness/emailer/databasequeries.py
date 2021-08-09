@@ -6,7 +6,6 @@ Database queries
 Queries to the freshness database
 """
 
-import datetime
 import logging
 import re
 from collections import OrderedDict
@@ -19,8 +18,6 @@ from hdx.freshness.database.dbrun import DBRun
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import and_
 
-from hdx.freshness.emailer.datasethelper import DatasetHelper
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,24 +28,31 @@ class DatabaseQueries:
     def __init__(self, session, now):
         ''''''
         self.session = session
-        self.run_numbers = self.get_cur_prev_runs(now)
+        self.now = now
+        self.run_number_to_run_date, self.run_numbers = self.get_cur_prev_runs()
         if len(self.run_numbers) < 2:
             logger.warning('Less than 2 runs!')
+        self.datasets_modified_yesterday = None
 
     def get_run_numbers(self):
         return self.run_numbers
 
-    def get_cur_prev_runs(self, now):
-        all_run_numbers = self.session.query(DBRun.run_number, DBRun.run_date).distinct().order_by(
+    def get_cur_prev_runs(self):
+        list_run_numbers = self.session.query(DBRun.run_number, DBRun.run_date).distinct().order_by(
             DBRun.run_number.desc()).all()
-        last_ind = len(all_run_numbers) - 1
-        for i, run_number in enumerate(all_run_numbers):
-            if run_number[1] < now:
+        run_number_to_run_date = dict()
+        run_numbers = list()
+        last_ind = len(list_run_numbers) - 1
+        for i, run_number in enumerate(list_run_numbers):
+            run_no = run_number.run_number
+            run_date = run_number.run_date
+            run_number_to_run_date[run_no] = run_date
+            if not run_numbers and run_date < self.now:
                 if i == last_ind:
-                    return [run_number]
+                    run_numbers = [run_number]
                 else:
-                    return [run_number, all_run_numbers[i + 1]]
-        return list()
+                    run_numbers = [run_number, list_run_numbers[i + 1]]
+        return run_number_to_run_date, run_numbers
 
     def get_number_datasets(self):
         datasets_today = self.session.query(DBDataset.id).filter(
@@ -225,6 +229,8 @@ class DatabaseQueries:
         return datasets_noresources
 
     def get_datasets_modified_yesterday(self):
+        if self.datasets_modified_yesterday is not None:
+            return self.datasets_modified_yesterday
         datasets = OrderedDict()
         no_runs = len(self.run_numbers)
         if no_runs < 2:
@@ -244,22 +250,58 @@ class DatabaseQueries:
                 dataset[column.key] = result[i]
             datasets[dataset['id']] = dataset
         logger.info('SQL query returned %d rows.' % norows)
+        self.datasets_modified_yesterday = datasets
         return datasets
 
-    def get_datasets_dataset_date(self):
-        datasets = self.get_datasets_modified_yesterday()
-        datasets_dataset_date = list()
-        for dataset in datasets.values():
-            update_frequency = dataset['update_frequency']
-            if update_frequency == 0:
-                update_frequency = 1
-            if update_frequency == -1 or update_frequency == -2:
-                update_frequency = 365
-            _, dataset_date = DatasetHelper.get_dataset_dates(dataset)
-            if not dataset_date:
-                continue
-            delta = dataset['latest_of_modifieds'] - dataset_date
-            if delta <= datetime.timedelta(days=update_frequency):
-                continue
-            datasets_dataset_date.append(dataset)
-        return datasets_dataset_date
+    # def get_datasets_dataset_date(self):
+    #     datasets = self.get_datasets_modified_yesterday()
+    #     dataset_ids = list()
+    #     for dataset_id, dataset in datasets.items():
+    #         if '*' in dataset['dataset_date']:
+    #             continue
+    #         if dataset['update_frequency'] <= 0:
+    #             continue
+    #         dataset_ids.append(dataset_id)
+    #     columns = [DBDataset.id, DBDataset.dataset_date]
+    #     filters = [DBDataset.id.in_(dataset_ids),
+    #                DBDataset.run_number == self.run_numbers[1][0]]
+    #     query = self.session.query(*columns).filter(and_(*filters))
+    #     norows = 0
+    #     unchanged_dsdates_datasets = list()
+    #     for norows, result in enumerate(query):
+    #         dataset_id = result.id
+    #         if result.dataset_date == datasets[dataset_id]['dataset_date']:
+    #             unchanged_dsdates_datasets.append(dataset_id)
+    #     logger.info('SQL query returned %d rows.' % norows)
+    #     DBDataset2 = aliased(DBDataset)
+    #     dsdates_not_changed_within_uf = list()
+    #     for dataset_id in unchanged_dsdates_datasets:
+    #         filters = [DBDataset.id == dataset_id, DBDataset2.id == DBDataset.id,
+    #                    DBDataset2.run_number == DBDataset.run_number - 1,
+    #                    DBDataset.dataset_date != DBDataset2.dataset_date
+    #                    ]
+    #         result = self.session.query(DBDataset.run_number).filter(and_(*filters)).order_by(
+    #         DBDataset.run_number.desc()).first()
+    #         delta = self.now - self.run_number_to_run_date[result.run_number]
+    #         if delta > datetime.timedelta(days=datasets[dataset_id]['update_frequency']):
+    #             dsdates_not_changed_within_uf.append(dataset_id)
+    #     datasets_dataset_date = list()
+    #     for dataset_id in dsdates_not_changed_within_uf:
+    #         columns = [DBDataset.run_number, DBDataset.update_frequency]
+    #         filters = [DBDataset.id == dataset_id, DBDataset2.id == DBDataset.id,
+    #                    DBDataset2.run_number == DBDataset.run_number - 1,
+    #                    DBDataset.what_updated != 'nothing']
+    #         query = self.session.query(*columns).filter(and_(*filters))
+    #         prevdate = self.now
+    #         number_of_updates = 0
+    #         number_of_updates_within_uf = 0
+    #         for number_of_updates, result in enumerate(query):
+    #             run_date = self.run_number_to_run_date[result.run_number]
+    #             delta = prevdate - run_date
+    #             if delta < datetime.timedelta(days=result.update_frequency):
+    #                 number_of_updates_within_uf += 1
+    #             prevdate = run_date
+    #         if number_of_updates_within_uf / number_of_updates < 0.8:
+    #             continue
+    #         datasets_dataset_date.append(datasets[dataset_id])
+    #     return datasets_dataset_date

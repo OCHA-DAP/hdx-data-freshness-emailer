@@ -31,7 +31,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
-def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_test, **ignore):
+def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_test, no_spreadsheet, **ignore):
     logger.info('> Data freshness emailer %s' % get_freshness_emailer_version())
     configuration = Configuration.read()
     if email_server:
@@ -61,7 +61,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
         failure_list = list()
         for address in configuration['failure_emails']:
             failure_list.append(base64_to_str(address))
-        error = sheet.setup_gsheet(configuration, gsheet_auth, spreadsheet_test)
+        error = sheet.setup_gsheet(configuration, gsheet_auth, spreadsheet_test, no_spreadsheet)
         if error:
             email.htmlify_send(failure_list, 'Error opening Google sheets!', error)
         else:
@@ -81,7 +81,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
                         freshness.process_delinquent(recipients=test_users)
                         freshness.process_maintainer_orgadmins(recipients=test_users)
                         freshness.process_datasets_noresources(recipients=test_users)
-                        # freshness.process_datasets_dataset_date(recipients=test_users, sysadmins=test_users)
+                        #                        freshness.process_datasets_dataset_date(recipients=test_users, sysadmins=test_users)
                         freshness.process_datasets_datagrid(recipients=test_users)
                     else:
                         freshness.process_broken()
@@ -89,7 +89,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
                         freshness.process_delinquent()
                         freshness.process_maintainer_orgadmins()
                         freshness.process_datasets_noresources()
-                        # freshness.process_datasets_dataset_date(sysadmins=test_users)
+                        #                        freshness.process_datasets_dataset_date(sysadmins=test_users)
                         freshness.process_datasets_datagrid()
 
     logger.info('Freshness emailer completed!')
@@ -109,6 +109,8 @@ if __name__ == '__main__':
                         help='Email only test users for testing purposes')
     parser.add_argument('-st', '--spreadsheet_test', default=False, action='store_true',
                         help='Use test instead of prod issues spreadsheet')
+    parser.add_argument('-ns', '--no_spreadsheet', default=False, action='store_true',
+                        help='Do not update issues spreadsheet')
     args = parser.parse_args()
     hdx_key = args.hdx_key
     if hdx_key is None:
@@ -139,4 +141,4 @@ if __name__ == '__main__':
     facade(main, hdx_key=hdx_key, user_agent=user_agent, preprefix=preprefix, hdx_site=hdx_site,
            project_config_yaml=project_config_yaml, db_url=db_url, db_params=args.db_params,
            email_server=email_server, gsheet_auth=gsheet_auth, email_test=args.email_test,
-           spreadsheet_test=args.spreadsheet_test)
+           spreadsheet_test=args.spreadsheet_test, no_spreadsheet=args.no_spreadsheet)

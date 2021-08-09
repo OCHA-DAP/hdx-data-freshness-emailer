@@ -71,7 +71,7 @@ class Sheet:
                         datagrid[key] = defaultgrid[key]
         return datagrid
 
-    def setup_gsheet(self, configuration, gsheet_auth, spreadsheet_test):
+    def setup_gsheet(self, configuration, gsheet_auth, spreadsheet_test, no_spreadsheet):
         if not gsheet_auth:
             return 'No GSheet Credentials!'
         try:
@@ -87,8 +87,11 @@ class Sheet:
             self.dutyofficers_spreadsheet = gc.open_by_url(configuration['dutyofficers_url'])
             logger.info('Opening datagrids gsheet')
             self.datagrids_spreadsheet = gc.open_by_url(configuration['datagrids_url'])
-            logger.info('Opening issues gsheet')
-            self.issues_spreadsheet = gc.open_by_url(issues_spreadsheet)
+            if not no_spreadsheet:
+                logger.info('Opening issues gsheet')
+                self.issues_spreadsheet = gc.open_by_url(issues_spreadsheet)
+            else:
+                self.issues_spreadsheet = None
         except Exception as ex:
             return str(ex)
         return None
