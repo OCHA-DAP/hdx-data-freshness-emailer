@@ -264,7 +264,9 @@ class DataFreshnessStatus:
                 for datasetinfo in datasetinfos:
                     dataset_id = datasetinfo['id']
                     if dataset_id not in [dataset['id'] for dataset in datasets]:
-                        datasets.append(datasets_modified_yesterday[dataset_id])
+                        dataset = datasets_modified_yesterday.get(dataset_id)
+                        if dataset is not None:
+                            datasets.append(dataset)
             if len(datasets) == 0:
                 logger.info(nodatasetsmsg % datagridname)
                 continue
