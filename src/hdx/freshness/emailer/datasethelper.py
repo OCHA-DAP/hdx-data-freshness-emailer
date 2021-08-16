@@ -77,11 +77,15 @@ class DatasetHelper:
         return maintainer, orgadmins, users_to_email
 
     @staticmethod
-    def get_update_frequency(dataset):
-        if dataset['update_frequency'] is None:
+    def get_update_frequency(update_freq):
+        if update_freq is None:
             return 'NOT SET'
         else:
-            return Dataset.transform_update_frequency('%d' % dataset['update_frequency']).lower()
+            return Dataset.transform_update_frequency('%d' % update_freq)
+
+    @classmethod
+    def get_update_frequency_from_dataset(cls, dataset):
+        return cls.get_update_frequency(dataset['update_frequency'])
 
     @staticmethod
     def get_user_name(user):
@@ -129,7 +133,7 @@ class DatasetHelper:
             if sysadmin:
                 msg.append(', '.join(usermsg))
                 htmlmsg.append(', '.join(userhtmlmsg))
-        update_frequency = self.get_update_frequency(dataset)
+        update_frequency = self.get_update_frequency_from_dataset(dataset)
         msg.append(' with expected update frequency: %s' % update_frequency)
         htmlmsg.append(' with expected update frequency: %s' % update_frequency)
         if include_freshness:

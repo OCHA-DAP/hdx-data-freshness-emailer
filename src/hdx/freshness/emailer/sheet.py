@@ -11,6 +11,10 @@ from datetime import datetime
 
 import pygsheets
 from google.oauth2 import service_account
+from hdx.data.dataset import Dataset
+from hdx.utilities.dateparse import parse_date
+
+from hdx.freshness.emailer.datasethelper import DatasetHelper
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,8 @@ def get_date(datestr):
 
 
 class Sheet:
+    row_limit = 1000
+
     def __init__(self, now):
         self.now = now
         self.dutyofficers_spreadsheet = None
@@ -162,17 +168,30 @@ class Sheet:
         current_values = sheet.get_all_values(returnas='matrix')
         keys = current_values[0]
         url_ind = keys.index('URL')
+        if 'Update Frequency' in keys:
+            update_frequency_ind = keys.index('Update Frequency')
+        else:
+            update_frequency_ind = None
         dateadded_ind = keys.index('Date Added')
+        dateoccurred_ind = keys.index('Date Last Occurred')
         no_times_ind = keys.index('No. Times')
         assigned_ind = keys.index('Assigned')
         status_ind = keys.index('Status')
-        urls = [x[url_ind] for i, x in enumerate(current_values) if i != 0]
+        headers = current_values[0]
+        current_values = [row for row in current_values[1:] if row[url_ind]]
+        urls = [x[url_ind] for x in current_values]
+        if update_frequency_ind is not None:
+            for row in current_values:
+                updatefreq = row[update_frequency_ind]
+                row[update_frequency_ind] = int(Dataset.transform_update_frequency(updatefreq))
         updated_notimes = set()
+        now = self.now.isoformat()
         for dataset in datasets:
             url = dataset['URL']
             new_row = [dataset.get(key, '') for key in keys]
+            new_row[dateoccurred_ind] = now
             try:
-                rowno = urls.index(url) + 1
+                rowno = urls.index(url)
                 current_row = current_values[rowno]
                 new_row[dateadded_ind] = current_row[dateadded_ind]
                 no_times = current_row[no_times_ind]
@@ -184,7 +203,7 @@ class Sheet:
                 new_row[status_ind] = current_row[status_ind]
                 current_values[rowno] = new_row
             except ValueError:
-                new_row[dateadded_ind] = self.now.isoformat()
+                new_row[dateadded_ind] = now
                 new_row[no_times_ind] = 1
                 if dutyofficer_name is not None:
                     new_row[assigned_ind] = dutyofficer_name
@@ -193,8 +212,38 @@ class Sheet:
                 current_values.append(new_row)
                 urls.append(url)
                 updated_notimes.add(url)
-        current_values = sorted(current_values, key=lambda x: x[dateadded_ind], reverse=True)
-        sheet.update_values('A1', current_values)
+        if update_frequency_ind is None:
+            current_values = sorted(current_values, key=lambda x: x[dateoccurred_ind], reverse=True)
+        else:
+            headers.append('sort')
+            sort_ind = headers.index('sort')
+            for row in current_values:
+                dateoccurred = row[dateoccurred_ind]
+                if dateoccurred == now:
+                    sort_val = 0
+                else:
+                    nodays = self.now - parse_date(dateoccurred)
+                    update_freq = row[update_frequency_ind]
+                    if update_freq == -1:
+                        update_freq = 1000
+                    elif update_freq == -2:
+                        update_freq = 500
+                    elif update_freq == 0:
+                        update_freq = 0.5
+                    sort_val = nodays.days / update_freq
+                row.append(sort_val)
+            current_values = sorted(current_values, key=lambda x: (-x[sort_ind], x[dateoccurred_ind]), reverse=True)
+        no_rows = len(current_values)
+        no_rows_to_remove = no_rows - self.row_limit
+        current_values = current_values[:-no_rows_to_remove]
+
+        if update_frequency_ind is not None:
+            for row in current_values:
+                update_freq = row[update_frequency_ind]
+                row[update_frequency_ind] = DatasetHelper.get_update_frequency(update_freq)
+                del row[sort_ind]
+            del headers[sort_ind]
+        sheet.update_values('A1', [headers] + current_values)
 
     @staticmethod
     def construct_row(datasethelper, dataset, maintainer, orgadmins):
@@ -207,7 +256,7 @@ class Sheet:
             maintainer_name, maintainer_email = '', ''
         orgadmin_names = ','.join([x[0] for x in orgadmins])
         orgadmin_emails = ','.join([x[1] for x in orgadmins])
-        update_freq = datasethelper.get_update_frequency(dataset)
+        update_freq = dataset['update_frequency']
         latest_of_modifieds = dataset['latest_of_modifieds'].isoformat()
         # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
         # Update Frequency	Latest of Modifieds

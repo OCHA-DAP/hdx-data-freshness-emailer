@@ -92,6 +92,8 @@ class DatabaseQueries:
                 if search_exception:
                     exception_string = search_exception.group(0)[1:-1]
                 else:
+                    # some sort of Server Error which most of the time is temporary so ignore
+                    # continue
                     exception_string = self.other_error_msg
             datasets_error = datasets.get(exception_string, dict())
             datasets[exception_string] = datasets_error
