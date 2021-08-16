@@ -9,8 +9,7 @@ import json
 import logging
 from datetime import datetime
 
-import pygsheets
-from google.oauth2 import service_account
+import gspread
 from hdx.data.dataset import Dataset
 from hdx.utilities.dateparse import parse_date
 
@@ -83,8 +82,7 @@ class Sheet:
         try:
             info = json.loads(gsheet_auth)
             scopes = ['https://www.googleapis.com/auth/spreadsheets']
-            credentials = service_account.Credentials.from_service_account_info(info, scopes=scopes)
-            gc = pygsheets.authorize(custom_credentials=credentials)
+            gc = gspread.service_account_from_dict(info, scopes=scopes)
             if spreadsheet_test:  # use test not prod spreadsheet
                 issues_spreadsheet = configuration['test_issues_spreadsheet_url']
             else:
@@ -105,8 +103,8 @@ class Sheet:
     def setup_input(self):
         logger.info('--------------------------------------------------')
         try:
-            sheet = self.dutyofficers_spreadsheet.worksheet_by_title('DutyRoster')
-            current_values = sheet.get_all_values(returnas='matrix')
+            sheet = self.dutyofficers_spreadsheet.worksheet('DutyRoster')
+            current_values = sheet.get_values()
             hxltags = {tag: i for i, tag in enumerate(current_values[1])}
             startdate_ind = hxltags['#date+start']
             contactname_ind = hxltags['#contact+name']
@@ -121,8 +119,8 @@ class Sheet:
                         logger.info('Duty officer: %s' % dutyofficer_name)
                         break
 
-            sheet = self.datagrids_spreadsheet.worksheet_by_title('DataGrids')
-            current_values = sheet.get_all_values(returnas='matrix')
+            sheet = self.datagrids_spreadsheet.worksheet('DataGrids')
+            current_values = sheet.get_values()
             hxltags = {tag: i for i, tag in enumerate(current_values[1])}
             datagrids = current_values[2:]
             defaultgrid = dict()
@@ -130,8 +128,8 @@ class Sheet:
                 if row[hxltags['#datagrid']] == 'default':
                     self.add_query(hxltags, defaultgrid, row)
 
-            sheet = self.datagrids_spreadsheet.worksheet_by_title('Curators')
-            current_values = sheet.get_all_values(returnas='matrix')
+            sheet = self.datagrids_spreadsheet.worksheet('Curators')
+            current_values = sheet.get_values()
             curators_hxltags = {tag: i for i, tag in enumerate(current_values[1])}
             curators = current_values[2:]
             for row in curators:
@@ -164,8 +162,8 @@ class Sheet:
             logger.warning('Cannot update Google spreadsheet!')
             return
         logger.info('Updating Google spreadsheet.')
-        sheet = self.issues_spreadsheet.worksheet_by_title(sheetname)
-        current_values = sheet.get_all_values(returnas='matrix')
+        sheet = self.issues_spreadsheet.worksheet(sheetname)
+        current_values = sheet.get_values()
         keys = current_values[0]
         url_ind = keys.index('URL')
         if 'Update Frequency' in keys:
@@ -243,7 +241,8 @@ class Sheet:
                 row[update_frequency_ind] = DatasetHelper.get_update_frequency(update_freq)
                 del row[sort_ind]
             del headers[sort_ind]
-        sheet.update_values('A1', [headers] + current_values)
+        sheet.clear()
+        sheet.update('A1', [headers] + current_values)
 
     @staticmethod
     def construct_row(datasethelper, dataset, maintainer, orgadmins):

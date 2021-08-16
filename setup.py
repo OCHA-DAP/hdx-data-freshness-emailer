@@ -48,7 +48,7 @@ def get_readme():
 
 
 requirements = ['hdx-data-freshness>=1.6.6',
-                'pygsheets'
+                'gspread'
                 ]
 
 classifiers = [

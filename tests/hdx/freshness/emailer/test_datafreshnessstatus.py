@@ -37,10 +37,10 @@ class TestDataFreshnessStatus:
 
     class TestSpreadsheet_Broken1:
         @staticmethod
-        def worksheet_by_title(_):
+        def worksheet(_):
             class TestWorksheet:
                 @staticmethod
-                def get_all_values(returnas):
+                def get_values():
                     return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
                              'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Freshness', 'Error Type',
                              'Error', 'Date Added', 'Date Last Occurred', 'No. Times', 'Assigned', 'Status'],
@@ -51,32 +51,40 @@ class TestDataFreshnessStatus:
                              '2017-01-02T19:07:30.333492', 3, 'Andrew', 'Contacted Maintainer']]
 
                 @staticmethod
-                def update_values(_, cells):
+                def clear():
+                    return
+
+                @staticmethod
+                def update(_, cells):
                     TestDataFreshnessStatus.cells_result = cells
             return TestWorksheet
 
     class TestSpreadsheet_Broken2:
         @staticmethod
-        def worksheet_by_title(_):
+        def worksheet(_):
             class TestWorksheet:
                 @staticmethod
-                def get_all_values(returnas):
+                def get_values():
                     return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
                              'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Freshness', 'Error Type',
                              'Error', 'Date Added', 'Date Last Occurred', 'No. Times', 'Assigned', 'Status']]
 
                 @staticmethod
-                def update_values(_, cells):
+                def clear():
+                    return
+
+                @staticmethod
+                def update(_, cells):
                     TestDataFreshnessStatus.cells_result = cells
 
             return TestWorksheet
 
     class TestSpreadsheet_Broken3:
         @staticmethod
-        def worksheet_by_title(_):
+        def worksheet(_):
             class TestWorksheet:
                 @staticmethod
-                def get_all_values(returnas):
+                def get_values():
                     return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
                              'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Freshness', 'Error Type',
                              'Error', 'Date Added', 'Date Last Occurred', 'No. Times', 'Assigned', 'Status'],
@@ -119,17 +127,21 @@ class TestDataFreshnessStatus:
                             ]
 
                 @staticmethod
-                def update_values(_, cells):
+                def clear():
+                    return
+
+                @staticmethod
+                def update(_, cells):
                     TestDataFreshnessStatus.cells_result = cells
 
             return TestWorksheet
 
     class TestSpreadsheet_OverdueDelinquent:
         @staticmethod
-        def worksheet_by_title(_):
+        def worksheet(_):
             class TestWorksheet:
                 @staticmethod
-                def get_all_values(returnas):
+                def get_values():
                     return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
                              'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Date Added',
                              'Date Last Occurred', 'No. Times', 'Assigned', 'Status'],
@@ -139,17 +151,21 @@ class TestDataFreshnessStatus:
                              '2017-01-01T19:07:30.333492', '2017-01-01T19:07:30.333492', 2, 'Peter', 'Done']]
 
                 @staticmethod
-                def update_values(_, cells):
+                def clear():
+                    return
+
+                @staticmethod
+                def update(_, cells):
                     TestDataFreshnessStatus.cells_result = cells
             return TestWorksheet
 
     class TestSpreadsheet_MaintainerOrgAdmins:
         @staticmethod
-        def worksheet_by_title(sheetname):
+        def worksheet(sheetname):
             class TestWorksheet:
 
                 @staticmethod
-                def get_all_values(returnas):
+                def get_values():
                     if TestWorksheet.sheetname == 'Maintainer':
                         return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
                                  'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Date Added',
@@ -168,7 +184,11 @@ class TestDataFreshnessStatus:
                                  '2017-01-01T19:07:30.333492', '2017-01-01T19:07:30.333492', 5, 'Aaron', '']]
 
                 @staticmethod
-                def update_values(_, cells):
+                def clear():
+                    return
+
+                @staticmethod
+                def update(_, cells):
                     TestDataFreshnessStatus.cells_result.append(cells)
 
             TestWorksheet.sheetname = sheetname
@@ -176,10 +196,10 @@ class TestDataFreshnessStatus:
 
     class TestSpreadsheet_NoResources:
         @staticmethod
-        def worksheet_by_title(_):
+        def worksheet(_):
             class TestWorksheet:
                 @staticmethod
-                def get_all_values(returnas):
+                def get_values():
                     return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
                              'Org Admin Emails', 'Update Frequency', 'Latest of Modifieds', 'Date Added',
                              'Date Last Occurred', 'No. Times', 'Assigned', 'Status'],
@@ -189,23 +209,31 @@ class TestDataFreshnessStatus:
                              '2017-01-01T19:07:30.333492', '2017-01-01T19:07:30.333492', 2, 'Peter', 'Done']]
 
                 @staticmethod
-                def update_values(_, cells):
+                def clear():
+                    return
+
+                @staticmethod
+                def update(_, cells):
                     TestDataFreshnessStatus.cells_result = cells
 
             return TestWorksheet
 
     class TestSpreadsheet_Empty:
         @staticmethod
-        def worksheet_by_title(_):
+        def worksheet(_):
             class TestWorksheet:
                 @staticmethod
-                def get_all_values(returnas):
+                def get_values():
                     return [['URL', 'Title', 'Organisation', 'Maintainer', 'Maintainer Email', 'Org Admins',
                              'Org Admin Emails', 'Dataset Date', 'Update Frequency', 'Latest of Modifieds',
                              'Date Added', 'Date Last Occurred', 'No. Times', 'Assigned', 'Status']]
 
                 @staticmethod
-                def update_values(_, cells):
+                def clear():
+                    return
+
+                @staticmethod
+                def update(_, cells):
                     TestDataFreshnessStatus.cells_result = cells
 
             return TestWorksheet
