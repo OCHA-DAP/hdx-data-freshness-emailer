@@ -15,5 +15,5 @@ Usage
 
 .. |Build Status| image:: https://github.com/OCHA-DAP/hdx-data-freshness-emailer/workflows/build/badge.svg
    :target: https://github.com/OCHA-DAP/hdx-data-freshness-emailer/actions?query=workflow%3Abuild
-.. |Coverage Status| image:: https://coveralls.io/repos/github/OCHA-DAP/hdx-data-freshness-emailer/badge.svg?branch=master&ts=1
-   :target: https://coveralls.io/github/OCHA-DAP/hdx-data-freshness-emailer?branch=master
+.. |Coverage Status| image:: https://coveralls.io/repos/github/OCHA-DAP/hdx-data-freshness-emailer/badge.svg?branch=main&ts=1
+   :target: https://coveralls.io/github/OCHA-DAP/hdx-data-freshness-emailer?branch=main
