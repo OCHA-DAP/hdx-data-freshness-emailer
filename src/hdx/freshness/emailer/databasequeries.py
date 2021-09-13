@@ -115,7 +115,7 @@ class DatabaseQueries:
             del row['error']
             dataset.update(row)
 
-        logger.info('SQL query returned %d rows.' % norows)
+        logger.info(f'SQL query returned {norows} rows.')
         return datasets
 
     def get_status(self, status):
@@ -146,7 +146,7 @@ class DatabaseQueries:
             del dataset['prev_what_updated']
             datasets.append(dataset)
 
-        logger.info('SQL query returned %d rows.' % norows)
+        logger.info(f'SQL query returned {norows} rows.')
         return datasets
 
     def get_invalid_maintainer_orgadmins(self, organizations, users, sysadmins):
@@ -190,7 +190,7 @@ class DatabaseQueries:
                             all_sysadmins = False
                 if nonexistantids:
                     invalid_orgadmins[organization_name] = \
-                        get_orginfo('The following org admins do not exist: %s!' % ', '.join(nonexistantids))
+                        get_orginfo(f"The following org admins do not exist: {', '.join(nonexistantids)}!")
                 elif all_sysadmins:
                     invalid_orgadmins[organization_name] = get_orginfo('All org admins are sysadmins!')
                 if maintainer_id in admins:
@@ -204,7 +204,7 @@ class DatabaseQueries:
                 continue
             invalid_maintainers.append(dataset)
 
-        logger.info('SQL query returned %d rows.' % norows)
+        logger.info(f'SQL query returned {norows} rows.')
         return invalid_maintainers, invalid_orgadmins
 
     def get_datasets_noresources(self):
@@ -226,7 +226,7 @@ class DatabaseQueries:
                 dataset[column.key] = result[i]
             datasets_noresources.append(dataset)
 
-        logger.info('SQL query returned %d rows.' % norows)
+        logger.info(f'SQL query returned {norows} rows.')
         return datasets_noresources
 
     def get_datasets_modified_yesterday(self):
@@ -250,7 +250,7 @@ class DatabaseQueries:
             for i, column in enumerate(columns):
                 dataset[column.key] = result[i]
             datasets[dataset['id']] = dataset
-        logger.info('SQL query returned %d rows.' % norows)
+        logger.info(f'SQL query returned {norows} rows.')
         self.datasets_modified_yesterday = datasets
         return datasets
 
@@ -273,7 +273,7 @@ class DatabaseQueries:
     #         dataset_id = result.id
     #         if result.dataset_date == datasets[dataset_id]['dataset_date']:
     #             unchanged_dsdates_datasets.append(dataset_id)
-    #     logger.info('SQL query returned %d rows.' % norows)
+    #     logger.info(f'SQL query returned {norows} rows.')
     #     DBDataset2 = aliased(DBDataset)
     #     dsdates_not_changed_within_uf = list()
     #     for dataset_id in unchanged_dsdates_datasets:

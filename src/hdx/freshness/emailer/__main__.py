@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_test, no_spreadsheet, **ignore):
-    logger.info('> Data freshness emailer %s' % get_freshness_emailer_version())
+    logger.info(f'> Data freshness emailer {get_freshness_emailer_version()}')
     configuration = Configuration.read()
     if email_server:
         email_config = email_server.split(',')
@@ -41,7 +41,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
         if len(email_config) > 5:
             email_config_dict['sender'] = email_config[5]
         configuration.setup_emailer(email_config_dict=email_config_dict)
-        logger.info('> Email host: %s' % email_config[1])
+        logger.info(f'> Email host: {email_config[1]}')
         send_emails = configuration.emailer().send
     else:
         logger.info('> No email host!')
@@ -52,7 +52,7 @@ def main(db_url, db_params, email_server, gsheet_auth, email_test, spreadsheet_t
         params = Database.get_params_from_sqlalchemy_url(db_url)
     else:
         params = {'driver': 'sqlite', 'database': 'freshness.db'}
-    logger.info('> Database parameters: %s' % params)
+    logger.info(f'> Database parameters: {params}')
     with Database(**params) as session:
         now = datetime.datetime.utcnow()
         email = Email(now, send_emails=send_emails, configuration=configuration)
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     if db_url is None:
         db_url = getenv('DB_URL')
     if db_url and '://' not in db_url:
-        db_url = 'postgresql://%s' % db_url
+        db_url = f'postgresql://{db_url}'
     email_server = args.email_server
     if email_server is None:
         email_server = getenv('EMAIL_SERVER')

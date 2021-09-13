@@ -48,13 +48,13 @@ class Sheet:
             queryparts = query.split(' ! ')
             query = queryparts[0]
             if include:
-                query = '%s OR %s' % (query, include)
+                query = f'{query} OR {include}'
             if len(queryparts) > 1:
-                query = '%s ! %s' % (query, ' ! '.join(queryparts[1:]))
+                query = f"{query} ! {' ! '.join(queryparts[1:])}"
         elif include:
             query = include
         if exclude:
-            query = '%s ! %s' % (query, exclude)
+            query = f'{query} ! {exclude}'
         grid[category] = query
 
     def get_datagrid(self, hxltags, dg, datagrids, defaultgrid):
@@ -116,7 +116,7 @@ class Sheet:
                     if dutyofficer_name:
                         dutyofficer_name = dutyofficer_name.strip()
                         self.dutyofficer = {'name': dutyofficer_name, 'email': row[contactemail_ind].strip()}
-                        logger.info('Duty officer: %s' % dutyofficer_name)
+                        logger.info(f'Duty officer: {dutyofficer_name}')
                         break
 
             sheet = self.datagrids_spreadsheet.worksheet('DataGrids')
@@ -148,11 +148,11 @@ class Sheet:
                         if datagrid is None:
                             continue
                         if datagrid.get('owner'):
-                            raise ValueError('There is more than one owner of datagrid %s!' % dg)
+                            raise ValueError(f'There is more than one owner of datagrid {dg}!')
                         datagrid['owner'] = {'name': curatorname, 'email': curatoremail}
             for datagridname in self.datagrids:
                 if 'owner' not in self.datagrids[datagridname]:
-                    raise ValueError('Datagrid %s does not have an owner!' % datagridname)
+                    raise ValueError(f'Datagrid {datagridname} does not have an owner!')
         except Exception as ex:
             return str(ex)
 

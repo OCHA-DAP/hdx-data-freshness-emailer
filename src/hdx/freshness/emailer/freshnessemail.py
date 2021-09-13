@@ -32,7 +32,7 @@ class Email:
                 cc = [cc]
             if isinstance(bcc, str):
                 bcc = [bcc]
-            subject = '%s (%s)' % (subject, self.now.strftime('%d/%m/%Y'))
+            subject = f'{subject} ({self.now.strftime("%d/%m/%Y")})'
             self.send_emails(recipients, subject, text_body, html_body=html_body, cc=cc, bcc=bcc)
         else:
             logger.warning('Not sending any email!')
@@ -57,11 +57,11 @@ class Email:
 
     @staticmethod
     def fill_addressee(msg, htmlmsg, dutyofficer, recipients, recipients_in_cc=False):
-        if '%s' not in msg[0]:
+        if '{}' not in msg[0]:
             return
         addressee = Email.get_addressee(dutyofficer, recipients, recipients_in_cc=recipients_in_cc)
-        msg[0] = msg[0] % addressee
-        htmlmsg[0] = htmlmsg[0] % addressee
+        msg[0] = msg[0].format(addressee)
+        htmlmsg[0] = htmlmsg[0].format(addressee)
 
     def get_recipients_cc(self, dutyofficer, recipients=None, recipients_in_cc=False):
         if recipients is None:
@@ -96,9 +96,9 @@ class Email:
 
     @classmethod
     def msg_close(cls, msg, htmlmsg, endmsg=''):
-        text_body = '%s%s%s' % (''.join(msg), endmsg, Email.closure)
-        html_body = cls.html_end('%s%s%s' % (''.join(htmlmsg), Email.convert_newlines(endmsg),
-                                              Email.convert_newlines(Email.closure)))
+        text_body = f"{''.join(msg)}{endmsg}{Email.closure}"
+        html_body = cls.html_end(
+            f"{''.join(htmlmsg)}{Email.convert_newlines(endmsg)}{Email.convert_newlines(Email.closure)}")
         return text_body, html_body
 
     @staticmethod
@@ -107,15 +107,14 @@ class Email:
 
     @staticmethod
     def html_start(msg):
-        return '''\
-<html>
+        return f'''<html>
   <head></head>
   <body>
-    <span>%s''' % msg
+    <span>{msg}'''
 
     @staticmethod
     def html_end(msg):
-        return '''%s
+        return f'''{msg}
       <br/><br/>
       <small>
         <p>
@@ -128,7 +127,7 @@ class Email:
     </span>
   </body>
 </html>
-''' % msg
+'''
 
     @staticmethod
     def output_tabs(msg, htmlmsg, n=1):
@@ -149,13 +148,13 @@ class Email:
     @classmethod
     def output_error(cls, msg, htmlmsg, error):
         msg.append(error)
-        htmlmsg.append('<b>%s</b>' % error)
+        htmlmsg.append(f'<b>{error}</b>')
         cls.output_newline(msg, htmlmsg)
 
     @classmethod
     def output_org(cls, msg, htmlmsg, title):
         msg.append(title)
-        htmlmsg.append('<b><i>%s</i></b>' % title)
+        htmlmsg.append(f'<b><i>{title}</i></b>')
         cls.output_newline(msg, htmlmsg)
 
     @staticmethod
@@ -199,11 +198,11 @@ class Email:
         for id in sorted(all_users_to_email.keys()):
             user = datasethelper.users[id]
             username = datasethelper.get_user_name(user)
-            basemsg = startmsg % username
+            basemsg = startmsg.format(username)
             dict_of_lists_add(emails, 'plain', basemsg)
             dict_of_lists_add(emails, 'html', self.convert_newlines(basemsg))
             msg = [basemsg]
-            htmlmsg = [starthtmlmsg % username]
+            htmlmsg = [starthtmlmsg.format(username)]
             for dataset_string, dataset_html_string in all_users_to_email[id]:
                 msg.append(dataset_string)
                 htmlmsg.append(dataset_html_string)

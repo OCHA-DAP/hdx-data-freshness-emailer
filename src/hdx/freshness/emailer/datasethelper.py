@@ -81,7 +81,7 @@ class DatasetHelper:
         if update_freq is None:
             return 'NOT SET'
         else:
-            return Dataset.transform_update_frequency('%d' % update_freq)
+            return Dataset.transform_update_frequency(str(update_freq))
 
     @classmethod
     def get_update_frequency_from_dataset(cls, dataset):
@@ -97,27 +97,27 @@ class DatasetHelper:
         return user_name
 
     def get_dataset_url(self, dataset):
-        return '%s/dataset/%s' % (self.site_url, dataset['name'])
+        return f"{self.site_url}/dataset/{dataset['name']}"
 
     def get_organization_url(self, organization):
-        return '%s/organization/%s' % (self.site_url, organization['name'])
+        return f"{self.site_url}/organization/{organization['name']}"
 
     def create_dataset_string(self, dataset, maintainer, orgadmins, sysadmin=False, include_org=True,
                               include_freshness=False, include_datasetdate=False):
         url = self.get_dataset_url(dataset)
         msg = list()
         htmlmsg = list()
-        msg.append('%s (%s)' % (dataset['title'], url))
-        htmlmsg.append('<a href="%s">%s</a>' % (url, dataset['title']))
+        msg.append(f"{dataset['title']} ({url})")
+        htmlmsg.append(f"<a href=\"{url}\">{dataset['title']}</a>")
         if sysadmin and include_org:
-            orgmsg = ' from %s' % dataset['organization_title']
+            orgmsg = f" from {dataset['organization_title']}"
             msg.append(orgmsg)
             htmlmsg.append(orgmsg)
         if maintainer is not None:
             if sysadmin:
                 user_name, user_email = maintainer
-                msg.append(' maintained by %s (%s)' % (user_name, user_email))
-                htmlmsg.append(' maintained by <a href="mailto:%s">%s</a>' % (user_email, user_name))
+                msg.append(f' maintained by {user_name} ({user_email})')
+                htmlmsg.append(f' maintained by <a href="mailto:{user_email}">{user_name}</a>')
         else:
             if sysadmin:
                 missing_maintainer = ' with missing maintainer and organization administrators '
@@ -128,22 +128,22 @@ class DatasetHelper:
             userhtmlmsg = list()
             for orgadmin in orgadmins:
                 user_name, user_email = orgadmin
-                usermsg.append('%s (%s)' % (user_name, user_email))
-                userhtmlmsg.append('<a href="mailto:%s">%s</a>' % (user_email, user_name))
+                usermsg.append(f'{user_name} ({user_email})')
+                userhtmlmsg.append(f'<a href="mailto:{user_email}">{user_name}</a>')
             if sysadmin:
                 msg.append(', '.join(usermsg))
                 htmlmsg.append(', '.join(userhtmlmsg))
         update_frequency = self.get_update_frequency_from_dataset(dataset)
-        msg.append(' with expected update frequency: %s' % update_frequency)
-        htmlmsg.append(' with expected update frequency: %s' % update_frequency)
+        msg.append(f' with expected update frequency: {update_frequency}')
+        htmlmsg.append(f' with expected update frequency: {update_frequency}')
         if include_freshness:
             fresh = self.freshness_status.get(dataset['fresh'], 'None')
-            msg.append(' and freshness: %s' % fresh)
-            htmlmsg.append(' and freshness: %s' % fresh)
+            msg.append(f' and freshness: {fresh}')
+            htmlmsg.append(f' and freshness: {fresh}')
         if include_datasetdate:
             datasetdate = dataset['dataset_date']
-            msg.append(' and date of dataset: %s' % datasetdate)
-            htmlmsg.append(' and date of dataset: %s' % datasetdate)
+            msg.append(f' and date of dataset: {datasetdate}')
+            htmlmsg.append(f' and date of dataset: {datasetdate}')
         Email.output_newline(msg, htmlmsg)
 
         return ''.join(msg), ''.join(htmlmsg)
