@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 DatasetHelper
 -------------
@@ -15,7 +14,7 @@ from hdx.freshness.emailer.freshnessemail import Email
 
 
 class DatasetHelper:
-    freshness_status = {0: 'Fresh', 1: 'Due', 2: 'Overdue', 3: 'Delinquent'}
+    freshness_status = {0: "Fresh", 1: "Due", 2: "Overdue", 3: "Delinquent"}
 
     def __init__(self, site_url, users=None, organizations=None):
         self.site_url = site_url
@@ -24,38 +23,40 @@ class DatasetHelper:
         self.users = dict()
         self.sysadmins = dict()
         for user in users:
-            userid = user['id']
+            userid = user["id"]
             self.users[userid] = user
-            if user['sysadmin']:
+            if user["sysadmin"]:
                 self.sysadmins[userid] = user
 
         self.organizations = dict()
         if organizations is None:  # pragma: no cover
-            organizations = Organization.get_all_organization_names(all_fields=True, include_users=True)
+            organizations = Organization.get_all_organization_names(
+                all_fields=True, include_users=True
+            )
         for organization in organizations:
             users_per_capacity = dict()
-            for user in organization['users']:
-                dict_of_lists_add(users_per_capacity, user['capacity'], user['id'])
-            self.organizations[organization['id']] = users_per_capacity
+            for user in organization["users"]:
+                dict_of_lists_add(users_per_capacity, user["capacity"], user["id"])
+            self.organizations[organization["id"]] = users_per_capacity
 
     @staticmethod
     def get_dataset_dates(dataset):
-        dataset_date = dataset['dataset_date']
+        dataset_date = dataset["dataset_date"]
         if not dataset_date:
             return None, None
         date_info = DateHelper.get_date_info(dataset_date)
-        return date_info['startdate'], date_info['enddate']
+        return date_info["startdate"], date_info["enddate"]
 
     def get_maintainer(self, dataset):
-        maintainer = dataset['maintainer']
+        maintainer = dataset["maintainer"]
         return self.users.get(maintainer)
 
     def get_org_admins(self, dataset):
-        organization_id = dataset['organization_id']
+        organization_id = dataset["organization_id"]
         orgadmins = list()
         organization = self.organizations[organization_id]
-        if 'admin' in organization:
-            for userid in self.organizations[organization_id]['admin']:
+        if "admin" in organization:
+            for userid in self.organizations[organization_id]["admin"]:
                 user = self.users.get(userid)
                 if user:
                     orgadmins.append(user)
@@ -67,33 +68,33 @@ class DatasetHelper:
         if maintainer is not None:
             users_to_email.append(maintainer)
             maintainer_name = self.get_user_name(maintainer)
-            maintainer = (maintainer_name, maintainer['email'])
+            maintainer = (maintainer_name, maintainer["email"])
         orgadmins = list()
         for orgadmin in self.get_org_admins(dataset):
             if maintainer is None:
                 users_to_email.append(orgadmin)
             username = self.get_user_name(orgadmin)
-            orgadmins.append((username, orgadmin['email']))
+            orgadmins.append((username, orgadmin["email"]))
         return maintainer, orgadmins, users_to_email
 
     @staticmethod
     def get_update_frequency(update_freq):
         if update_freq is None:
-            return 'NOT SET'
+            return "NOT SET"
         else:
             return Dataset.transform_update_frequency(str(update_freq))
 
     @classmethod
     def get_update_frequency_from_dataset(cls, dataset):
-        return cls.get_update_frequency(dataset['update_frequency'])
+        return cls.get_update_frequency(dataset["update_frequency"])
 
     @staticmethod
     def get_user_name(user):
-        user_name = user.get('display_name')
+        user_name = user.get("display_name")
         if not user_name:
-            user_name = user['fullname']
+            user_name = user["fullname"]
             if not user_name:
-                user_name = user['name']
+                user_name = user["name"]
         return user_name
 
     def get_dataset_url(self, dataset):
@@ -102,8 +103,16 @@ class DatasetHelper:
     def get_organization_url(self, organization):
         return f"{self.site_url}/organization/{organization['name']}"
 
-    def create_dataset_string(self, dataset, maintainer, orgadmins, sysadmin=False, include_org=True,
-                              include_freshness=False, include_datasetdate=False):
+    def create_dataset_string(
+        self,
+        dataset,
+        maintainer,
+        orgadmins,
+        sysadmin=False,
+        include_org=True,
+        include_freshness=False,
+        include_datasetdate=False,
+    ):
         url = self.get_dataset_url(dataset)
         msg = list()
         htmlmsg = list()
@@ -116,11 +125,15 @@ class DatasetHelper:
         if maintainer is not None:
             if sysadmin:
                 user_name, user_email = maintainer
-                msg.append(f' maintained by {user_name} ({user_email})')
-                htmlmsg.append(f' maintained by <a href="mailto:{user_email}">{user_name}</a>')
+                msg.append(f" maintained by {user_name} ({user_email})")
+                htmlmsg.append(
+                    f' maintained by <a href="mailto:{user_email}">{user_name}</a>'
+                )
         else:
             if sysadmin:
-                missing_maintainer = ' with missing maintainer and organization administrators '
+                missing_maintainer = (
+                    " with missing maintainer and organization administrators "
+                )
                 msg.append(missing_maintainer)
                 htmlmsg.append(missing_maintainer)
 
@@ -128,22 +141,22 @@ class DatasetHelper:
             userhtmlmsg = list()
             for orgadmin in orgadmins:
                 user_name, user_email = orgadmin
-                usermsg.append(f'{user_name} ({user_email})')
+                usermsg.append(f"{user_name} ({user_email})")
                 userhtmlmsg.append(f'<a href="mailto:{user_email}">{user_name}</a>')
             if sysadmin:
-                msg.append(', '.join(usermsg))
-                htmlmsg.append(', '.join(userhtmlmsg))
+                msg.append(", ".join(usermsg))
+                htmlmsg.append(", ".join(userhtmlmsg))
         update_frequency = self.get_update_frequency_from_dataset(dataset)
-        msg.append(f' with expected update frequency: {update_frequency}')
-        htmlmsg.append(f' with expected update frequency: {update_frequency}')
+        msg.append(f" with expected update frequency: {update_frequency}")
+        htmlmsg.append(f" with expected update frequency: {update_frequency}")
         if include_freshness:
-            fresh = self.freshness_status.get(dataset['fresh'], 'None')
-            msg.append(f' and freshness: {fresh}')
-            htmlmsg.append(f' and freshness: {fresh}')
+            fresh = self.freshness_status.get(dataset["fresh"], "None")
+            msg.append(f" and freshness: {fresh}")
+            htmlmsg.append(f" and freshness: {fresh}")
         if include_datasetdate:
-            datasetdate = dataset['dataset_date']
-            msg.append(f' and date of dataset: {datasetdate}')
-            htmlmsg.append(f' and date of dataset: {datasetdate}')
+            datasetdate = dataset["dataset_date"]
+            msg.append(f" and date of dataset: {datasetdate}")
+            htmlmsg.append(f" and date of dataset: {datasetdate}")
         Email.output_newline(msg, htmlmsg)
 
-        return ''.join(msg), ''.join(htmlmsg)
+        return "".join(msg), "".join(htmlmsg)
