@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 REGISTER:
 ---------
@@ -19,12 +18,12 @@ from hdx.utilities.easy_logging import setup_logging
 from hdx.utilities.encoding import base64_to_str
 from hdx.utilities.path import script_dir_plus_file
 
-from hdx.freshness.emailer import __version__
-from hdx.freshness.emailer.databasequeries import DatabaseQueries
-from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
-from hdx.freshness.emailer.datasethelper import DatasetHelper
-from hdx.freshness.emailer.freshnessemail import Email
-from hdx.freshness.emailer.sheet import Sheet
+from hdx.freshness.emailer.app import __version__
+from hdx.freshness.emailer.app.datafreshnessstatus import DataFreshnessStatus
+from hdx.freshness.emailer.utils.databasequeries import DatabaseQueries
+from hdx.freshness.emailer.utils.datasethelper import DatasetHelper
+from hdx.freshness.emailer.utils.freshnessemail import Email
+from hdx.freshness.emailer.utils.sheet import Sheet
 
 setup_logging()
 logger = logging.getLogger(__name__)

@@ -9,7 +9,7 @@ import pytest
 from dateutil import parser
 from hdx.api.configuration import Configuration
 
-from hdx.freshness.emailer.sheet import Sheet
+from hdx.freshness.emailer.utils.sheet import Sheet
 
 
 class TestSheet:

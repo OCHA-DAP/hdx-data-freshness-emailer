@@ -5,7 +5,7 @@ Unit tests for database queries code.
 from dateutil import parser
 from hdx.database import Database
 
-from hdx.freshness.emailer.databasequeries import DatabaseQueries
+from hdx.freshness.emailer.utils.databasequeries import DatabaseQueries
 
 
 class TestDatabaseQueries:

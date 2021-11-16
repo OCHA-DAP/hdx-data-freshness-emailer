@@ -11,11 +11,11 @@ import pytest
 from dateutil import parser
 from hdx.database import Database
 
-from hdx.freshness.emailer.databasequeries import DatabaseQueries
-from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
-from hdx.freshness.emailer.datasethelper import DatasetHelper
-from hdx.freshness.emailer.freshnessemail import Email
-from hdx.freshness.emailer.sheet import Sheet
+from hdx.freshness.emailer.app.datafreshnessstatus import DataFreshnessStatus
+from hdx.freshness.emailer.utils.databasequeries import DatabaseQueries
+from hdx.freshness.emailer.utils.datasethelper import DatasetHelper
+from hdx.freshness.emailer.utils.freshnessemail import Email
+from hdx.freshness.emailer.utils.sheet import Sheet
 
 
 class TestDataFreshnessStatus:

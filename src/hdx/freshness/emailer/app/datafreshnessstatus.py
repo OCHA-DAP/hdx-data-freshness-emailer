@@ -12,7 +12,7 @@ import logging
 from hdx.data.dataset import Dataset
 from hdx.utilities.dictandlist import dict_of_lists_add
 
-from .freshnessemail import Email
+from hdx.freshness.emailer.utils.freshnessemail import Email
 
 logger = logging.getLogger(__name__)
 
