@@ -84,7 +84,7 @@ output_directory = "docs/build"
 
         [[tool.pydoc-markdown.renderer.pages.children]]
         title = "Utilities"
-        contents = ["hdx.freshness.emailer.utilities.*"]
+        contents = ["hdx.freshness.emailer.utils.*"]
 
 
 [tool.tox]
