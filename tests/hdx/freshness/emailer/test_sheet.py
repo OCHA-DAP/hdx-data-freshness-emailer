@@ -7,7 +7,7 @@ from os.path import join
 
 import pytest
 from dateutil import parser
-from hdx.hdx_configuration import Configuration
+from hdx.api.configuration import Configuration
 
 from hdx.freshness.emailer.sheet import Sheet
 
@@ -15,7 +15,9 @@ from hdx.freshness.emailer.sheet import Sheet
 class TestSheet:
     @pytest.fixture(scope="function")
     def configuration(self):
-        project_config_yaml = join("tests", "fixtures", "project_configuration.yml")
+        project_config_yaml = join(
+            "tests", "fixtures", "project_configuration.yml"
+        )
         return Configuration(
             hdx_site="prod",
             user_agent="test",
@@ -143,6 +145,8 @@ class TestSheet:
     def test_setup_input_multiple(self, configuration_multiple):
         now = parser.parse("2019-10-24 19:07:30.333492")
         sheet = Sheet(now)
-        sheet.setup_gsheet(configuration_multiple, getenv("GSHEET_AUTH"), True, False)
+        sheet.setup_gsheet(
+            configuration_multiple, getenv("GSHEET_AUTH"), True, False
+        )
         error = sheet.setup_input()
         assert error == "There is more than one owner of datagrid sdn!"

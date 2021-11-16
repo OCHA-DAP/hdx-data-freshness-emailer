@@ -28,7 +28,10 @@ class DatabaseQueries:
         """"""
         self.session = session
         self.now = now
-        self.run_number_to_run_date, self.run_numbers = self.get_cur_prev_runs()
+        (
+            self.run_number_to_run_date,
+            self.run_numbers,
+        ) = self.get_cur_prev_runs()
         if len(self.run_numbers) < 2:
             logger.warning("Less than 2 runs!")
         self.datasets_modified_yesterday = None
@@ -95,7 +98,7 @@ class DatabaseQueries:
             DBResource.dataset_id == DBDataset.id,
             DBDataset.run_number == self.run_numbers[0][0],
             DBResource.run_number == DBDataset.run_number,
-            DBResource.error != None,
+            DBResource.error.is_not(None),
             DBResource.when_checked > self.run_numbers[1][1],
         ]
         query = self.session.query(*columns).filter(and_(*filters))
@@ -193,7 +196,9 @@ class DatabaseQueries:
         logger.info(f"SQL query returned {norows} rows.")
         return datasets
 
-    def get_invalid_maintainer_orgadmins(self, organizations, users, sysadmins):
+    def get_invalid_maintainer_orgadmins(
+        self, organizations, users, sysadmins
+    ):
         invalid_maintainers = list()
         invalid_orgadmins = dict()
         no_runs = len(self.run_numbers)

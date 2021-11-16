@@ -11,20 +11,20 @@ import datetime
 import logging
 from os import getenv
 
+from hdx.api.configuration import Configuration
 from hdx.database import Database
 from hdx.facades.keyword_arguments import facade
-from hdx.hdx_configuration import Configuration
 from hdx.utilities.dictandlist import args_to_dict
 from hdx.utilities.easy_logging import setup_logging
 from hdx.utilities.encoding import base64_to_str
 from hdx.utilities.path import script_dir_plus_file
 
+from hdx.freshness.emailer import __version__
 from hdx.freshness.emailer.databasequeries import DatabaseQueries
 from hdx.freshness.emailer.datafreshnessstatus import DataFreshnessStatus
 from hdx.freshness.emailer.datasethelper import DatasetHelper
 from hdx.freshness.emailer.freshnessemail import Email
 from hdx.freshness.emailer.sheet import Sheet
-from hdx.freshness.emailer.version import get_freshness_emailer_version
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def main(
     no_spreadsheet,
     **ignore,
 ):
-    logger.info(f"> Data freshness emailer {get_freshness_emailer_version()}")
+    logger.info(f"> Data freshness emailer {__version__}")
     configuration = Configuration.read()
     if email_server:
         email_config = email_server.split(",")
@@ -68,7 +68,9 @@ def main(
     logger.info(f"> Database parameters: {params}")
     with Database(**params) as session:
         now = datetime.datetime.utcnow()
-        email = Email(now, send_emails=send_emails, configuration=configuration)
+        email = Email(
+            now, send_emails=send_emails, configuration=configuration
+        )
         sheet = Sheet(now)
 
         failure_list = list()
@@ -78,7 +80,9 @@ def main(
             configuration, gsheet_auth, spreadsheet_test, no_spreadsheet
         )
         if error:
-            email.htmlify_send(failure_list, "Error opening Google sheets!", error)
+            email.htmlify_send(
+                failure_list, "Error opening Google sheets!", error
+            )
         else:
             error = sheet.setup_input()
             if error:
@@ -88,7 +92,9 @@ def main(
                     error,
                 )
             else:
-                datasethelper = DatasetHelper(site_url=configuration.get_hdx_site_url())
+                datasethelper = DatasetHelper(
+                    site_url=configuration.get_hdx_site_url()
+                )
                 databasequeries = DatabaseQueries(session=session, now=now)
                 freshness = DataFreshnessStatus(
                     datasethelper=datasethelper,
@@ -96,7 +102,9 @@ def main(
                     email=email,
                     sheet=sheet,
                 )
-                if not freshness.check_number_datasets(now, send_failures=failure_list):
+                if not freshness.check_number_datasets(
+                    now, send_failures=failure_list
+                ):
                     test_users = [failure_list[0]]
                     if email_test:  # send just to test users
                         freshness.process_broken(recipients=test_users)
@@ -104,10 +112,16 @@ def main(
                             recipients=test_users, sysadmins=test_users
                         )
                         freshness.process_delinquent(recipients=test_users)
-                        freshness.process_maintainer_orgadmins(recipients=test_users)
-                        freshness.process_datasets_noresources(recipients=test_users)
+                        freshness.process_maintainer_orgadmins(
+                            recipients=test_users
+                        )
+                        freshness.process_datasets_noresources(
+                            recipients=test_users
+                        )
                         #                        freshness.process_datasets_dataset_date(recipients=test_users, sysadmins=test_users)
-                        freshness.process_datasets_datagrid(recipients=test_users)
+                        freshness.process_datasets_datagrid(
+                            recipients=test_users
+                        )
                     else:
                         freshness.process_broken()
                         freshness.process_overdue()
@@ -125,7 +139,9 @@ if __name__ == "__main__":
     parser.add_argument("-hk", "--hdx_key", default=None, help="HDX api key")
     parser.add_argument("-ua", "--user_agent", default=None, help="user agent")
     parser.add_argument("-pp", "--preprefix", default=None, help="preprefix")
-    parser.add_argument("-hs", "--hdx_site", default=None, help="HDX site to use")
+    parser.add_argument(
+        "-hs", "--hdx_site", default=None, help="HDX site to use"
+    )
     parser.add_argument(
         "-db", "--db_url", default=None, help="Database connection string"
     )
@@ -191,7 +207,9 @@ if __name__ == "__main__":
     gsheet_auth = args.gsheet_auth
     if gsheet_auth is None:
         gsheet_auth = getenv("GSHEET_AUTH")
-    project_config_yaml = script_dir_plus_file("project_configuration.yml", main)
+    project_config_yaml = script_dir_plus_file(
+        "project_configuration.yml", main
+    )
     facade(
         main,
         hdx_key=hdx_key,

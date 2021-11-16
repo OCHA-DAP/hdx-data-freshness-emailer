@@ -10,7 +10,7 @@ from hdx.data.organization import Organization
 from hdx.data.user import User
 from hdx.utilities.dictandlist import dict_of_lists_add
 
-from hdx.freshness.emailer.freshnessemail import Email
+from .freshnessemail import Email
 
 
 class DatasetHelper:
@@ -36,7 +36,9 @@ class DatasetHelper:
         for organization in organizations:
             users_per_capacity = dict()
             for user in organization["users"]:
-                dict_of_lists_add(users_per_capacity, user["capacity"], user["id"])
+                dict_of_lists_add(
+                    users_per_capacity, user["capacity"], user["id"]
+                )
             self.organizations[organization["id"]] = users_per_capacity
 
     @staticmethod
@@ -142,7 +144,9 @@ class DatasetHelper:
             for orgadmin in orgadmins:
                 user_name, user_email = orgadmin
                 usermsg.append(f"{user_name} ({user_email})")
-                userhtmlmsg.append(f'<a href="mailto:{user_email}">{user_name}</a>')
+                userhtmlmsg.append(
+                    f'<a href="mailto:{user_email}">{user_name}</a>'
+                )
             if sysadmin:
                 msg.append(", ".join(usermsg))
                 htmlmsg.append(", ".join(userhtmlmsg))

@@ -12,7 +12,7 @@ import gspread
 from hdx.data.dataset import Dataset
 from hdx.utilities.dateparse import parse_date
 
-from hdx.freshness.emailer.datasethelper import DatasetHelper
+from .datasethelper import DatasetHelper
 
 logger = logging.getLogger(__name__)
 
@@ -87,15 +87,21 @@ class Sheet:
             scopes = ["https://www.googleapis.com/auth/spreadsheets"]
             gc = gspread.service_account_from_dict(info, scopes=scopes)
             if spreadsheet_test:  # use test not prod spreadsheet
-                issues_spreadsheet = configuration["test_issues_spreadsheet_url"]
+                issues_spreadsheet = configuration[
+                    "test_issues_spreadsheet_url"
+                ]
             else:
-                issues_spreadsheet = configuration["prod_issues_spreadsheet_url"]
+                issues_spreadsheet = configuration[
+                    "prod_issues_spreadsheet_url"
+                ]
             logger.info("Opening duty officers gsheet")
             self.dutyofficers_spreadsheet = gc.open_by_url(
                 configuration["dutyofficers_url"]
             )
             logger.info("Opening datagrids gsheet")
-            self.datagrids_spreadsheet = gc.open_by_url(configuration["datagrids_url"])
+            self.datagrids_spreadsheet = gc.open_by_url(
+                configuration["datagrids_url"]
+            )
             if not no_spreadsheet:
                 logger.info("Opening issues gsheet")
                 self.issues_spreadsheet = gc.open_by_url(issues_spreadsheet)
@@ -115,7 +121,9 @@ class Sheet:
             contactname_ind = hxltags["#contact+name"]
             contactemail_ind = hxltags["#contact+email"]
             for row in sorted(
-                current_values[2:], key=lambda x: x[startdate_ind], reverse=True
+                current_values[2:],
+                key=lambda x: x[startdate_ind],
+                reverse=True,
             ):
                 startdate = row[startdate_ind].strip()
                 if datetime.strptime(startdate, "%Y-%m-%d") <= self.now:
@@ -140,7 +148,9 @@ class Sheet:
 
             sheet = self.datagrids_spreadsheet.worksheet("Curators")
             current_values = sheet.get_values()
-            curators_hxltags = {tag: i for i, tag in enumerate(current_values[1])}
+            curators_hxltags = {
+                tag: i for i, tag in enumerate(current_values[1])
+            }
             curators = current_values[2:]
             for row in curators:
                 curatoremail = row[curators_hxltags["#contact+email"]].strip()
@@ -163,10 +173,15 @@ class Sheet:
                             raise ValueError(
                                 f"There is more than one owner of datagrid {dg}!"
                             )
-                        datagrid["owner"] = {"name": curatorname, "email": curatoremail}
+                        datagrid["owner"] = {
+                            "name": curatorname,
+                            "email": curatoremail,
+                        }
             for datagridname in self.datagrids:
                 if "owner" not in self.datagrids[datagridname]:
-                    raise ValueError(f"Datagrid {datagridname} does not have an owner!")
+                    raise ValueError(
+                        f"Datagrid {datagridname} does not have an owner!"
+                    )
         except Exception as ex:
             return str(ex)
 

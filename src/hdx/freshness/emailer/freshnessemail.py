@@ -14,7 +14,11 @@ logger = logging.getLogger(__name__)
 
 class Email:
     def __init__(
-        self, now, send_emails=None, sysadmins_to_email=None, configuration=None
+        self,
+        now,
+        send_emails=None,
+        sysadmins_to_email=None,
+        configuration=None,
     ):
         self.now = now
         self.send_emails = send_emails
@@ -25,7 +29,9 @@ class Email:
         else:
             self.sysadmins_to_email = sysadmins_to_email
 
-    def send(self, recipients, subject, text_body, html_body=None, cc=None, bcc=None):
+    def send(
+        self, recipients, subject, text_body, html_body=None, cc=None, bcc=None
+    ):
         if self.send_emails is not None:
             if isinstance(recipients, str):
                 recipients = [recipients]
@@ -35,7 +41,12 @@ class Email:
                 bcc = [bcc]
             subject = f'{subject} ({self.now.strftime("%d/%m/%Y")})'
             self.send_emails(
-                recipients, subject, text_body, html_body=html_body, cc=cc, bcc=bcc
+                recipients,
+                subject,
+                text_body,
+                html_body=html_body,
+                cc=cc,
+                bcc=bcc,
             )
         else:
             logger.warning("Not sending any email!")
@@ -46,7 +57,15 @@ class Email:
         logger.info(text_body)
 
     def close_send(
-        self, recipients, subject, msg, htmlmsg, endmsg="", cc=None, bcc=None, log=True
+        self,
+        recipients,
+        subject,
+        msg,
+        htmlmsg,
+        endmsg="",
+        cc=None,
+        bcc=None,
+        log=True,
     ):
         text_body, html_body = Email.msg_close(msg, htmlmsg, endmsg)
         self.send(recipients, subject, text_body, html_body, cc=cc, bcc=bcc)
@@ -61,7 +80,9 @@ class Email:
             return "system administrator"
 
     @staticmethod
-    def fill_addressee(msg, htmlmsg, dutyofficer, recipients, recipients_in_cc=False):
+    def fill_addressee(
+        msg, htmlmsg, dutyofficer, recipients, recipients_in_cc=False
+    ):
         if "{}" not in msg[0]:
             return
         addressee = Email.get_addressee(
@@ -70,7 +91,9 @@ class Email:
         msg[0] = msg[0].format(addressee)
         htmlmsg[0] = htmlmsg[0].format(addressee)
 
-    def get_recipients_cc(self, dutyofficer, recipients=None, recipients_in_cc=False):
+    def get_recipients_cc(
+        self, dutyofficer, recipients=None, recipients_in_cc=False
+    ):
         if recipients is None:
             if dutyofficer:
                 return dutyofficer["email"], self.sysadmins_to_email
@@ -99,12 +122,18 @@ class Email:
         recipients_in_cc=False,
     ):
         self.fill_addressee(
-            msg, htmlmsg, dutyofficer, recipients, recipients_in_cc=recipients_in_cc
+            msg,
+            htmlmsg,
+            dutyofficer,
+            recipients,
+            recipients_in_cc=recipients_in_cc,
         )
         recipients, cc = self.get_recipients_cc(
             dutyofficer, recipients, recipients_in_cc=recipients_in_cc
         )
-        self.close_send(recipients, subject, msg, htmlmsg, endmsg, cc=cc, log=log)
+        self.close_send(
+            recipients, subject, msg, htmlmsg, endmsg, cc=cc, log=log
+        )
 
     def send_admin_summary(
         self,
@@ -210,8 +239,14 @@ class Email:
                 orgadmins,
                 users_to_email,
             ) = datasethelper.get_maintainer_orgadmins(dataset)
-            dataset_string, dataset_html_string = datasethelper.create_dataset_string(
-                dataset, maintainer, orgadmins, include_datasetdate=include_datasetdate
+            (
+                dataset_string,
+                dataset_html_string,
+            ) = datasethelper.create_dataset_string(
+                dataset,
+                maintainer,
+                orgadmins,
+                include_datasetdate=include_datasetdate,
             )
             for user in users_to_email:
                 id = user["id"]
@@ -220,7 +255,9 @@ class Email:
                     output_list = list()
                     all_users_to_email[id] = output_list
                 output_list.append((dataset_string, dataset_html_string))
-            row = sheet.construct_row(datasethelper, dataset, maintainer, orgadmins)
+            row = sheet.construct_row(
+                datasethelper, dataset, maintainer, orgadmins
+            )
             if include_datasetdate:
                 start_date, end_date = datasethelper.get_dataset_dates(dataset)
                 row["Dataset Start Date"] = start_date.isoformat()
@@ -279,7 +316,11 @@ class Email:
                 users_to_email = recipients
             self.close_send(users_to_email, subject, msg, htmlmsg, endmsg)
         self.send_admin_summary(
-            sheet.dutyofficer, sysadmins, emails, summary_subject, summary_startmsg
+            sheet.dutyofficer,
+            sysadmins,
+            emails,
+            summary_subject,
+            summary_startmsg,
         )
 
     @staticmethod
@@ -292,16 +333,25 @@ class Email:
         for dataset in sorted(
             datasets, key=lambda d: (d["organization_title"], d["name"])
         ):
-            maintainer, orgadmins, _ = datasethelper.get_maintainer_orgadmins(dataset)
-            dataset_string, dataset_html_string = datasethelper.create_dataset_string(
+            maintainer, orgadmins, _ = datasethelper.get_maintainer_orgadmins(
+                dataset
+            )
+            (
+                dataset_string,
+                dataset_html_string,
+            ) = datasethelper.create_dataset_string(
                 dataset, maintainer, orgadmins, sysadmin=True
             )
             msg.append(dataset_string)
             htmlmsg.append(dataset_html_string)
             datasets_flat.append(
-                sheet.construct_row(datasethelper, dataset, maintainer, orgadmins)
+                sheet.construct_row(
+                    datasethelper, dataset, maintainer, orgadmins
+                )
             )
-        sheet.update(sheetname, datasets_flat, dutyofficer_name=dutyofficer["name"])
+        sheet.update(
+            sheetname, datasets_flat, dutyofficer_name=dutyofficer["name"]
+        )
         return msg, htmlmsg
 
     def email_admins(

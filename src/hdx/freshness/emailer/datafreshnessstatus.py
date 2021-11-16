@@ -12,7 +12,7 @@ import logging
 from hdx.data.dataset import Dataset
 from hdx.utilities.dictandlist import dict_of_lists_add
 
-from hdx.freshness.emailer.freshnessemail import Email
+from .freshnessemail import Email
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +66,7 @@ class DataFreshnessStatus:
                     recipients = send_failures
                 else:
                     subject = "WARNING: Fall in datasets on HDX today!"
-                    startmsg = (
-                        f"Dear {Email.get_addressee(self.sheet.dutyofficer)},\n\n"
-                    )
+                    startmsg = f"Dear {Email.get_addressee(self.sheet.dutyofficer)},\n\n"
                     msg = f"{startmsg}There are {diff_datasets} ({percentage_diff * 100:.0f}%) fewer datasets today than yesterday on HDX which may indicate a serious problem so should be investigated!\n"
                     recipients, cc = self.email.get_recipients_cc(
                         self.sheet.dutyofficer
@@ -86,7 +84,9 @@ class DataFreshnessStatus:
         if len(datasets) == 0:
             logger.info("No broken datasets found.")
             return
-        startmsg = "Dear {},\n\nThe following datasets have broken resources:\n\n"
+        startmsg = (
+            "Dear {},\n\nThe following datasets have broken resources:\n\n"
+        )
         msg = [startmsg]
         htmlmsg = [Email.html_start(Email.convert_newlines(startmsg))]
 
@@ -95,7 +95,12 @@ class DataFreshnessStatus:
                 dataset_string,
                 dataset_html_string,
             ) = self.datasethelper.create_dataset_string(
-                ds, ma, oa, sysadmin=True, include_org=False, include_freshness=True
+                ds,
+                ma,
+                oa,
+                sysadmin=True,
+                include_org=False,
+                include_freshness=True,
             )
             Email.output_tabs(msg, htmlmsg, 2)
             msg.append(dataset_string)
@@ -145,11 +150,15 @@ class DataFreshnessStatus:
                         orgadmins,
                         _,
                     ) = self.datasethelper.get_maintainer_orgadmins(dataset)
-                    cut_down = create_cut_down_broken_dataset_string(i, dataset)
+                    cut_down = create_cut_down_broken_dataset_string(
+                        i, dataset
+                    )
                     if cut_down:
                         newline = True
                     else:
-                        create_broken_dataset_string(dataset, maintainer, orgadmins)
+                        create_broken_dataset_string(
+                            dataset, maintainer, orgadmins
+                        )
                     row = self.sheet.construct_row(
                         self.datasethelper, dataset, maintainer, orgadmins
                     )
@@ -300,7 +309,9 @@ class DataFreshnessStatus:
             "\n\n*** Checking for datasets where date of dataset has not been updated ***"
         )
         datasets = self.databasequeries.get_datasets_dataset_date()
-        nodatasetsmsg = "No datasets with date of dataset needing update found."
+        nodatasetsmsg = (
+            "No datasets with date of dataset needing update found."
+        )
         startmsg = "Dear {},\n\nThe dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\n"
         endmsg = ""
         subject = "Check date of dataset for your datasets on HDX"
@@ -342,13 +353,17 @@ class DataFreshnessStatus:
             for category in datagrid:
                 if category in ["datagrid", "owner"]:
                     continue
-                runyesterday = self.databasequeries.run_numbers[1][1].isoformat()
+                runyesterday = self.databasequeries.run_numbers[1][
+                    1
+                ].isoformat()
                 runtoday = self.databasequeries.run_numbers[0][1].isoformat()
                 query = f'metadata_created:[{runyesterday}Z TO {runtoday}Z] AND {datagrid["datagrid"]} AND ({datagrid[category]})'
                 datasetinfos = datasetclass.search_in_hdx(fq=query)
                 for datasetinfo in datasetinfos:
                     dataset_id = datasetinfo["id"]
-                    if dataset_id not in [dataset["id"] for dataset in datasets]:
+                    if dataset_id not in [
+                        dataset["id"] for dataset in datasets
+                    ]:
                         dataset = datasets_modified_yesterday.get(dataset_id)
                         if dataset is not None:
                             datasets.append(dataset)

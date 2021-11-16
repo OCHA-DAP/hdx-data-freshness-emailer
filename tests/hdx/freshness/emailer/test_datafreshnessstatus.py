@@ -565,7 +565,10 @@ class TestDataFreshnessStatus:
                 "num_followers": 0,
                 "id": "15942bd7-524a-40d6-8a60-09bd78110d2d",
                 "approval_status": "approved",
-                "users": [copy.deepcopy(orgusers[2]), copy.deepcopy(orgusers[4])],
+                "users": [
+                    copy.deepcopy(orgusers[2]),
+                    copy.deepcopy(orgusers[4]),
+                ],
             },
             {
                 "display_name": "OCHA Somalia",
@@ -583,7 +586,10 @@ class TestDataFreshnessStatus:
                 "num_followers": 0,
                 "id": "68aa2b4d-ea41-4b79-8e37-ac03cbe9ddca",
                 "approval_status": "approved",
-                "users": [copy.deepcopy(orgusers[2]), copy.deepcopy(orgusers[3])],
+                "users": [
+                    copy.deepcopy(orgusers[2]),
+                    copy.deepcopy(orgusers[3]),
+                ],
             },
             {
                 "display_name": "OCHA Yemen",
@@ -601,7 +607,10 @@ class TestDataFreshnessStatus:
                 "num_followers": 0,
                 "id": "cdcb3c1f-b8d5-4154-a356-c7021bb1ffbd",
                 "approval_status": "approved",
-                "users": [copy.deepcopy(orgusers[3]), copy.deepcopy(orgusers[4])],
+                "users": [
+                    copy.deepcopy(orgusers[3]),
+                    copy.deepcopy(orgusers[4]),
+                ],
             },
             {
                 "display_name": "OurAirports",
@@ -690,7 +699,9 @@ class TestDataFreshnessStatus:
         now = parser.parse("2017-02-03 19:07:30.333492")
         sheet = Sheet(now)
         email = Email(
-            now, send_emails=self.email_users, sysadmins_to_email=sysadmins_to_email
+            now,
+            send_emails=self.email_users,
+            sysadmins_to_email=sysadmins_to_email,
         )
         with Database(**database_broken) as session:
             datasethelper = DatasetHelper(
@@ -704,7 +715,9 @@ class TestDataFreshnessStatus:
                 sheet=sheet,
             )
 
-            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken1
+            sheet.issues_spreadsheet = (
+                TestDataFreshnessStatus.TestSpreadsheet_Broken1
+            )
             sheet.dutyofficer = {"name": "Peter", "email": "peter@lala.org"}
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
@@ -819,11 +832,15 @@ class TestDataFreshnessStatus:
                 ],
             ]
 
-            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken2
+            sheet.issues_spreadsheet = (
+                TestDataFreshnessStatus.TestSpreadsheet_Broken2
+            )
             sheet.dutyofficer = {"name": "John", "email": "john@lala.org"}
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
-            freshness.process_broken(recipients=["alex@lala.org", "jenny@lala.org"])
+            freshness.process_broken(
+                recipients=["alex@lala.org", "jenny@lala.org"]
+            )
             assert TestDataFreshnessStatus.email_users_result == [
                 (
                     ["alex@lala.org", "jenny@lala.org"],
@@ -934,7 +951,9 @@ class TestDataFreshnessStatus:
                 ],
             ]
 
-            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken3
+            sheet.issues_spreadsheet = (
+                TestDataFreshnessStatus.TestSpreadsheet_Broken3
+            )
             sheet.dutyofficer = {"name": "Peter", "email": "peter@lala.org"}
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
@@ -1178,7 +1197,9 @@ class TestDataFreshnessStatus:
                 sheet=sheet,
             )
 
-            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Broken1
+            sheet.issues_spreadsheet = (
+                TestDataFreshnessStatus.TestSpreadsheet_Broken1
+            )
             sheet.dutyofficer = {"name": "Peter", "email": "peter@lala.org"}
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
@@ -1194,7 +1215,9 @@ class TestDataFreshnessStatus:
         now = parser.parse("2017-02-02 19:07:30.333492")
         sheet = Sheet(now)
         email = Email(
-            now, send_emails=self.email_users, sysadmins_to_email=sysadmins_to_email
+            now,
+            send_emails=self.email_users,
+            sysadmins_to_email=sysadmins_to_email,
         )
         with Database(**database_status) as session:
             datasethelper = DatasetHelper(
@@ -1327,7 +1350,9 @@ class TestDataFreshnessStatus:
 
             TestDataFreshnessStatus.email_users_result = list()
             freshness.process_overdue()
-            assert TestDataFreshnessStatus.email_users_result == expected_result
+            assert (
+                TestDataFreshnessStatus.email_users_result == expected_result
+            )
             TestDataFreshnessStatus.email_users_result = list()
             freshness.process_overdue(sysadmins="elizabeth@lala.org")
             restuple = expected_result[3]
@@ -1339,7 +1364,9 @@ class TestDataFreshnessStatus:
                 None,
                 restuple[5],
             )
-            assert TestDataFreshnessStatus.email_users_result == expected_result
+            assert (
+                TestDataFreshnessStatus.email_users_result == expected_result
+            )
             TestDataFreshnessStatus.email_users_result = list()
             sheet.dutyofficer = None
             freshness.process_overdue()
@@ -1352,7 +1379,9 @@ class TestDataFreshnessStatus:
                 None,
                 restuple[5],
             )
-            assert TestDataFreshnessStatus.email_users_result == expected_result
+            assert (
+                TestDataFreshnessStatus.email_users_result == expected_result
+            )
             TestDataFreshnessStatus.email_users_result = list()
             sheet.dutyofficer = {"name": "Paul", "email": "paul@lala.org"}
             freshness.process_overdue(recipients="lizzy@lala.org")
@@ -1681,7 +1710,9 @@ class TestDataFreshnessStatus:
         TestDataFreshnessStatus.email_users_result = list()
         now = parser.parse("2017-02-03 19:07:30.333492")
         sheet = Sheet(now)
-        email = Email(now, send_emails=self.email_users, configuration=configuration)
+        email = Email(
+            now, send_emails=self.email_users, configuration=configuration
+        )
         with Database(**database_failure) as session:
             datasethelper = DatasetHelper(
                 site_url=site_url, users=users, organizations=organizations
@@ -1930,13 +1961,19 @@ class TestDataFreshnessStatus:
     #         TestDataFreshnessStatus.cells_result = None
 
     def test_datasets_datagrid(
-        self, configuration, database_datasets_modified_yesterday, users, organizations
+        self,
+        configuration,
+        database_datasets_modified_yesterday,
+        users,
+        organizations,
     ):
         site_url = "http://lala"
         sysadmins_to_email = ["blah3@blah.com"]
         now = parser.parse("2017-02-02 19:07:30.333492")
         sheet = Sheet(now)
-        error = sheet.setup_gsheet(configuration, os.getenv("GSHEET_AUTH"), True, False)
+        error = sheet.setup_gsheet(
+            configuration, os.getenv("GSHEET_AUTH"), True, False
+        )
         assert error is None
         error = sheet.setup_input()
         assert error is None
@@ -1957,7 +1994,9 @@ class TestDataFreshnessStatus:
                 email=email,
                 sheet=sheet,
             )
-            sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Empty
+            sheet.issues_spreadsheet = (
+                TestDataFreshnessStatus.TestSpreadsheet_Empty
+            )
             sheet.dutyofficer = {"name": "Sharon", "email": "sharon@lala.org"}
 
             TestDataFreshnessStatus.email_users_result = list()
@@ -2008,7 +2047,11 @@ class TestDataFreshnessStatus:
                     "",
                 ],
             ]
-            assert TestDataFreshnessStatus.email_users_result == expected_result
-            assert TestDataFreshnessStatus.cells_result == expected_cells_result
+            assert (
+                TestDataFreshnessStatus.email_users_result == expected_result
+            )
+            assert (
+                TestDataFreshnessStatus.cells_result == expected_cells_result
+            )
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
