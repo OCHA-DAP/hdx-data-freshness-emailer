@@ -1,33 +1,42 @@
+"""Functions that perform queries of the freshness database
 """
-Database queries
-----------------
-
-Queries to the freshness database
-"""
-
+import datetime
 import logging
 import re
 from collections import OrderedDict
+from typing import Dict, List, Tuple
 
 from hdx.freshness.database.dbdataset import DBDataset
 from hdx.freshness.database.dbinfodataset import DBInfoDataset
 from hdx.freshness.database.dborganization import DBOrganization
 from hdx.freshness.database.dbresource import DBResource
 from hdx.freshness.database.dbrun import DBRun
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.elements import and_
+
+from hdx.freshness.emailer.utils.hdxhelper import HDXHelper
 
 logger = logging.getLogger(__name__)
 
 
 class DatabaseQueries:
+    """A class that offers functions that query the freshness database
+
+    Args:
+        session (sqlalchemy.orm.Session): Session to use for queries
+        now (datetime.datetime): Date to use for now
+        hdxhelper (HDXHelper): HDX helper object
+    """
+
     format_mismatch_msg = "Format Mismatch"
     other_error_msg = "Server Error (may be temporary)"
 
-    def __init__(self, session, now):
-        """"""
+    def __init__(
+        self, session: Session, now: datetime.datetime, hdxhelper: HDXHelper
+    ):
         self.session = session
         self.now = now
+        self.hdxhelper = hdxhelper
         (
             self.run_number_to_run_date,
             self.run_numbers,
@@ -36,10 +45,25 @@ class DatabaseQueries:
             logger.warning("Less than 2 runs!")
         self.datasets_modified_yesterday = None
 
-    def get_run_numbers(self):
+    def get_run_numbers(self) -> List[Tuple]:
+        """Get run numbers as list of tuples of the form (run number, run date)
+
+        Returns:
+             List[Tuple]: List of (run number, run date)
+        """
         return self.run_numbers
 
-    def get_cur_prev_runs(self):
+    def get_cur_prev_runs(
+        self,
+    ) -> Tuple[Dict[int, datetime.datetime], List[Tuple]]:
+        """Get run numbers in two forms in a tuple. the first form is a dictionary
+        from run number to run date. The second form is list of tuples of the form
+        (run number, run date)
+
+        Returns:
+             Tuple[Dict[int, datetime.datetime], List[Tuple]]:
+             (run number to run date, list of run numbers an run dates)
+        """
         list_run_numbers = (
             self.session.query(DBRun.run_number, DBRun.run_date)
             .distinct()
@@ -60,7 +84,12 @@ class DatabaseQueries:
                     run_numbers = [run_number, list_run_numbers[i + 1]]
         return run_number_to_run_date, run_numbers
 
-    def get_number_datasets(self):
+    def get_number_datasets(self) -> Tuple[int, int]:
+        """Get the number of datasets today and yesterday in a tuple
+
+        Returns:
+             Tuple[int, int]: (number of datasets today, number of datasets yesterday)
+        """
         datasets_today = (
             self.session.query(DBDataset.id)
             .filter(DBDataset.run_number == self.run_numbers[0][0])
@@ -73,7 +102,12 @@ class DatabaseQueries:
         )
         return datasets_today, datasets_previous
 
-    def get_broken(self):
+    def get_broken(self) -> Dict[str, Dict]:
+        """Get dateset information categorised by error message
+
+        Returns:
+             Dict[str, Dict]: Dataset information categorised by error message
+        """
         datasets = dict()
         if len(self.run_numbers) == 0:
             return datasets
@@ -112,16 +146,16 @@ class DatabaseQueries:
             if error == "File too large to hash!":
                 continue
             if "does not match HDX format" in error:
-                exception_string = self.format_mismatch_msg
+                error_msg = self.format_mismatch_msg
             else:
-                search_exception = re.search(regex, error)
-                if search_exception:
-                    exception_string = search_exception.group(0)[1:-1]
+                match_error = re.search(regex, error)
+                if match_error:
+                    error_msg = match_error.group(0)[1:-1]
                 else:
                     # some sort of Server Error which most of the time is temporary so ignore
                     continue
-            datasets_error = datasets.get(exception_string, dict())
-            datasets[exception_string] = datasets_error
+            datasets_error = datasets.get(error_msg, dict())
+            datasets[error_msg] = datasets_error
 
             org_title = row["organization_title"]
             org = datasets_error.get(org_title, dict())
@@ -148,7 +182,16 @@ class DatabaseQueries:
         logger.info(f"SQL query returned {norows} rows.")
         return datasets
 
-    def get_status(self, status):
+    def get_status(self, status: int) -> List[Dict]:
+        """Get datasets for a given freshness status (0=fresh, 1=due, 2=overdue,
+        3=delinquent)
+
+        Args:
+            status (int): Freshness status
+
+        Returns:
+            List[Dict]: List of datasets for a given freshness status
+        """
         datasets = list()
         no_runs = len(self.run_numbers)
         if no_runs == 0:
@@ -197,8 +240,15 @@ class DatabaseQueries:
         return datasets
 
     def get_invalid_maintainer_orgadmins(
-        self, organizations, users, sysadmins
-    ):
+        self,
+    ) -> Tuple[List[Dict], Dict[str, Dict]]:
+        """Get datasets with invalid maintainer and organisations with invalid
+        administrators
+
+        Returns:
+            Tuple[List[Dict], Dict[str, Dict]]: (Datasets with invalid maintainer,
+            organisations with invalid administrators)
+        """
         invalid_maintainers = list()
         invalid_orgadmins = dict()
         no_runs = len(self.run_numbers)
@@ -230,7 +280,7 @@ class DatabaseQueries:
             maintainer_id = dataset["maintainer"]
             organization_id = dataset["organization_id"]
             organization_name = dataset["organization_name"]
-            organization = organizations[organization_id]
+            organization = self.hdxhelper.organizations[organization_id]
             admins = organization.get("admin")
 
             def get_orginfo(error):
@@ -245,7 +295,7 @@ class DatabaseQueries:
                 all_sysadmins = True
                 nonexistantids = list()
                 for adminid in admins:
-                    admin = users.get(adminid)
+                    admin = self.hdxhelper.users.get(adminid)
                     if not admin:
                         nonexistantids.append(adminid)
                     else:
@@ -268,14 +318,19 @@ class DatabaseQueries:
             editors = organization.get("editor", [])
             if maintainer_id in editors:
                 continue
-            if maintainer_id in sysadmins:
+            if maintainer_id in self.hdxhelper.sysadmins:
                 continue
             invalid_maintainers.append(dataset)
 
         logger.info(f"SQL query returned {norows} rows.")
         return invalid_maintainers, invalid_orgadmins
 
-    def get_datasets_noresources(self):
+    def get_datasets_noresources(self) -> List[Dict]:
+        """Get datasets with no resources
+
+        Returns:
+            List[Dict]: Datasets with no resources
+        """
         datasets_noresources = list()
         no_runs = len(self.run_numbers)
         if no_runs == 0:
@@ -309,7 +364,12 @@ class DatabaseQueries:
         logger.info(f"SQL query returned {norows} rows.")
         return datasets_noresources
 
-    def get_datasets_modified_yesterday(self):
+    def get_datasets_modified_yesterday(self) -> Dict[str, Dict]:
+        """Get datasets modified yesterday
+
+        Returns:
+            Dict[str, Dict]: Datasets modified yesterday
+        """
         if self.datasets_modified_yesterday is not None:
             return self.datasets_modified_yesterday
         datasets = OrderedDict()
@@ -346,55 +406,60 @@ class DatabaseQueries:
         self.datasets_modified_yesterday = datasets
         return datasets
 
-    # def get_datasets_dataset_date(self):
-    #     datasets = self.get_datasets_modified_yesterday()
-    #     dataset_ids = list()
-    #     for dataset_id, dataset in datasets.items():
-    #         if '*' in dataset['dataset_date']:
-    #             continue
-    #         if dataset['update_frequency'] <= 0:
-    #             continue
-    #         dataset_ids.append(dataset_id)
-    #     columns = [DBDataset.id, DBDataset.dataset_date]
-    #     filters = [DBDataset.id.in_(dataset_ids),
-    #                DBDataset.run_number == self.run_numbers[1][0]]
-    #     query = self.session.query(*columns).filter(and_(*filters))
-    #     norows = 0
-    #     unchanged_dsdates_datasets = list()
-    #     for norows, result in enumerate(query):
-    #         dataset_id = result.id
-    #         if result.dataset_date == datasets[dataset_id]['dataset_date']:
-    #             unchanged_dsdates_datasets.append(dataset_id)
-    #     logger.info(f'SQL query returned {norows} rows.')
-    #     DBDataset2 = aliased(DBDataset)
-    #     dsdates_not_changed_within_uf = list()
-    #     for dataset_id in unchanged_dsdates_datasets:
-    #         filters = [DBDataset.id == dataset_id, DBDataset2.id == DBDataset.id,
-    #                    DBDataset2.run_number == DBDataset.run_number - 1,
-    #                    DBDataset.dataset_date != DBDataset2.dataset_date
-    #                    ]
-    #         result = self.session.query(DBDataset.run_number).filter(and_(*filters)).order_by(
-    #         DBDataset.run_number.desc()).first()
-    #         delta = self.now - self.run_number_to_run_date[result.run_number]
-    #         if delta > datetime.timedelta(days=datasets[dataset_id]['update_frequency']):
-    #             dsdates_not_changed_within_uf.append(dataset_id)
-    #     datasets_dataset_date = list()
-    #     for dataset_id in dsdates_not_changed_within_uf:
-    #         columns = [DBDataset.run_number, DBDataset.update_frequency]
-    #         filters = [DBDataset.id == dataset_id, DBDataset2.id == DBDataset.id,
-    #                    DBDataset2.run_number == DBDataset.run_number - 1,
-    #                    DBDataset.what_updated != 'nothing']
-    #         query = self.session.query(*columns).filter(and_(*filters))
-    #         prevdate = self.now
-    #         number_of_updates = 0
-    #         number_of_updates_within_uf = 0
-    #         for number_of_updates, result in enumerate(query):
-    #             run_date = self.run_number_to_run_date[result.run_number]
-    #             delta = prevdate - run_date
-    #             if delta < datetime.timedelta(days=result.update_frequency):
-    #                 number_of_updates_within_uf += 1
-    #             prevdate = run_date
-    #         if number_of_updates_within_uf / number_of_updates < 0.8:
-    #             continue
-    #         datasets_dataset_date.append(datasets[dataset_id])
-    #     return datasets_dataset_date
+    def get_datasets_dataset_date(self) -> List[Dict]:
+        """Get datasets with a dataset date that could be due for update
+
+        Returns:
+            List[Dict]: Datasets with a dataset date that could be due for update
+        """
+        datasets = self.get_datasets_modified_yesterday()
+        dataset_ids = list()
+        for dataset_id, dataset in datasets.items():
+            if '*' in dataset['dataset_date']:
+                continue
+            if dataset['update_frequency'] <= 0:
+                continue
+            dataset_ids.append(dataset_id)
+        columns = [DBDataset.id, DBDataset.dataset_date]
+        filters = [DBDataset.id.in_(dataset_ids),
+                   DBDataset.run_number == self.run_numbers[1][0]]
+        query = self.session.query(*columns).filter(and_(*filters))
+        norows = 0
+        unchanged_dsdates_datasets = list()
+        for norows, result in enumerate(query):
+            dataset_id = result.id
+            if result.dataset_date == datasets[dataset_id]['dataset_date']:
+                unchanged_dsdates_datasets.append(dataset_id)
+        logger.info(f'SQL query returned {norows} rows.')
+        DBDataset2 = aliased(DBDataset)
+        dsdates_not_changed_within_uf = list()
+        for dataset_id in unchanged_dsdates_datasets:
+            filters = [DBDataset.id == dataset_id, DBDataset2.id == DBDataset.id,
+                       DBDataset2.run_number == DBDataset.run_number - 1,
+                       DBDataset.dataset_date != DBDataset2.dataset_date
+                       ]
+            result = self.session.query(DBDataset.run_number).filter(and_(*filters)).order_by(
+            DBDataset.run_number.desc()).first()
+            delta = self.now - self.run_number_to_run_date[result.run_number]
+            if delta > datetime.timedelta(days=datasets[dataset_id]['update_frequency']):
+                dsdates_not_changed_within_uf.append(dataset_id)
+        datasets_dataset_date = list()
+        for dataset_id in dsdates_not_changed_within_uf:
+            columns = [DBDataset.run_number, DBDataset.update_frequency]
+            filters = [DBDataset.id == dataset_id, DBDataset2.id == DBDataset.id,
+                       DBDataset2.run_number == DBDataset.run_number - 1,
+                       DBDataset.what_updated != 'nothing']
+            query = self.session.query(*columns).filter(and_(*filters))
+            prevdate = self.now
+            number_of_updates = 0
+            number_of_updates_within_uf = 0
+            for number_of_updates, result in enumerate(query):
+                run_date = self.run_number_to_run_date[result.run_number]
+                delta = prevdate - run_date
+                if delta < datetime.timedelta(days=result.update_frequency):
+                    number_of_updates_within_uf += 1
+                prevdate = run_date
+            if number_of_updates_within_uf / number_of_updates < 0.8:
+                continue
+            datasets_dataset_date.append(datasets[dataset_id])
+        return datasets_dataset_date

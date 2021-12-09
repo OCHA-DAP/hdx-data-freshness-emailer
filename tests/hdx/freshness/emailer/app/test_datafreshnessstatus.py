@@ -9,12 +9,13 @@ from os.path import join
 
 import pytest
 from dateutil import parser
+from hdx.data.dataset import Dataset
 from hdx.database import Database
 
 from hdx.freshness.emailer.app.datafreshnessstatus import DataFreshnessStatus
 from hdx.freshness.emailer.utils.databasequeries import DatabaseQueries
-from hdx.freshness.emailer.utils.datasethelper import DatasetHelper
 from hdx.freshness.emailer.utils.freshnessemail import Email
+from hdx.freshness.emailer.utils.hdxhelper import HDXHelper
 from hdx.freshness.emailer.utils.sheet import Sheet
 
 
@@ -28,7 +29,7 @@ class TestDataFreshnessStatus:
             (users_to_email, subject, text_body, html_body, cc, bcc)
         )
 
-    class TestDataset:
+    class TestDataset(Dataset):
         @staticmethod
         def search_in_hdx(fq):
             if "airport" in fq and "groups:wsm" in fq:
@@ -695,21 +696,29 @@ class TestDataFreshnessStatus:
         self, configuration, database_broken, users, organizations
     ):
         site_url = "http://lala"
-        sysadmins_to_email = ["blah3@blah.com", "blah4@blah.com"]
         now = parser.parse("2017-02-03 19:07:30.333492")
         sheet = Sheet(now)
+        with pytest.raises(ValueError):
+            Email(
+                now,
+                send_emails=self.email_users,
+                sysadmins_to_email=None,
+                configuration=None,
+            )
+        sysadmins_to_email = ["blah3@blah.com", "blah4@blah.com"]
         email = Email(
             now,
             send_emails=self.email_users,
             sysadmins_to_email=sysadmins_to_email,
         )
         with Database(**database_broken) as session:
-            datasethelper = DatasetHelper(
+            hdxhelper = HDXHelper(
                 site_url=site_url, users=users, organizations=organizations
             )
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1189,9 +1198,10 @@ class TestDataFreshnessStatus:
             now = parser.parse("2017-01-31 19:07:30.333492")
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1220,12 +1230,13 @@ class TestDataFreshnessStatus:
             sysadmins_to_email=sysadmins_to_email,
         )
         with Database(**database_status) as session:
-            datasethelper = DatasetHelper(
+            hdxhelper = HDXHelper(
                 site_url=site_url, users=users, organizations=organizations
             )
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1354,7 +1365,7 @@ class TestDataFreshnessStatus:
                 TestDataFreshnessStatus.email_users_result == expected_result
             )
             TestDataFreshnessStatus.email_users_result = list()
-            freshness.process_overdue(sysadmins="elizabeth@lala.org")
+            freshness.process_overdue(sysadmins=["elizabeth@lala.org"])
             restuple = expected_result[3]
             expected_result[3] = (
                 ["elizabeth@lala.org"],
@@ -1384,7 +1395,7 @@ class TestDataFreshnessStatus:
             )
             TestDataFreshnessStatus.email_users_result = list()
             sheet.dutyofficer = {"name": "Paul", "email": "paul@lala.org"}
-            freshness.process_overdue(recipients="lizzy@lala.org")
+            freshness.process_overdue(recipients=["lizzy@lala.org"])
             assert TestDataFreshnessStatus.email_users_result == [
                 (
                     ["lizzy@lala.org"],
@@ -1421,9 +1432,10 @@ class TestDataFreshnessStatus:
             ]
 
             now = parser.parse("2017-01-31 19:07:30.333492")
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1456,12 +1468,13 @@ class TestDataFreshnessStatus:
             configuration=configuration,
         )
         with Database(**database_maintainer) as session:
-            datasethelper = DatasetHelper(
+            hdxhelper = HDXHelper(
                 site_url=site_url, users=users, organizations=organizations
             )
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1628,12 +1641,13 @@ class TestDataFreshnessStatus:
                 }
             )
             neworgs[1]["users"] = list()
-            datasethelper = DatasetHelper(
+            hdxhelper = HDXHelper(
                 site_url=site_url, users=users, organizations=neworgs
             )
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1672,12 +1686,13 @@ class TestDataFreshnessStatus:
             )
             neworgs[1]["users"][0]["id"] = "NOTEXIST1"
             neworgs[1]["users"][1]["id"] = "NOTEXIST2"
-            datasethelper = DatasetHelper(
+            hdxhelper = HDXHelper(
                 site_url=site_url, users=users, organizations=neworgs
             )
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1714,12 +1729,13 @@ class TestDataFreshnessStatus:
             now, send_emails=self.email_users, configuration=configuration
         )
         with Database(**database_failure) as session:
-            datasethelper = DatasetHelper(
+            hdxhelper = HDXHelper(
                 site_url=site_url, users=users, organizations=organizations
             )
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1739,9 +1755,10 @@ class TestDataFreshnessStatus:
             ]
             TestDataFreshnessStatus.email_users_result = list()
             now = parser.parse("2017-02-02 19:07:30.333492")
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1762,9 +1779,10 @@ class TestDataFreshnessStatus:
             ]
             TestDataFreshnessStatus.email_users_result = list()
             now = parser.parse("2017-02-04 19:07:30.333492")
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1791,9 +1809,10 @@ class TestDataFreshnessStatus:
             session.execute(
                 "INSERT INTO dbdatasets(run_number,id,last_modified,metadata_modified,latest_of_modifieds,what_updated,last_resource_updated,last_resource_modified,error) VALUES (3,'lala','2017-02-04 9:07:30.333492','2017-02-04 9:07:30.333492','2017-02-04 9:07:30.333492','lala','lala','2017-02-04 9:07:30.333492',False);"
             )
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1827,12 +1846,13 @@ class TestDataFreshnessStatus:
             configuration=configuration,
         )
         with Database(**database_noresources) as session:
-            datasethelper = DatasetHelper(
+            hdxhelper = HDXHelper(
                 site_url=site_url, users=users, organizations=organizations
             )
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,
@@ -1914,9 +1934,9 @@ class TestDataFreshnessStatus:
     #     sheet = Sheet(now)
     #     email = Email(now, send_emails=self.email_users, sysadmins_to_email=sysadmins_to_email)
     #     with Database(**database_datasets_modified_yesterday) as session:
-    #         datasethelper = DatasetHelper(site_url=site_url, users=users, organizations=organizations)
-    #         databasequeries = DatabaseQueries(session=session, now=now)
-    #         freshness = DataFreshnessStatus(datasethelper=datasethelper, databasequeries=databasequeries, email=email,
+    #         hdxhelper = HDXHelper(site_url=site_url, users=users, organizations=organizations)
+    #         databasequeries = DatabaseQueries(session=session, now=now, hdxhelper=hdxhelper)
+    #         freshness = DataFreshnessStatus(hdxhelper=hdxhelper, databasequeries=databasequeries, email=email,
     #                                         sheet=sheet)
     #         sheet.issues_spreadsheet = TestDataFreshnessStatus.TestSpreadsheet_Empty
     #         sheet.dutyofficer = {'name': 'Sharon', 'email': 'sharon@lala.org'}
@@ -1984,12 +2004,13 @@ class TestDataFreshnessStatus:
             configuration=configuration,
         )
         with Database(**database_datasets_modified_yesterday) as session:
-            datasethelper = DatasetHelper(
+            hdxhelper = HDXHelper(
                 site_url=site_url, users=users, organizations=organizations
             )
-            databasequeries = DatabaseQueries(session=session, now=now)
+            databasequeries = DatabaseQueries(
+                session=session, now=now, hdxhelper=hdxhelper
+            )
             freshness = DataFreshnessStatus(
-                datasethelper=datasethelper,
                 databasequeries=databasequeries,
                 email=email,
                 sheet=sheet,

@@ -1,9 +1,8 @@
+"""Helper functions for HDX datasets, users and organisations
 """
-DatasetHelper
--------------
+import datetime
+from typing import Dict, List, Optional, Tuple
 
-Dataset helper functions
-"""
 from hdx.data.dataset import Dataset
 from hdx.data.date_helper import DateHelper
 from hdx.data.organization import Organization
@@ -13,14 +12,28 @@ from hdx.utilities.dictandlist import dict_of_lists_add
 from .freshnessemail import Email
 
 
-class DatasetHelper:
+class HDXHelper:
+    """A class providing functions for retrieving information about HDX datasets,
+    users and organisations
+
+    Args:
+        site_url (str): URL of HDX site
+        users (Optional[List[Dict]]): List of users (for testing). Defaults to None.
+        organizations (Optional[List[Dict]]): List of organizations. Defaults to None.
+    """
+
     freshness_status = {0: "Fresh", 1: "Due", 2: "Overdue", 3: "Delinquent"}
 
-    def __init__(self, site_url, users=None, organizations=None):
+    def __init__(
+        self,
+        site_url: str,
+        users: Optional[List[User]] = None,
+        organizations: Optional[List[Organization]] = None,
+    ):
         self.site_url = site_url
         if users is None:  # pragma: no cover
             users = User.get_all_users()
-        self.users = dict()
+        self.users: Dict[str, User] = dict()
         self.sysadmins = dict()
         for user in users:
             userid = user["id"]
@@ -28,9 +41,9 @@ class DatasetHelper:
             if user["sysadmin"]:
                 self.sysadmins[userid] = user
 
-        self.organizations = dict()
+        self.organizations: Dict = dict()
         if organizations is None:  # pragma: no cover
-            organizations = Organization.get_all_organization_names(
+            organizations: List = Organization.get_all_organization_names(
                 all_fields=True, include_users=True
             )
         for organization in organizations:
@@ -42,18 +55,45 @@ class DatasetHelper:
             self.organizations[organization["id"]] = users_per_capacity
 
     @staticmethod
-    def get_dataset_dates(dataset):
+    def get_dataset_dates(
+        dataset: Dict,
+    ) -> Tuple[Optional[datetime.datetime], Optional[datetime.datetime]]:
+        """Return a tuple containing dataset start and end date or (None, None)
+
+        Args:
+            dataset (Dict): Dataset to examine
+
+        Returns:
+            Tuple[Optional[datetime.datetime], Optional[datetime.datetime]]:
+            Dataset start and end date or (None, None)
+        """
         dataset_date = dataset["dataset_date"]
         if not dataset_date:
             return None, None
         date_info = DateHelper.get_date_info(dataset_date)
         return date_info["startdate"], date_info["enddate"]
 
-    def get_maintainer(self, dataset):
+    def get_maintainer(self, dataset: Dict) -> User:
+        """Get the maintainer of a dataset
+
+        Args:
+            dataset (Dict): Dataset to examine
+
+        Returns:
+            User: Maintainer of the dataset
+        """
         maintainer = dataset["maintainer"]
         return self.users.get(maintainer)
 
-    def get_org_admins(self, dataset):
+    def get_org_admins(self, dataset: Dict) -> List[User]:
+        """Get the administrators of the organisation of the dataset
+
+        Args:
+            dataset (Dict): Dataset to examine
+
+        Returns:
+            List[User]: Administrators of the organisation of the dataset
+        """
         organization_id = dataset["organization_id"]
         orgadmins = list()
         organization = self.organizations[organization_id]
@@ -64,34 +104,70 @@ class DatasetHelper:
                     orgadmins.append(user)
         return orgadmins
 
-    def get_maintainer_orgadmins(self, dataset):
+    def get_maintainer_orgadmins(
+        self, dataset: Dict
+    ) -> Tuple[Dict[str, str], List[Dict[str, str]], List[User]]:
+        """Get the maintainer of the dataset and the administrators of the organisation
+        of the dataset as well as a list of users to email
+
+        Args:
+            dataset (Dict): Dataset to examine
+
+        Returns:
+            Tuple[Dict[str, str], List[Dict[str, str]], List[User]]:
+            (maintainer info, list of org admin info, list of users to email)
+        """
         users_to_email = list()
         maintainer = self.get_maintainer(dataset)
         if maintainer is not None:
             users_to_email.append(maintainer)
             maintainer_name = self.get_user_name(maintainer)
-            maintainer = (maintainer_name, maintainer["email"])
+            maintainer = {"name": maintainer_name, "email": maintainer["email"]}
         orgadmins = list()
         for orgadmin in self.get_org_admins(dataset):
             if maintainer is None:
                 users_to_email.append(orgadmin)
             username = self.get_user_name(orgadmin)
-            orgadmins.append((username, orgadmin["email"]))
+            orgadmins.append({"name": username, "email": orgadmin["email"]})
         return maintainer, orgadmins, users_to_email
 
     @staticmethod
-    def get_update_frequency(update_freq):
+    def get_update_frequency(update_freq: int) -> str:
+        """Get the update frequency string as words from the numeric value
+
+        Args:
+            update_freq (int): Update frequency value
+
+        Returns:
+            str: Update frequency in words
+        """
         if update_freq is None:
             return "NOT SET"
         else:
             return Dataset.transform_update_frequency(str(update_freq))
 
     @classmethod
-    def get_update_frequency_from_dataset(cls, dataset):
+    def get_update_frequency_from_dataset(cls, dataset: Dict) -> str:
+        """Get the update frequency string as words from the dataset
+
+        Args:
+            dataset (Dict): Dataset to examine
+
+        Returns:
+            str: Update frequency in words
+        """
         return cls.get_update_frequency(dataset["update_frequency"])
 
     @staticmethod
-    def get_user_name(user):
+    def get_user_name(user: User) -> str:
+        """Get the user name from the user
+
+        Args:
+            user (User): User to examine
+
+        Returns:
+            str: User name of User object
+        """
         user_name = user.get("display_name")
         if not user_name:
             user_name = user["fullname"]
@@ -99,22 +175,53 @@ class DatasetHelper:
                 user_name = user["name"]
         return user_name
 
-    def get_dataset_url(self, dataset):
+    def get_dataset_url(self, dataset: Dict) -> str:
+        """Get the dataset's URL
+
+        Args:
+            dataset (Dict): Dataset to examine
+
+        Returns:
+            str: URL of dataset
+        """
         return f"{self.site_url}/dataset/{dataset['name']}"
 
-    def get_organization_url(self, organization):
+    def get_organization_url(self, organization: Dict):
+        """Get the organisation's URL
+
+        Args:
+            organization (Dict): Organisation to examine
+
+        Returns:
+            str: URL of organisation
+        """
         return f"{self.site_url}/organization/{organization['name']}"
 
     def create_dataset_string(
         self,
-        dataset,
-        maintainer,
-        orgadmins,
-        sysadmin=False,
-        include_org=True,
-        include_freshness=False,
-        include_datasetdate=False,
-    ):
+        dataset: Dict,
+        maintainer: Dict[str, str],
+        orgadmins: List[Dict[str, str]],
+        sysadmin: bool = False,
+        include_org: bool = True,
+        include_freshness: bool = False,
+        include_datasetdate: bool = False,
+    ) -> Tuple[str, str]:
+        """Create the string that will be output in an email, returning a plain text
+        and HTML version, the latter including URL links
+
+        Args:
+            dataset (Dict): Dataset to examine
+            maintainer (Dict[str, str]): Maintainer information
+            orgadmins (List[Dict[str, str]]): List of organisation administrator info
+            sysadmin (bool): Include additional info for sysadmins. Defaults to False.
+            include_org (bool): Include additional org info in string. Defaults to True.
+            include_freshness (bool): Include freshness status. Defaults to False.
+            include_datasetdate (bool): Include dataset date. Defaults to False.
+
+        Returns:
+            Tuple[str, str]: (plain text string, HTML string) for output in email
+        """
         url = self.get_dataset_url(dataset)
         msg = list()
         htmlmsg = list()
@@ -126,7 +233,8 @@ class DatasetHelper:
             htmlmsg.append(orgmsg)
         if maintainer is not None:
             if sysadmin:
-                user_name, user_email = maintainer
+                user_name = maintainer["name"]
+                user_email = maintainer["email"]
                 msg.append(f" maintained by {user_name} ({user_email})")
                 htmlmsg.append(
                     f' maintained by <a href="mailto:{user_email}">{user_name}</a>'
@@ -142,7 +250,8 @@ class DatasetHelper:
             usermsg = list()
             userhtmlmsg = list()
             for orgadmin in orgadmins:
-                user_name, user_email = orgadmin
+                user_name = orgadmin["name"]
+                user_email = orgadmin["email"]
                 usermsg.append(f"{user_name} ({user_email})")
                 userhtmlmsg.append(
                     f'<a href="mailto:{user_email}">{user_name}</a>'

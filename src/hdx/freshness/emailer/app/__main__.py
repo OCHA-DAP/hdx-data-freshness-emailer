@@ -1,14 +1,10 @@
-"""
-REGISTER:
----------
-
-Caller script. Designed to call all other functions.
-
+"""Entry point to start data freshness emailer
 """
 import argparse
 import datetime
 import logging
 from os import getenv
+from typing import Optional
 
 from hdx.api.configuration import Configuration
 from hdx.database import Database
@@ -21,8 +17,8 @@ from hdx.utilities.path import script_dir_plus_file
 from hdx.freshness.emailer.app import __version__
 from hdx.freshness.emailer.app.datafreshnessstatus import DataFreshnessStatus
 from hdx.freshness.emailer.utils.databasequeries import DatabaseQueries
-from hdx.freshness.emailer.utils.datasethelper import DatasetHelper
 from hdx.freshness.emailer.utils.freshnessemail import Email
+from hdx.freshness.emailer.utils.hdxhelper import HDXHelper
 from hdx.freshness.emailer.utils.sheet import Sheet
 
 setup_logging()
@@ -30,18 +26,43 @@ logger = logging.getLogger(__name__)
 
 
 def main(
-    db_url,
-    db_params,
-    email_server,
-    gsheet_auth,
-    email_test,
-    spreadsheet_test,
-    no_spreadsheet,
+    db_url: Optional[str] = None,
+    db_params: Optional[str] = None,
+    email_server: Optional[str] = None,
+    gsheet_auth: Optional[str] = None,
+    email_test: bool = False,
+    spreadsheet_test: bool = False,
+    no_spreadsheet: bool = False,
     **ignore,
-):
+) -> None:
+    """Run freshness emailer. Either a database connection string (db_url) or database
+    connection parameters (db_params) can be supplied. If neither is supplied, a local
+    SQLite database with filename "freshness.db" is assumed. An optional email server
+    can be supplied in the form:
+    connection type (eg. ssl),host,port,username,password,sender email
+
+    If not supplied, no emails will be sent. An optional authorisation string for
+    Google Sheets can be supplied of the form:
+    {"type": "service_account", "project_id": "hdx-bot", "private_key_id": ...
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",...}
+
+    Args:
+        db_url (Optional[str]): Database connection string. Defaults to None.
+        db_params (Optional[str]): Database connection parameters. Defaults to None.
+        email_server (Optional[str]): Email server to use. Defaults to None.
+        gsheet_auth (Optional[str]): Google Sheets authorisation. Defaults to None.
+        email_test (bool): Only email test users. Defaults to False.
+        spreadsheet_test (bool): Output to test Google spreadsheet. Defaults to False.
+        no_spreadsheet (bool): Don't output to Google spreadsheet. Defaults to False.
+
+    Returns:
+        None
+    """
+
     logger.info(f"> Data freshness emailer {__version__}")
     configuration = Configuration.read()
-    if email_server:
+    if email_server:  # Get email server details
         email_config = email_server.split(",")
         email_config_dict = {
             "connection_type": email_config[0],
@@ -58,7 +79,7 @@ def main(
     else:
         logger.info("> No email host!")
         send_emails = None
-    if db_params:
+    if db_params:  # Get freshness database server details
         params = args_to_dict(db_params)
     elif db_url:
         params = Database.get_params_from_sqlalchemy_url(db_url)
@@ -91,16 +112,18 @@ def main(
                     error,
                 )
             else:
-                datasethelper = DatasetHelper(
+                hdxhelper = HDXHelper(
                     site_url=configuration.get_hdx_site_url()
                 )
-                databasequeries = DatabaseQueries(session=session, now=now)
+                databasequeries = DatabaseQueries(
+                    session=session, now=now, hdxhelper=hdxhelper
+                )
                 freshness = DataFreshnessStatus(
-                    datasethelper=datasethelper,
                     databasequeries=databasequeries,
                     email=email,
                     sheet=sheet,
                 )
+                # Check number of datasets hasn't dropped
                 if not freshness.check_number_datasets(
                     now, send_failures=failure_list
                 ):
@@ -117,17 +140,27 @@ def main(
                         freshness.process_datasets_noresources(
                             recipients=test_users
                         )
-                        #                        freshness.process_datasets_dataset_date(recipients=test_users, sysadmins=test_users)
+                        # freshness.process_datasets_dataset_date(
+                        #     recipients=test_users,
+                        #     sysadmins=test_users
+                        # )
                         freshness.process_datasets_datagrid(
                             recipients=test_users
                         )
                     else:
-                        freshness.process_broken()
-                        freshness.process_overdue()
-                        freshness.process_delinquent()
+                        freshness.process_broken()  # Check for broken resources
+                        freshness.process_overdue()  # Check for overdue datasets
+                        freshness.process_delinquent()  # Check for delinquent datasets
+                        # Check for datasets with invalid maintainer and organisations
+                        # with invalid administrators
                         freshness.process_maintainer_orgadmins()
+                        # Check for datasets with no resources
                         freshness.process_datasets_noresources()
-                        #                        freshness.process_datasets_dataset_date(sysadmins=test_users)
+                        # Check for datasets where the dataset date may need updating
+                        # freshness.process_datasets_dataset_date(
+                        #     sysadmins=test_users
+                        # )
+                        # Check for candidates for the data grid
                         freshness.process_datasets_datagrid()
 
     logger.info("Freshness emailer completed!")

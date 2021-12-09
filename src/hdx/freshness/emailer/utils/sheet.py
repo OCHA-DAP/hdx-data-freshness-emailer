@@ -1,18 +1,16 @@
-"""
-Sheet
------
-
-Utilities to handle interaction with Google sheets
+"""Utilities to handle interaction with Google sheets
 """
 import json
 import logging
 from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
 import gspread
+from hdx.api.configuration import Configuration
 from hdx.data.dataset import Dataset
 from hdx.utilities.dateparse import parse_date
 
-from .datasethelper import DatasetHelper
+from .hdxhelper import HDXHelper
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +20,12 @@ def get_date(datestr):
 
 
 class Sheet:
+    """A class that provides functions to interact with a Google spreadsheet
+
+    Args:
+        now (datetime.datetime): Date to use for now
+    """
+
     row_limit = 1000
 
     def __init__(self, now):
@@ -34,7 +38,20 @@ class Sheet:
         self.datagridccs = list()
 
     @staticmethod
-    def add_query(hxltags, grid, row):
+    def add_category_to_datagrid(
+        hxltags: Dict[str, int], datagrid: Dict[str, str], row: List
+    ) -> None:
+        """Add a category to the datagrid from a supplied row read from the Google
+        spreadsheet and map it to an HDX query
+
+        Args:
+            hxltags (Dict[str, int]): Mapping from HXL tag to column number
+            datagrid (Dict[str, str]): Mapping from a category to a query
+            row (List): Row from datagrids Google spreadsheet
+
+        Returns:
+            None
+        """
         category = row[hxltags["#category"]].strip()
         include = row[hxltags["#include"]]
         if include:
@@ -42,7 +59,7 @@ class Sheet:
         exclude = row[hxltags["#exclude"]]
         if exclude:
             exclude = exclude.strip()
-        query = grid.get(category, "")
+        query = datagrid.get(category, "")
         if query:
             queryparts = query.split(" ! ")
             query = queryparts[0]
@@ -54,19 +71,37 @@ class Sheet:
             query = include
         if exclude:
             query = f"{query} ! {exclude}"
-        grid[category] = query
+        datagrid[category] = query
 
-    def get_datagrid(self, hxltags, dg, datagrids, defaultgrid):
-        datagridname = dg.strip()
+    def get_datagrid(
+        self,
+        hxltags: Dict[str, int],
+        datagridname: str,
+        rows: List[List],
+        defaultgrid: Dict[str, str],
+    ) -> Dict[str, str]:
+        """Get datagrid with given name, constructing it if it does not already exist.
+        defaultgrid contains defaults for all countries.
+
+        Args:
+            hxltags (Dict[str, int]): Mapping from HXL tag to column number
+            datagridname (str): Name of datagrid
+            rows (List[List]): Row from datagrids Google spreadsheet
+            defaultgrid (Dict[str, str]): Default datagrid (defaults for all countries)
+
+        Returns:
+            Dict[str, str]: Datagrid
+        """
+        datagridname = datagridname.strip()
         if datagridname == "" or datagridname == "cc":
             return None
         datagrid = self.datagrids.get(datagridname)
         if datagrid is None:
             datagrid = dict()
             self.datagrids[datagridname] = datagrid
-            for row in datagrids:
+            for row in rows:
                 if row[hxltags["#datagrid"]] == datagridname:
-                    self.add_query(hxltags, datagrid, row)
+                    self.add_category_to_datagrid(hxltags, datagrid, row)
             for key in defaultgrid:
                 if key not in datagrid:
                     if key == "datagrid":
@@ -78,8 +113,26 @@ class Sheet:
         return datagrid
 
     def setup_gsheet(
-        self, configuration, gsheet_auth, spreadsheet_test, no_spreadsheet
-    ):
+        self,
+        configuration: Configuration,
+        gsheet_auth: Optional[str],
+        spreadsheet_test: bool,
+        no_spreadsheet: bool,
+    ) -> Optional[str]:
+        """Open the various Google spreadsheets. The Datasets with Issues spreadsheet
+        is for output. The HDX Data Partnerships Team Duty Roster and DataGrid Curation
+        filters spreadsheets are for input.
+
+        Args:
+            configuration (Configuration): Configuration object
+            gsheet_auth (Optional[str]): Google Sheets authorisation
+            spreadsheet_test (bool): Output to test Google spreadsheet
+            no_spreadsheet (bool): Don't output to Google spreadsheet
+
+        Returns:
+            Optional[str]: Error message or None
+        """
+
         if not gsheet_auth:
             return "No GSheet Credentials!"
         try:
@@ -111,7 +164,12 @@ class Sheet:
             return str(ex)
         return None
 
-    def setup_input(self):
+    def setup_input(self) -> Optional[str]:
+        """Read in the input Google spreadsheets
+
+        Returns:
+            Optional[str]: Error message or None
+        """
         logger.info("--------------------------------------------------")
         try:
             sheet = self.dutyofficers_spreadsheet.worksheet("DutyRoster")
@@ -140,11 +198,11 @@ class Sheet:
             sheet = self.datagrids_spreadsheet.worksheet("DataGrids")
             current_values = sheet.get_values()
             hxltags = {tag: i for i, tag in enumerate(current_values[1])}
-            datagrids = current_values[2:]
+            rows = current_values[2:]
             defaultgrid = dict()
-            for row in datagrids:
+            for row in rows:
                 if row[hxltags["#datagrid"]] == "default":
-                    self.add_query(hxltags, defaultgrid, row)
+                    self.add_category_to_datagrid(hxltags, defaultgrid, row)
 
             sheet = self.datagrids_spreadsheet.worksheet("Curators")
             current_values = sheet.get_values()
@@ -155,23 +213,23 @@ class Sheet:
             for row in curators:
                 curatoremail = row[curators_hxltags["#contact+email"]].strip()
                 owner = row[curators_hxltags["#datagrid"]]
-                for dg in owner.strip().split(","):
-                    if dg.strip() == "cc":
+                for datagridname in owner.strip().split(","):
+                    if datagridname.strip() == "cc":
                         self.datagridccs.append(curatoremail)
             for row in curators:
                 curatorname = row[curators_hxltags["#contact+name"]].strip()
                 curatoremail = row[curators_hxltags["#contact+email"]].strip()
                 owner = row[curators_hxltags["#datagrid"]]
                 if owner is not None:
-                    for dg in owner.strip().split(","):
+                    for datagridname in owner.strip().split(","):
                         datagrid = self.get_datagrid(
-                            hxltags, dg, datagrids, defaultgrid
+                            hxltags, datagridname, rows, defaultgrid
                         )
                         if datagrid is None:
                             continue
                         if datagrid.get("owner"):
                             raise ValueError(
-                                f"There is more than one owner of datagrid {dg}!"
+                                f"There is more than one owner of datagrid {datagridname}!"
                             )
                         datagrid["owner"] = {
                             "name": curatorname,
@@ -185,8 +243,26 @@ class Sheet:
         except Exception as ex:
             return str(ex)
 
-    def update(self, sheetname, datasets, dutyofficer_name=None):
-        # sheet must have been set up!
+    def update(
+        self,
+        sheetname: str,
+        rows: List[Dict],
+        dutyofficer_name: Optional[str] = None,
+    ) -> None:
+        """Update output Google spreadsheet (which must have been set up with
+        setup_gsheet). The duty officer which is usually taken from the HDX Data
+        Partnerships Team Duty Roster spreadsheet can be overridden by supplying
+        dutyofficer_name.
+
+        Args:
+            sheetname (str): Name of tab in Google spreadsheet to output to
+            rows (List[Dict]): Rows to add to Google spreadsheet
+            dutyofficer_name (Optional[str]): Name of duty office. Defaults to None.
+
+        Returns:
+            None
+        """
+
         if self.issues_spreadsheet is None or (
             self.dutyofficer is None and dutyofficer_name is None
         ):
@@ -194,8 +270,8 @@ class Sheet:
             return
         logger.info("Updating Google spreadsheet.")
         sheet = self.issues_spreadsheet.worksheet(sheetname)
-        current_values = sheet.get_values()
-        keys = current_values[0]
+        gsheet_rows = sheet.get_values()
+        keys = gsheet_rows[0]
         url_ind = keys.index("URL")
         if "Update Frequency" in keys:
             update_frequency_ind = keys.index("Update Frequency")
@@ -206,24 +282,24 @@ class Sheet:
         no_times_ind = keys.index("No. Times")
         assigned_ind = keys.index("Assigned")
         status_ind = keys.index("Status")
-        headers = current_values[0]
-        current_values = [row for row in current_values[1:] if row[url_ind]]
-        urls = [x[url_ind] for x in current_values]
+        headers = gsheet_rows[0]
+        gsheet_rows = [row for row in gsheet_rows[1:] if row[url_ind]]
+        urls = [x[url_ind] for x in gsheet_rows]
         if update_frequency_ind is not None:
-            for row in current_values:
-                updatefreq = row[update_frequency_ind]
-                row[update_frequency_ind] = int(
+            for gsheet_row in gsheet_rows:
+                updatefreq = gsheet_row[update_frequency_ind]
+                gsheet_row[update_frequency_ind] = int(
                     Dataset.transform_update_frequency(updatefreq)
                 )
         updated_notimes = set()
         now = self.now.isoformat()
-        for dataset in datasets:
-            url = dataset["URL"]
-            new_row = [dataset.get(key, "") for key in keys]
+        for row in rows:
+            url = row["URL"]
+            new_row = [row.get(key, "") for key in keys]
             new_row[dateoccurred_ind] = now
             try:
                 rowno = urls.index(url)
-                current_row = current_values[rowno]
+                current_row = gsheet_rows[rowno]
                 new_row[dateadded_ind] = current_row[dateadded_ind]
                 no_times = current_row[no_times_ind]
                 new_row[no_times_ind] = int(no_times)
@@ -232,7 +308,7 @@ class Sheet:
                     new_row[no_times_ind] += 1
                 new_row[assigned_ind] = current_row[assigned_ind]
                 new_row[status_ind] = current_row[status_ind]
-                current_values[rowno] = new_row
+                gsheet_rows[rowno] = new_row
             except ValueError:
                 new_row[dateadded_ind] = now
                 new_row[no_times_ind] = 1
@@ -240,23 +316,23 @@ class Sheet:
                     new_row[assigned_ind] = dutyofficer_name
                 else:
                     new_row[assigned_ind] = self.dutyofficer["name"]
-                current_values.append(new_row)
+                gsheet_rows.append(new_row)
                 urls.append(url)
                 updated_notimes.add(url)
         if update_frequency_ind is None:
-            current_values = sorted(
-                current_values, key=lambda x: x[dateoccurred_ind], reverse=True
+            gsheet_rows = sorted(
+                gsheet_rows, key=lambda x: x[dateoccurred_ind], reverse=True
             )
         else:
             headers.append("sort")
             sort_ind = headers.index("sort")
-            for row in current_values:
-                dateoccurred = row[dateoccurred_ind]
+            for gsheet_row in gsheet_rows:
+                dateoccurred = gsheet_row[dateoccurred_ind]
                 if dateoccurred == now:
                     sort_val = 0
                 else:
                     nodays = self.now - parse_date(dateoccurred)
-                    update_freq = row[update_frequency_ind]
+                    update_freq = gsheet_row[update_frequency_ind]
                     if update_freq == -1:
                         update_freq = 1000
                     elif update_freq == -2:
@@ -264,42 +340,58 @@ class Sheet:
                     elif update_freq == 0:
                         update_freq = 0.5
                     sort_val = nodays.days / update_freq
-                row.append(sort_val)
-            current_values = sorted(
-                current_values,
+                gsheet_row.append(sort_val)
+            gsheet_rows = sorted(
+                gsheet_rows,
                 key=lambda x: (-x[sort_ind], x[dateoccurred_ind]),
                 reverse=True,
             )
-        no_rows = len(current_values)
+        no_rows = len(gsheet_rows)
         no_rows_to_remove = no_rows - self.row_limit
-        current_values = current_values[:-no_rows_to_remove]
+        gsheet_rows = gsheet_rows[:-no_rows_to_remove]
 
         if update_frequency_ind is not None:
-            for row in current_values:
-                update_freq = row[update_frequency_ind]
-                row[update_frequency_ind] = DatasetHelper.get_update_frequency(
-                    update_freq
-                )
-                del row[sort_ind]
+            for gsheet_row in gsheet_rows:
+                update_freq = gsheet_row[update_frequency_ind]
+                gsheet_row[
+                    update_frequency_ind
+                ] = HDXHelper.get_update_frequency(update_freq)
+                del gsheet_row[sort_ind]
             del headers[sort_ind]
         sheet.clear()
-        sheet.update("A1", [headers] + current_values)
+        sheet.update("A1", [headers] + gsheet_rows)
 
     @staticmethod
-    def construct_row(datasethelper, dataset, maintainer, orgadmins):
-        url = datasethelper.get_dataset_url(dataset)
+    def construct_row(
+        hdxhelper: HDXHelper,
+        dataset: Dict,
+        maintainer: Dict[str, str],
+        orgadmins: List[Dict[str, str]],
+    ) -> Dict[str, str]:
+        """Construct a Google spreadsheet dataset row from dataset, maintainer and
+        organisation administrators.
+
+        Args:
+            hdxhelper (HDXHelper): HDX helper object
+            dataset (Dict): Dataset to examine
+            maintainer (Tuple[str, str]): Maintainer information
+            orgadmins (List[Tuple[str, str]]): List of organisation administrator info
+
+        Returns:
+            Dict[str, str]: Spreadsheet row
+        """
+        url = hdxhelper.get_dataset_url(dataset)
         title = dataset["title"]
         org_title = dataset["organization_title"]
         if maintainer:
-            maintainer_name, maintainer_email = maintainer
+            maintainer_name = maintainer["name"]
+            maintainer_email = maintainer["email"]
         else:
             maintainer_name, maintainer_email = "", ""
-        orgadmin_names = ",".join([x[0] for x in orgadmins])
-        orgadmin_emails = ",".join([x[1] for x in orgadmins])
+        orgadmin_names = ",".join([x["name"] for x in orgadmins])
+        orgadmin_emails = ",".join([x["email"] for x in orgadmins])
         update_freq = dataset["update_frequency"]
         latest_of_modifieds = dataset["latest_of_modifieds"].isoformat()
-        # URL	Title	Organisation	Maintainer	Maintainer Email	Org Admins	Org Admin Emails
-        # Update Frequency	Latest of Modifieds
         row = {
             "URL": url,
             "Title": title,
