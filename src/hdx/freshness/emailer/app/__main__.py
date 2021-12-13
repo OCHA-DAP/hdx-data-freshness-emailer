@@ -11,7 +11,6 @@ from hdx.database import Database
 from hdx.facades.keyword_arguments import facade
 from hdx.utilities.dictandlist import args_to_dict
 from hdx.utilities.easy_logging import setup_logging
-from hdx.utilities.encoding import base64_to_str
 from hdx.utilities.path import script_dir_plus_file
 
 from hdx.freshness.emailer.app import __version__

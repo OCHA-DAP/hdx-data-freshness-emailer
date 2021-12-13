@@ -3,7 +3,7 @@
 import json
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import gspread
 from hdx.api.configuration import Configuration
@@ -374,8 +374,8 @@ class Sheet:
         Args:
             hdxhelper (HDXHelper): HDX helper object
             dataset (Dict): Dataset to examine
-            maintainer (Tuple[str, str]): Maintainer information
-            orgadmins (List[Tuple[str, str]]): List of organisation administrator info
+            maintainer (Dict[str, str]): Maintainer information
+            orgadmins (List[Dict[str, str]]): List of organisation administrator info
 
         Returns:
             Dict[str, str]: Spreadsheet row

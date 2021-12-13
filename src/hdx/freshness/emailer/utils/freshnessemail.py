@@ -6,9 +6,7 @@ import datetime
 import logging
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 
-from hdx.api.configuration import Configuration
 from hdx.utilities.dictandlist import dict_of_lists_add
-from hdx.utilities.encoding import base64_to_str
 
 if TYPE_CHECKING:
     from hdx.freshness.emailer.utils.hdxhelper import HDXHelper
