@@ -36,7 +36,9 @@ class DataFreshnessStatus:
         self.sheet = sheet
 
     def check_number_datasets(
-        self, now: datetime.datetime, send_failures: List[str] = list(),
+        self,
+        now: datetime.datetime,
+        send_failures: List[str],
     ) -> bool:
         """Check the number of datasets in HDX today compared to yesterday and alert for
         failures like no run date today, no datasets today or a sizable fall in

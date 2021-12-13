@@ -24,30 +24,19 @@ class Email:
 
     Args:
         now (datetime.datetime): Date to use for now
+        sysadmin_emails (List[str]): List of admins to email.
         send_emails (Optional[Callable]): Function to send emails. Defaults to None.
-        sysadmins_to_email (List[str]): List of admins to email. Defaults to None.
-        configuration (Optional[Configuration]): Configuration object. Defaults to None.
     """
 
     def __init__(
         self,
         now: datetime.datetime,
+        sysadmin_emails: List[str] = None,
         send_emails: Optional[Callable] = None,
-        sysadmins_to_email: List[str] = None,
-        configuration: Optional[Configuration] = None,
     ):
         self.now = now
         self.send_emails: Optional[Callable] = send_emails
-        if sysadmins_to_email is None:
-            if configuration is None:
-                raise ValueError(
-                    "Either sysadmins_to_email or configuration must be specified!"
-                )
-            self.sysadmins_to_email = configuration["sysadmins_to_email"]
-            for i, email in enumerate(self.sysadmins_to_email):
-                self.sysadmins_to_email[i] = base64_to_str(email)
-        else:
-            self.sysadmins_to_email = sysadmins_to_email
+        self.sysadmin_emails = sysadmin_emails
 
     def send(
         self,
@@ -207,9 +196,9 @@ class Email:
         """
         if recipients is None:
             if dutyofficer:
-                return [dutyofficer["email"]], self.sysadmins_to_email
+                return [dutyofficer["email"]], self.sysadmin_emails
             else:
-                return self.sysadmins_to_email, None
+                return self.sysadmin_emails, None
         else:
             if recipients_in_cc:
                 if dutyofficer:
@@ -544,7 +533,7 @@ class Email:
         summary_startmsg,
         sheet: Sheet,
         sheetname: str,
-        sysadmins=None,
+        sysadmins: Optional[List[str]] = None,
     ) -> None:
         """Email users and send a summary to HDX system administrators
 
@@ -552,8 +541,16 @@ class Email:
             hdxhelper (HDXHelper): HDX helper object
             include_datasetdate (bool): Whether to include dataset date in output
             datasets (List[Dict]): List of datasets
+            nodatasetsmsg (str): Message for log when there are no datasets
+            startmsg (str): Text for start of email to users
+            endmsg (str): Additional string to add to message end
+            recipients (Optional[List[str]]): Recipient emails
+            subject (str): Subject of email to users
+            summary_subject (str): Subject of summary email to admins
+            summary_startmsg (str): Text for start of summary email to admins
             sheet (Sheet): Sheet object
             sheetname (str): Name of sheet
+            sysadmins (Optional[List[str]]): HDX sysadmin emails. Defaults to None.
 
         Returns:
             None
@@ -603,19 +600,20 @@ class Email:
     def prepare_admin_emails(
         hdxhelper: HDXHelper,
         datasets: List[Dict],
-        startmsg,
+        startmsg: str,
         sheet: Sheet,
         sheetname: str,
-        dutyofficer,
+        dutyofficer: Dict[str, str],
     ):
         """Prepare emails to HDX admins
 
         Args:
             hdxhelper (HDXHelper): HDX helper object
-            include_datasetdate (bool): Whether to include dataset date in output
             datasets (List[Dict]): List of datasets
+            startmsg (str): Text for start of email to admins
             sheet (Sheet): Sheet object
             sheetname (str): Name of sheet
+            dutyofficer (Dict[str, str]): Duty officer information
 
         Returns:
             None
@@ -655,17 +653,22 @@ class Email:
         sheet: Sheet,
         sheetname: str,
         recipients=None,
-        dutyofficer=None,
-        recipients_in_cc=False,
+        dutyofficer: Optional[Dict[str, str]] = None,
+        recipients_in_cc: bool = False,
     ):
         """Send summary of emails sent to users to HDX admins
 
         Args:
             hdxhelper (HDXHelper): HDX helper object
-            include_datasetdate (bool): Whether to include dataset date in output
             datasets (List[Dict]): List of datasets
+            nodatasetsmsg (str): Message for log when there are no datasets
+            startmsg (str): Text for start of email to users
+            endmsg (str): Additional string to add to message end
             sheet (Sheet): Sheet object
             sheetname (str): Name of sheet
+            recipients (Optional[List[str]]): Recipient emails. Defaults to None.
+            dutyofficer (Optional[Dict[str, str]]): Duty officer. Defaults to None.
+            recipients_in_cc (bool): Put recipients in cc not to. Defaults to False.
 
         Returns:
             None

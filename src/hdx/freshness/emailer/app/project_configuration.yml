@@ -1,10 +1,4 @@
 # Collector specific configuration
-failure_emails:
-  - "bWNhcmFuc0B5YWhvby5jby51aw=="
-  - "dGVvZG9yZXNjdS5zZXJiYW5AZ21haWwuY29t"
-sysadmins_to_email:
-  - "aGR4QHVuLm9yZw=="
-  - "bWNhcmFuc0B5YWhvby5jby51aw=="
 dutyofficers_url: "https://docs.google.com/spreadsheets/d/1PLWmVbVV-WUaYM1K_bjPQDQgE_3Q2qNCf-CLM_SHdvI/edit"
 datagrids_url: "https://docs.google.com/spreadsheets/d/1YmHrIbtfum5GOUaQpEcxA-PRHjHaT3JlFs9lsBDtVok/edit"
 prod_issues_spreadsheet_url: "https://docs.google.com/spreadsheets/d/10usac8agIhH1r-ZHXNxv2eqq_Z5YzfhSlMJhJOj1hdI/edit"

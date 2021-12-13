@@ -122,7 +122,10 @@ class HDXHelper:
         if maintainer is not None:
             users_to_email.append(maintainer)
             maintainer_name = self.get_user_name(maintainer)
-            maintainer = {"name": maintainer_name, "email": maintainer["email"]}
+            maintainer = {
+                "name": maintainer_name,
+                "email": maintainer["email"],
+            }
         orgadmins = list()
         for orgadmin in self.get_org_admins(dataset):
             if maintainer is None:

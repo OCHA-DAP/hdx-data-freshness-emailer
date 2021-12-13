@@ -698,18 +698,11 @@ class TestDataFreshnessStatus:
         site_url = "http://lala"
         now = parser.parse("2017-02-03 19:07:30.333492")
         sheet = Sheet(now)
-        with pytest.raises(ValueError):
-            Email(
-                now,
-                send_emails=self.email_users,
-                sysadmins_to_email=None,
-                configuration=None,
-            )
-        sysadmins_to_email = ["blah3@blah.com", "blah4@blah.com"]
+        sysadmin_emails = ["blah3@blah.com", "blah4@blah.com"]
         email = Email(
             now,
+            sysadmin_emails=sysadmin_emails,
             send_emails=self.email_users,
-            sysadmins_to_email=sysadmins_to_email,
         )
         with Database(**database_broken) as session:
             hdxhelper = HDXHelper(
@@ -1221,13 +1214,13 @@ class TestDataFreshnessStatus:
         self, configuration, database_status, users, organizations
     ):
         site_url = "http://lala"
-        sysadmins_to_email = ["blah2@blah.com", "blah4@blah.com"]
+        sysadmin_emails = ["blah2@blah.com", "blah4@blah.com"]
         now = parser.parse("2017-02-02 19:07:30.333492")
         sheet = Sheet(now)
         email = Email(
             now,
+            sysadmin_emails=sysadmin_emails,
             send_emails=self.email_users,
-            sysadmins_to_email=sysadmins_to_email,
         )
         with Database(**database_status) as session:
             hdxhelper = HDXHelper(
@@ -1247,7 +1240,7 @@ class TestDataFreshnessStatus:
             sheet.dutyofficer = {"name": "Sharon", "email": "sharon@lala.org"}
 
             TestDataFreshnessStatus.email_users_result = list()
-            freshness.check_number_datasets(now)
+            freshness.check_number_datasets(now, send_failures=list())
             assert TestDataFreshnessStatus.email_users_result == [
                 (
                     ["sharon@lala.org"],
@@ -1458,14 +1451,13 @@ class TestDataFreshnessStatus:
         self, configuration, database_maintainer, users, organizations
     ):
         site_url = "http://lala"
-        sysadmins_to_email = ["blah2@blah.com", "blah4@blah.com"]
+        sysadmin_emails = ["blah2@blah.com", "blah4@blah.com"]
         now = parser.parse("2017-02-02 19:07:30.333492")
         sheet = Sheet(now)
         email = Email(
             now,
+            sysadmin_emails=sysadmin_emails,
             send_emails=self.email_users,
-            sysadmins_to_email=sysadmins_to_email,
-            configuration=configuration,
         )
         with Database(**database_maintainer) as session:
             hdxhelper = HDXHelper(
@@ -1721,12 +1713,13 @@ class TestDataFreshnessStatus:
     def test_freshnessfailure(
         self, configuration, database_failure, users, organizations
     ):
-        site_url = None
+        site_url = ""
         TestDataFreshnessStatus.email_users_result = list()
         now = parser.parse("2017-02-03 19:07:30.333492")
         sheet = Sheet(now)
         email = Email(
-            now, send_emails=self.email_users, configuration=configuration
+            now,
+            send_emails=self.email_users,
         )
         with Database(**database_failure) as session:
             hdxhelper = HDXHelper(
@@ -1836,14 +1829,13 @@ class TestDataFreshnessStatus:
         self, configuration, database_noresources, users, organizations
     ):
         site_url = "http://lala"
-        sysadmins_to_email = ["blah2@blah.com", "blah4@blah.com"]
+        sysadmin_emails = ["blah2@blah.com", "blah4@blah.com"]
         now = parser.parse("2017-02-03 19:07:30.333492")
         sheet = Sheet(now)
         email = Email(
             now,
+            sysadmin_emails=sysadmin_emails,
             send_emails=self.email_users,
-            sysadmins_to_email=sysadmins_to_email,
-            configuration=configuration,
         )
         with Database(**database_noresources) as session:
             hdxhelper = HDXHelper(
@@ -1929,10 +1921,10 @@ class TestDataFreshnessStatus:
 
     # def test_dataset_date(self, configuration, database_datasets_modified_yesterday, users, organizations):
     #     site_url = 'http://lala'
-    #     sysadmins_to_email = ['blah3@blah.com']
+    #     sysadmin_emails = ['blah3@blah.com']
     #     now = parser.parse('2017-02-02 19:07:30.333492')
     #     sheet = Sheet(now)
-    #     email = Email(now, send_emails=self.email_users, sysadmins_to_email=sysadmins_to_email)
+    #     email = Email(now, send_emails=self.email_users, sysadmin_emails=sysadmin_emails)
     #     with Database(**database_datasets_modified_yesterday) as session:
     #         hdxhelper = HDXHelper(site_url=site_url, users=users, organizations=organizations)
     #         databasequeries = DatabaseQueries(session=session, now=now, hdxhelper=hdxhelper)
@@ -1988,7 +1980,7 @@ class TestDataFreshnessStatus:
         organizations,
     ):
         site_url = "http://lala"
-        sysadmins_to_email = ["blah3@blah.com"]
+        sysadmin_emails = ["blah3@blah.com"]
         now = parser.parse("2017-02-02 19:07:30.333492")
         sheet = Sheet(now)
         error = sheet.setup_gsheet(
@@ -1999,9 +1991,8 @@ class TestDataFreshnessStatus:
         assert error is None
         email = Email(
             now,
+            sysadmin_emails=sysadmin_emails,
             send_emails=self.email_users,
-            sysadmins_to_email=sysadmins_to_email,
-            configuration=configuration,
         )
         with Database(**database_datasets_modified_yesterday) as session:
             hdxhelper = HDXHelper(

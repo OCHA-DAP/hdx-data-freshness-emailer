@@ -28,9 +28,11 @@ logger = logging.getLogger(__name__)
 def main(
     db_url: Optional[str] = None,
     db_params: Optional[str] = None,
-    email_server: Optional[str] = None,
     gsheet_auth: Optional[str] = None,
-    email_test: bool = False,
+    email_server: Optional[str] = None,
+    failure_emails: Optional[str] = None,
+    sysadmin_emails: Optional[str] = None,
+    email_test: Optional[str] = None,
     spreadsheet_test: bool = False,
     no_spreadsheet: bool = False,
     **ignore,
@@ -47,12 +49,19 @@ def main(
     "token_uri": "https://oauth2.googleapis.com/token",
     "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",...}
 
+    failure_emails is a list of email addresses for the people who should be emailed in
+    the event of a freshness failure. sysadmin_emails is a list of email addresses of
+    HDX system administrators who are emailed with summaries of maintainers contacted,
+    datasets that have become delinquent, invalid maintainers and org admins etc.
+
     Args:
         db_url (Optional[str]): Database connection string. Defaults to None.
         db_params (Optional[str]): Database connection parameters. Defaults to None.
-        email_server (Optional[str]): Email server to use. Defaults to None.
         gsheet_auth (Optional[str]): Google Sheets authorisation. Defaults to None.
-        email_test (bool): Only email test users. Defaults to False.
+        email_server (Optional[str]): Email server to use. Defaults to None.
+        failure_emails (Optional[str]): Email addresses. Defaults to None.
+        sysadmin_emails (Optional[str]): Email addresses. Defaults to None.
+        email_test (Optional[str]): Only email test users. Defaults to None.
         spreadsheet_test (bool): Output to test Google spreadsheet. Defaults to False.
         no_spreadsheet (bool): Don't output to Google spreadsheet. Defaults to False.
 
@@ -85,29 +94,34 @@ def main(
         params = Database.get_params_from_sqlalchemy_url(db_url)
     else:
         params = {"driver": "sqlite", "database": "freshness.db"}
+    if sysadmin_emails:
+        sysadmin_emails = sysadmin_emails.split(",")
     logger.info(f"> Database parameters: {params}")
     with Database(**params) as session:
         now = datetime.datetime.utcnow()
         email = Email(
-            now, send_emails=send_emails, configuration=configuration
+            now,
+            sysadmin_emails=sysadmin_emails,
+            send_emails=send_emails,
         )
         sheet = Sheet(now)
 
-        failure_list = list()
-        for address in configuration["failure_emails"]:
-            failure_list.append(base64_to_str(address))
+        if failure_emails:
+            failure_emails = failure_emails.split(",")
+        else:
+            failure_emails = list()
         error = sheet.setup_gsheet(
             configuration, gsheet_auth, spreadsheet_test, no_spreadsheet
         )
         if error:
             email.htmlify_send(
-                failure_list, "Error opening Google sheets!", error
+                failure_emails, "Error opening Google sheets!", error
             )
         else:
             error = sheet.setup_input()
             if error:
                 email.htmlify_send(
-                    failure_list,
+                    failure_emails,
                     "Error reading DP duty roster or data grid curation sheet!",
                     error,
                 )
@@ -125,10 +139,10 @@ def main(
                 )
                 # Check number of datasets hasn't dropped
                 if not freshness.check_number_datasets(
-                    now, send_failures=failure_list
+                    now, send_failures=failure_emails
                 ):
-                    test_users = [failure_list[0]]
                     if email_test:  # send just to test users
+                        test_users = [failure_emails[0]]
                         freshness.process_broken(recipients=test_users)
                         freshness.process_overdue(
                             recipients=test_users, sysadmins=test_users
@@ -184,20 +198,31 @@ if __name__ == "__main__":
         help="Database connection parameters. Overrides --db_url.",
     )
     parser.add_argument(
-        "-es", "--email_server", default=None, help="Email server to use"
-    )
-    parser.add_argument(
         "-gs",
         "--gsheet_auth",
         default=None,
         help="Credentials for accessing Google Sheets",
     )
     parser.add_argument(
+        "-es", "--email_server", default=None, help="Email server to use"
+    )
+    parser.add_argument(
+        "-fe",
+        "--failure_emails",
+        default=None,
+        help="People to alert on freshness failure",
+    )
+    parser.add_argument(
+        "-se",
+        "--sysadmin_emails",
+        default=None,
+        help="HDX system administrator emails",
+    )
+    parser.add_argument(
         "-et",
         "--email_test",
-        default=False,
-        action="store_true",
-        help="Email only test users for testing purposes",
+        default=None,
+        help="Email only these test users for testing purposes",
     )
     parser.add_argument(
         "-st",
@@ -233,12 +258,18 @@ if __name__ == "__main__":
         db_url = getenv("DB_URL")
     if db_url and "://" not in db_url:
         db_url = f"postgresql://{db_url}"
-    email_server = args.email_server
-    if email_server is None:
-        email_server = getenv("EMAIL_SERVER")
     gsheet_auth = args.gsheet_auth
     if gsheet_auth is None:
         gsheet_auth = getenv("GSHEET_AUTH")
+    email_server = args.email_server
+    if email_server is None:
+        email_server = getenv("EMAIL_SERVER")
+    failure_emails = args.failure_emails
+    if failure_emails is None:
+        failure_emails = getenv("FAILURE_EMAILS")
+    sysadmin_emails = args.sysadmin_emails
+    if sysadmin_emails is None:
+        sysadmin_emails = getenv("SYSADMIN_EMAILS")
     project_config_yaml = script_dir_plus_file(
         "project_configuration.yml", main
     )
@@ -251,8 +282,10 @@ if __name__ == "__main__":
         project_config_yaml=project_config_yaml,
         db_url=db_url,
         db_params=args.db_params,
-        email_server=email_server,
         gsheet_auth=gsheet_auth,
+        email_server=email_server,
+        failure_emails=failure_emails,
+        sysadmin_emails=sysadmin_emails,
         email_test=args.email_test,
         spreadsheet_test=args.spreadsheet_test,
         no_spreadsheet=args.no_spreadsheet,

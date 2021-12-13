@@ -415,40 +415,53 @@ class DatabaseQueries:
         datasets = self.get_datasets_modified_yesterday()
         dataset_ids = list()
         for dataset_id, dataset in datasets.items():
-            if '*' in dataset['dataset_date']:
+            if "*" in dataset["dataset_date"]:
                 continue
-            if dataset['update_frequency'] <= 0:
+            if dataset["update_frequency"] <= 0:
                 continue
             dataset_ids.append(dataset_id)
         columns = [DBDataset.id, DBDataset.dataset_date]
-        filters = [DBDataset.id.in_(dataset_ids),
-                   DBDataset.run_number == self.run_numbers[1][0]]
+        filters = [
+            DBDataset.id.in_(dataset_ids),
+            DBDataset.run_number == self.run_numbers[1][0],
+        ]
         query = self.session.query(*columns).filter(and_(*filters))
         norows = 0
         unchanged_dsdates_datasets = list()
         for norows, result in enumerate(query):
             dataset_id = result.id
-            if result.dataset_date == datasets[dataset_id]['dataset_date']:
+            if result.dataset_date == datasets[dataset_id]["dataset_date"]:
                 unchanged_dsdates_datasets.append(dataset_id)
-        logger.info(f'SQL query returned {norows} rows.')
+        logger.info(f"SQL query returned {norows} rows.")
         DBDataset2 = aliased(DBDataset)
         dsdates_not_changed_within_uf = list()
         for dataset_id in unchanged_dsdates_datasets:
-            filters = [DBDataset.id == dataset_id, DBDataset2.id == DBDataset.id,
-                       DBDataset2.run_number == DBDataset.run_number - 1,
-                       DBDataset.dataset_date != DBDataset2.dataset_date
-                       ]
-            result = self.session.query(DBDataset.run_number).filter(and_(*filters)).order_by(
-            DBDataset.run_number.desc()).first()
+            filters = [
+                DBDataset.id == dataset_id,
+                DBDataset2.id == DBDataset.id,
+                DBDataset2.run_number == DBDataset.run_number - 1,
+                DBDataset.dataset_date != DBDataset2.dataset_date,
+            ]
+            result = (
+                self.session.query(DBDataset.run_number)
+                .filter(and_(*filters))
+                .order_by(DBDataset.run_number.desc())
+                .first()
+            )
             delta = self.now - self.run_number_to_run_date[result.run_number]
-            if delta > datetime.timedelta(days=datasets[dataset_id]['update_frequency']):
+            if delta > datetime.timedelta(
+                days=datasets[dataset_id]["update_frequency"]
+            ):
                 dsdates_not_changed_within_uf.append(dataset_id)
         datasets_dataset_date = list()
         for dataset_id in dsdates_not_changed_within_uf:
             columns = [DBDataset.run_number, DBDataset.update_frequency]
-            filters = [DBDataset.id == dataset_id, DBDataset2.id == DBDataset.id,
-                       DBDataset2.run_number == DBDataset.run_number - 1,
-                       DBDataset.what_updated != 'nothing']
+            filters = [
+                DBDataset.id == dataset_id,
+                DBDataset2.id == DBDataset.id,
+                DBDataset2.run_number == DBDataset.run_number - 1,
+                DBDataset.what_updated != "nothing",
+            ]
             query = self.session.query(*columns).filter(and_(*filters))
             prevdate = self.now
             number_of_updates = 0
