@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 from hdx.utilities.dictandlist import dict_of_lists_add
 
 if TYPE_CHECKING:
-    from hdx.freshness.emailer.utils.hdxhelper import HDXHelper
-    from hdx.freshness.emailer.utils.sheet import Sheet
+    from .hdxhelper import HDXHelper
+    from .sheet import Sheet
 
 logger = logging.getLogger(__name__)
 

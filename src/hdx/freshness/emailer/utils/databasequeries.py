@@ -14,7 +14,7 @@ from hdx.freshness.database.dbrun import DBRun
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.elements import and_
 
-from hdx.freshness.emailer.utils.hdxhelper import HDXHelper
+from .hdxhelper import HDXHelper
 
 logger = logging.getLogger(__name__)
 

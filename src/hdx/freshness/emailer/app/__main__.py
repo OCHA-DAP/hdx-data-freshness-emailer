@@ -13,12 +13,12 @@ from hdx.utilities.dictandlist import args_to_dict
 from hdx.utilities.easy_logging import setup_logging
 from hdx.utilities.path import script_dir_plus_file
 
-from hdx.freshness.emailer.app import __version__
-from hdx.freshness.emailer.app.datafreshnessstatus import DataFreshnessStatus
-from hdx.freshness.emailer.utils.databasequeries import DatabaseQueries
-from hdx.freshness.emailer.utils.freshnessemail import Email
-from hdx.freshness.emailer.utils.hdxhelper import HDXHelper
-from hdx.freshness.emailer.utils.sheet import Sheet
+from ..utils.databasequeries import DatabaseQueries
+from ..utils.freshnessemail import Email
+from ..utils.hdxhelper import HDXHelper
+from ..utils.sheet import Sheet
+from . import __version__
+from .datafreshnessstatus import DataFreshnessStatus
 
 setup_logging()
 logger = logging.getLogger(__name__)

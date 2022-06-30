@@ -1,6 +1,7 @@
-"""Outputs freshness statuses for datasets by email and to a Google sheet. Also
-looks for datasets with broken or no resources and/or invalid maintainers,
-organisations with invalid administrators and candidates for the data grid.
+"""Outputs freshness statuses for datasets by email and to a Google sheet. Reports 
+overdue and delinquent datasets. Also reports datasets with broken or no resources 
+and/or invalid maintainers, organisations with invalid administrators and candidates for 
+the data grid.
 """
 import datetime
 import logging
@@ -9,15 +10,15 @@ from typing import Dict, List, Optional, Type
 from hdx.data.dataset import Dataset
 from hdx.utilities.dictandlist import dict_of_lists_add
 
-from hdx.freshness.emailer.utils.databasequeries import DatabaseQueries
-from hdx.freshness.emailer.utils.freshnessemail import Email
-from hdx.freshness.emailer.utils.sheet import Sheet
+from ..utils.databasequeries import DatabaseQueries
+from ..utils.freshnessemail import Email
+from ..utils.sheet import Sheet
 
 logger = logging.getLogger(__name__)
 
 
 class DataFreshnessStatus:
-    """Data freshness emailer main class
+    """Data freshness emailer main class.
 
     Args:
         databasequeries (DatabaseQueries): DatabaseQueries object
