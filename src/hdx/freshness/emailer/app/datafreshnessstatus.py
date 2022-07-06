@@ -1,6 +1,6 @@
-"""Outputs freshness statuses for datasets by email and to a Google sheet. Reports 
-overdue and delinquent datasets. Also reports datasets with broken or no resources 
-and/or invalid maintainers, organisations with invalid administrators and candidates for 
+"""Outputs freshness statuses for datasets by email and to a Google sheet. Reports
+overdue and delinquent datasets. Also reports datasets with broken or no resources
+and/or invalid maintainers, organisations with invalid administrators and candidates for
 the data grid.
 """
 import datetime
