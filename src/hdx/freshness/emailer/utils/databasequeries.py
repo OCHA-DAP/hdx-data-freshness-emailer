@@ -11,6 +11,7 @@ from hdx.freshness.database.dbinfodataset import DBInfoDataset
 from hdx.freshness.database.dborganization import DBOrganization
 from hdx.freshness.database.dbresource import DBResource
 from hdx.freshness.database.dbrun import DBRun
+from hdx.freshness.utils.retrieval import Retrieval
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.elements import and_
 
@@ -141,14 +142,13 @@ class DatabaseQueries:
             row = dict()
             for i, column in enumerate(columns):
                 row[column.key] = result[i]
-            regex = ".Client(.*)Error "
             error = row["error"]
-            if error == "File too large to hash!":
+            if error == Retrieval.toolargeerror:
                 continue
-            if "does not match HDX format" in error:
+            if Retrieval.notmatcherror in error:
                 error_msg = self.format_mismatch_msg
             else:
-                match_error = re.search(regex, error)
+                match_error = re.search(Retrieval.clienterror_regex, error)
                 if match_error:
                     error_msg = match_error.group(0)[1:-1]
                 else:
