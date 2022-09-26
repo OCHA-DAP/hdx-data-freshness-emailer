@@ -1,4 +1,4 @@
-FROM mcarans/hdx-data-freshness
+FROM public.ecr.aws/unocha/hdx-data-freshness:main
 
 WORKDIR /srv
 
