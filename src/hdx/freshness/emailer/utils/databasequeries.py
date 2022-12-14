@@ -1,9 +1,9 @@
 """Functions that perform queries of the freshness database
 """
-import datetime
 import logging
 import re
 from collections import OrderedDict
+from datetime import datetime
 from typing import Dict, List, Tuple
 
 from hdx.freshness.database.dbdataset import DBDataset
@@ -25,16 +25,14 @@ class DatabaseQueries:
 
     Args:
         session (sqlalchemy.orm.Session): Session to use for queries
-        now (datetime.datetime): Date to use for now
+        now (datetime): Date to use for now
         hdxhelper (HDXHelper): HDX helper object
     """
 
     format_mismatch_msg = "Format Mismatch"
     other_error_msg = "Server Error (may be temporary)"
 
-    def __init__(
-        self, session: Session, now: datetime.datetime, hdxhelper: HDXHelper
-    ):
+    def __init__(self, session: Session, now: datetime, hdxhelper: HDXHelper):
         self.session = session
         self.now = now
         self.hdxhelper = hdxhelper
@@ -56,13 +54,13 @@ class DatabaseQueries:
 
     def get_cur_prev_runs(
         self,
-    ) -> Tuple[Dict[int, datetime.datetime], List[Tuple]]:
+    ) -> Tuple[Dict[int, datetime], List[Tuple]]:
         """Get run numbers in two forms in a tuple. the first form is a dictionary
         from run number to run date. The second form is list of tuples of the form
         (run number, run date)
 
         Returns:
-             Tuple[Dict[int, datetime.datetime], List[Tuple]]:
+             Tuple[Dict[int, datetime], List[Tuple]]:
              (run number to run date, list of run numbers an run dates)
         """
         list_run_numbers = (

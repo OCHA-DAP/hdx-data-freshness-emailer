@@ -6,8 +6,8 @@ from os import getenv
 from os.path import join
 
 import pytest
-from dateutil import parser
 from hdx.api.configuration import Configuration
+from hdx.utilities.dateparse import parse_date
 
 from hdx.freshness.emailer.utils.sheet import Sheet
 
@@ -38,7 +38,9 @@ class TestSheet:
         )
 
     def test_setup_input(self, configuration):
-        now = parser.parse("2019-10-24 19:07:30.333492")
+        now = parse_date(
+            "2019-10-24 19:07:30.333492", include_microseconds=True
+        )
         sheet = Sheet(now)
         sheet.setup_gsheet(configuration, getenv("GSHEET_AUTH"), True, False)
         result = sheet.setup_input()
@@ -143,7 +145,9 @@ class TestSheet:
         }
 
     def test_setup_input_multiple(self, configuration_multiple):
-        now = parser.parse("2019-10-24 19:07:30.333492")
+        now = parse_date(
+            "2019-10-24 19:07:30.333492", include_microseconds=True
+        )
         sheet = Sheet(now)
         sheet.setup_gsheet(
             configuration_multiple, getenv("GSHEET_AUTH"), True, False

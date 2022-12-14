@@ -3,8 +3,8 @@ overdue and delinquent datasets. Also reports datasets with broken or no resourc
 and/or invalid maintainers, organisations with invalid administrators and candidates for
 the data grid.
 """
-import datetime
 import logging
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Type
 
 from hdx.data.dataset import Dataset
@@ -38,7 +38,7 @@ class DataFreshnessStatus:
 
     def check_number_datasets(
         self,
-        now: datetime.datetime,
+        now: datetime,
         send_failures: List[str],
     ) -> bool:
         """Check the number of datasets in HDX today compared to yesterday and alert for
@@ -47,7 +47,7 @@ class DataFreshnessStatus:
 
 
         Args:
-            now (datetime.datetime): Date to use for now
+            now (datetime): Date to use for now
             send_failures (List[str]): List of email addresses to send mails to
 
         Returns:
@@ -62,7 +62,7 @@ class DataFreshnessStatus:
             subject = "FAILURE: Future run date!"
             msg = "Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n"
             to = send_failures
-        elif now - run_date > datetime.timedelta(days=1):
+        elif now - run_date > timedelta(days=1):
             subject = "FAILURE: No run today!"
             msg = "Dear system administrator,\n\nIt is highly probable that data freshness has failed!\n"
             to = send_failures

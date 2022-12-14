@@ -1,6 +1,6 @@
 """Helper functions for HDX datasets, users and organisations
 """
-import datetime
+from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from hdx.data.dataset import Dataset
@@ -57,14 +57,14 @@ class HDXHelper:
     @staticmethod
     def get_dataset_dates(
         dataset: Dict,
-    ) -> Tuple[Optional[datetime.datetime], Optional[datetime.datetime]]:
+    ) -> Tuple[Optional[datetime], Optional[datetime]]:
         """Return a tuple containing dataset start and end date or (None, None)
 
         Args:
             dataset (Dict): Dataset to examine
 
         Returns:
-            Tuple[Optional[datetime.datetime], Optional[datetime.datetime]]:
+            Tuple[Optional[datetime], Optional[datetime]]:
             Dataset start and end date or (None, None)
         """
         dataset_date = dataset["dataset_date"]

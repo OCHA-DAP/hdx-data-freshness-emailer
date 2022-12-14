@@ -2,8 +2,8 @@
 """
 from __future__ import annotations
 
-import datetime
 import logging
+from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Union
 
 from hdx.utilities.dictandlist import dict_of_lists_add
@@ -21,14 +21,14 @@ class Email:
     specified.
 
     Args:
-        now (datetime.datetime): Date to use for now
+        now (datetime): Date to use for now
         sysadmin_emails (List[str]): List of admins to email.
         send_emails (Optional[Callable]): Function to send emails. Defaults to None.
     """
 
     def __init__(
         self,
-        now: datetime.datetime,
+        now: datetime,
         sysadmin_emails: List[str] = None,
         send_emails: Optional[Callable] = None,
     ):

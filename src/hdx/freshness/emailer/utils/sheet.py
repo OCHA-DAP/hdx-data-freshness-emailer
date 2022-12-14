@@ -23,12 +23,12 @@ class Sheet:
     """A class that provides functions to interact with a Google spreadsheet
 
     Args:
-        now (datetime.datetime): Date to use for now
+        now (datetime): Date to use for now
     """
 
     row_limit = 1000
 
-    def __init__(self, now):
+    def __init__(self, now: datetime):
         self.now = now
         self.dutyofficers_spreadsheet = None
         self.datagrids_spreadsheet = None
@@ -184,7 +184,7 @@ class Sheet:
                 reverse=True,
             ):
                 startdate = row[startdate_ind].strip()
-                if datetime.strptime(startdate, "%Y-%m-%d") <= self.now:
+                if parse_date(startdate) <= self.now:
                     dutyofficer_name = row[contactname_ind]
                     if dutyofficer_name:
                         dutyofficer_name = dutyofficer_name.strip()
@@ -292,7 +292,7 @@ class Sheet:
                     Dataset.transform_update_frequency(updatefreq)
                 )
         updated_notimes = set()
-        now = self.now.isoformat()
+        now = self.now.replace(tzinfo=None).isoformat()
         for row in rows:
             url = row["URL"]
             new_row = [row.get(key, "") for key in keys]
@@ -391,7 +391,9 @@ class Sheet:
         orgadmin_names = ",".join([x["name"] for x in orgadmins])
         orgadmin_emails = ",".join([x["email"] for x in orgadmins])
         update_freq = dataset["update_frequency"]
-        latest_of_modifieds = dataset["latest_of_modifieds"].isoformat()
+        latest_of_modifieds = (
+            dataset["latest_of_modifieds"].replace(tzinfo=None).isoformat()
+        )
         row = {
             "URL": url,
             "Title": title,

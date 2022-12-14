@@ -1,7 +1,6 @@
 """Entry point to start data freshness emailer
 """
 import argparse
-import datetime
 import logging
 from os import getenv
 from typing import Optional
@@ -9,6 +8,7 @@ from typing import Optional
 from hdx.api.configuration import Configuration
 from hdx.database import Database
 from hdx.facades.keyword_arguments import facade
+from hdx.utilities.dateparse import now_utc
 from hdx.utilities.dictandlist import args_to_dict
 from hdx.utilities.easy_logging import setup_logging
 from hdx.utilities.path import script_dir_plus_file
@@ -97,7 +97,7 @@ def main(
         sysadmin_emails = sysadmin_emails.split(",")
     logger.info(f"> Database parameters: {params}")
     with Database(**params) as session:
-        now = datetime.datetime.utcnow()
+        now = now_utc()
         email = Email(
             now,
             sysadmin_emails=sysadmin_emails,

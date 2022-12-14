@@ -8,9 +8,9 @@ import shutil
 from os.path import join
 
 import pytest
-from dateutil import parser
 from hdx.data.dataset import Dataset
 from hdx.database import Database
+from hdx.utilities.dateparse import parse_date
 
 from hdx.freshness.emailer.app.datafreshnessstatus import DataFreshnessStatus
 from hdx.freshness.emailer.utils.databasequeries import DatabaseQueries
@@ -696,7 +696,9 @@ class TestDataFreshnessStatus:
         self, configuration, database_broken, users, organizations
     ):
         site_url = "http://lala"
-        now = parser.parse("2017-02-03 19:07:30.333492")
+        now = parse_date(
+            "2017-02-03 19:07:30.333492", include_microseconds=True
+        )
         sheet = Sheet(now)
         sysadmin_emails = ["blah3@blah.com", "blah4@blah.com"]
         email = Email(
@@ -1188,7 +1190,9 @@ class TestDataFreshnessStatus:
             freshness.process_broken()
             assert TestDataFreshnessStatus.cells_result == result[:6]
 
-            now = parser.parse("2017-01-31 19:07:30.333492")
+            now = parse_date(
+                "2017-01-31 19:07:30.333492", include_microseconds=True
+            )
             TestDataFreshnessStatus.email_users_result = list()
             TestDataFreshnessStatus.cells_result = None
             databasequeries = DatabaseQueries(
@@ -1215,7 +1219,9 @@ class TestDataFreshnessStatus:
     ):
         site_url = "http://lala"
         sysadmin_emails = ["blah2@blah.com", "blah4@blah.com"]
-        now = parser.parse("2017-02-02 19:07:30.333492")
+        now = parse_date(
+            "2017-02-02 19:07:30.333492", include_microseconds=True
+        )
         sheet = Sheet(now)
         email = Email(
             now,
@@ -1424,7 +1430,9 @@ class TestDataFreshnessStatus:
                 ),
             ]
 
-            now = parser.parse("2017-01-31 19:07:30.333492")
+            now = parse_date(
+                "2017-01-31 19:07:30.333492", include_microseconds=True
+            )
             databasequeries = DatabaseQueries(
                 session=session, now=now, hdxhelper=hdxhelper
             )
@@ -1452,7 +1460,9 @@ class TestDataFreshnessStatus:
     ):
         site_url = "http://lala"
         sysadmin_emails = ["blah2@blah.com", "blah4@blah.com"]
-        now = parser.parse("2017-02-02 19:07:30.333492")
+        now = parse_date(
+            "2017-02-02 19:07:30.333492", include_microseconds=True
+        )
         sheet = Sheet(now)
         email = Email(
             now,
@@ -1715,7 +1725,9 @@ class TestDataFreshnessStatus:
     ):
         site_url = ""
         TestDataFreshnessStatus.email_users_result = list()
-        now = parser.parse("2017-02-03 19:07:30.333492")
+        now = parse_date(
+            "2017-02-03 19:07:30.333492", include_microseconds=True
+        )
         sheet = Sheet(now)
         email = Email(
             now,
@@ -1747,7 +1759,9 @@ class TestDataFreshnessStatus:
                 )
             ]
             TestDataFreshnessStatus.email_users_result = list()
-            now = parser.parse("2017-02-02 19:07:30.333492")
+            now = parse_date(
+                "2017-02-02 19:07:30.333492", include_microseconds=True
+            )
             databasequeries = DatabaseQueries(
                 session=session, now=now, hdxhelper=hdxhelper
             )
@@ -1757,7 +1771,9 @@ class TestDataFreshnessStatus:
                 sheet=sheet,
             )
             freshness.check_number_datasets(
-                parser.parse("2017-02-01 19:07:30.333492"),
+                parse_date(
+                    "2017-02-01 19:07:30.333492", include_microseconds=True
+                ),
                 send_failures=["blah2@blah.com", "blah4@blah.com"],
             )
             assert TestDataFreshnessStatus.email_users_result == [
@@ -1771,7 +1787,9 @@ class TestDataFreshnessStatus:
                 )
             ]
             TestDataFreshnessStatus.email_users_result = list()
-            now = parser.parse("2017-02-04 19:07:30.333492")
+            now = parse_date(
+                "2017-02-04 19:07:30.333492", include_microseconds=True
+            )
             databasequeries = DatabaseQueries(
                 session=session, now=now, hdxhelper=hdxhelper
             )
@@ -1794,7 +1812,9 @@ class TestDataFreshnessStatus:
                 )
             ]
             TestDataFreshnessStatus.email_users_result = list()
-            now = parser.parse("2017-02-04 19:07:30.333492")
+            now = parse_date(
+                "2017-02-04 19:07:30.333492", include_microseconds=True
+            )
             # insert new run and dataset
             session.execute(
                 "INSERT INTO dbruns(run_number,run_date) VALUES (3,'2017-02-04 9:07:30.333492');"
@@ -1830,7 +1850,9 @@ class TestDataFreshnessStatus:
     ):
         site_url = "http://lala"
         sysadmin_emails = ["blah2@blah.com", "blah4@blah.com"]
-        now = parser.parse("2017-02-03 19:07:30.333492")
+        now = parse_date(
+            "2017-02-03 19:07:30.333492", include_microseconds=True
+        )
         sheet = Sheet(now)
         email = Email(
             now,
@@ -1922,7 +1944,7 @@ class TestDataFreshnessStatus:
     # def test_dataset_date(self, configuration, database_datasets_modified_yesterday, users, organizations):
     #     site_url = 'http://lala'
     #     sysadmin_emails = ['blah3@blah.com']
-    #     now = parser.parse('2017-02-02 19:07:30.333492')
+    #     now = parse_date('2017-02-02 19:07:30.333492', include_microseconds=True)
     #     sheet = Sheet(now)
     #     email = Email(now, send_emails=self.email_users, sysadmin_emails=sysadmin_emails)
     #     with Database(**database_datasets_modified_yesterday) as session:
@@ -1981,7 +2003,9 @@ class TestDataFreshnessStatus:
     ):
         site_url = "http://lala"
         sysadmin_emails = ["blah3@blah.com"]
-        now = parser.parse("2017-02-02 19:07:30.333492")
+        now = parse_date(
+            "2017-02-02 19:07:30.333492", include_microseconds=True
+        )
         sheet = Sheet(now)
         error = sheet.setup_gsheet(
             configuration, os.getenv("GSHEET_AUTH"), True, False
