@@ -161,9 +161,9 @@ def main(
                             recipients=test_users
                         )
                     else:
-                        freshness.process_broken()  # Check for broken resources
+                        # freshness.process_broken()  # Check for broken resources
                         freshness.process_overdue()  # Check for overdue datasets
-                        freshness.process_delinquent()  # Check for delinquent datasets
+                        # freshness.process_delinquent()  # Check for delinquent datasets
                         # Check for datasets with invalid maintainer and organisations
                         # with invalid administrators
                         freshness.process_maintainer_orgadmins()
