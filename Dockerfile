@@ -1,10 +1,7 @@
-FROM public.ecr.aws/unocha/hdx-data-freshness:1.8.9
+FROM public.ecr.aws/unocha/hdx-data-freshness:main
 
 WORKDIR /srv
 
-COPY . .
-
-RUN pip --no-cache-dir install -r docker-requirements.txt
-
+RUN pip --no-cache-dir install hdx-data-freshness-emailer
 
 CMD ["python3", "-m", "hdx.freshness.emailer.app"]
