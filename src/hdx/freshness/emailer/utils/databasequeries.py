@@ -3,7 +3,7 @@
 import logging
 import re
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
 from hdx.freshness.database.dbdataset import DBDataset
@@ -447,7 +447,7 @@ class DatabaseQueries:
                 .first()
             )
             delta = self.now - self.run_number_to_run_date[result.run_number]
-            if delta > datetime.timedelta(
+            if delta > timedelta(
                 days=datasets[dataset_id]["update_frequency"]
             ):
                 dsdates_not_changed_within_uf.append(dataset_id)
@@ -467,7 +467,7 @@ class DatabaseQueries:
             for number_of_updates, result in enumerate(query):
                 run_date = self.run_number_to_run_date[result.run_number]
                 delta = prevdate - run_date
-                if delta < datetime.timedelta(days=result.update_frequency):
+                if delta < timedelta(days=result.update_frequency):
                     number_of_updates_within_uf += 1
                 prevdate = run_date
             if number_of_updates_within_uf / number_of_updates < 0.8:
