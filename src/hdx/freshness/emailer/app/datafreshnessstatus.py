@@ -485,10 +485,12 @@ class DataFreshnessStatus:
             for category in datagrid:
                 if category in ["datagrid", "owner"]:
                     continue
-                runyesterday = self.databasequeries.run_numbers[1][
-                    1
-                ].isoformat()
-                runtoday = self.databasequeries.run_numbers[0][1].isoformat()
+                runyesterday = self.databasequeries.run_numbers[1][1]
+                runyesterday = runyesterday.replace(tzinfo=None)
+                runyesterday = runyesterday.isoformat()
+                runtoday = self.databasequeries.run_numbers[0][1]
+                runtoday = runtoday.replace(tzinfo=None)
+                runtoday = runtoday.isoformat()
                 query = f'metadata_created:[{runyesterday}Z TO {runtoday}Z] AND {datagrid["datagrid"]} AND ({datagrid[category]})'
                 datasetinfos = datasetclass.search_in_hdx(fq=query)
                 for datasetinfo in datasetinfos:

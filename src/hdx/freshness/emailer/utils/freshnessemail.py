@@ -61,14 +61,15 @@ class Email:
 
         if self.send_emails is not None:
             subject = f"{subject} ({self.now.strftime('%d/%m/%Y')})"
-            self.send_emails(
-                to,
-                subject,
-                text_body,
-                html_body=html_body,
-                cc=cc,
-                bcc=bcc,
-            )
+            logger.info(f"TO: {to}    CC: {cc}")
+            # self.send_emails(
+            #     to,
+            #     subject,
+            #     text_body,
+            #     html_body=html_body,
+            #     cc=cc,
+            #     bcc=bcc,
+            # )
         else:
             logger.warning("Not sending any email!")
 
