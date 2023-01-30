@@ -10,6 +10,8 @@ from os.path import join
 import pytest
 from hdx.data.dataset import Dataset
 from hdx.database import Database
+from hdx.freshness.database.dbdataset import DBDataset
+from hdx.freshness.database.dbrun import DBRun
 from hdx.utilities.dateparse import parse_date
 
 from hdx.freshness.emailer.app.datafreshnessstatus import DataFreshnessStatus
@@ -1816,12 +1818,28 @@ class TestDataFreshnessStatus:
                 "2017-02-04 19:07:30.333492", include_microseconds=True
             )
             # insert new run and dataset
-            session.execute(
-                "INSERT INTO dbruns(run_number,run_date) VALUES (3,'2017-02-04 9:07:30.333492');"
+            run_date = parse_date(
+                "2017-02-04 9:07:30.333492", include_microseconds=True
             )
-            session.execute(
-                "INSERT INTO dbdatasets(run_number,id,last_modified,metadata_modified,latest_of_modifieds,what_updated,last_resource_updated,last_resource_modified,error) VALUES (3,'lala','2017-02-04 9:07:30.333492','2017-02-04 9:07:30.333492','2017-02-04 9:07:30.333492','lala','lala','2017-02-04 9:07:30.333492',False);"
+            dbrun = DBRun(run_number=3, run_date=run_date)
+            session.add(dbrun)
+            dbdataset = DBDataset(
+                run_number=3,
+                id="lala",
+                dataset_date="",
+                update_frequency=0,
+                review_date=run_date,
+                last_modified=run_date,
+                updated_by_script=run_date,
+                metadata_modified=run_date,
+                latest_of_modifieds=run_date,
+                what_updated="lala",
+                last_resource_updated="lala",
+                last_resource_modified=run_date,
+                fresh=0,
+                error=False,
             )
+            session.add(dbdataset)
             databasequeries = DatabaseQueries(
                 session=session, now=now, hdxhelper=hdxhelper
             )
