@@ -407,12 +407,12 @@ class DataFreshnessStatus:
             recipients,
         )
 
-    def process_datasets_dataset_date(
+    def process_datasets_reference_period(
         self,
         recipients: Optional[List[str]] = None,
         sysadmins: Optional[List[str]] = None,
     ) -> None:
-        """Check for datasets that have a date of dataset field that needs updating,
+        """Check for datasets that have a reference period field that needs updating,
         update Google spreadsheet and email maintainers, sending a summary of emails
         sent to HDX system administrators.
 
@@ -424,17 +424,17 @@ class DataFreshnessStatus:
             None
         """
         logger.info(
-            "\n\n*** Checking for datasets where date of dataset has not been updated ***"
+            "\n\n*** Checking for datasets where reference period has not been updated ***"
         )
-        datasets = self.databasequeries.get_datasets_dataset_date()
+        datasets = self.databasequeries.get_datasets_reference_period()
         nodatasetsmsg = (
-            "No datasets with date of dataset needing update found."
+            "No datasets with reference period needing update found."
         )
-        startmsg = "Dear {},\n\nThe dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\n"
+        startmsg = "Dear {},\n\nThe dataset(s) listed below have a reference period that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\n"
         endmsg = ""
-        subject = "Check date of dataset for your datasets on HDX"
-        summary_subject = "All date of dataset emails"
-        summary_startmsg = "Dear {},\n\nBelow are the emails which have been sent today to maintainers whose datasets have a date of dataset that has not been updated. You may wish to follow up with them.\n\n"
+        subject = "Check reference period for your datasets on HDX"
+        summary_subject = "All reference period emails"
+        summary_startmsg = "Dear {},\n\nBelow are the emails which have been sent today to maintainers whose datasets have a reference period that has not been updated. You may wish to follow up with them.\n\n"
         sheetname = "DateofDatasets"
         self.email.email_users_send_summary(
             self.hdxhelper,

@@ -7,6 +7,7 @@ from typing import Optional
 
 from hdx.api.configuration import Configuration
 from hdx.database import Database
+from hdx.database.dburi import get_params_from_connection_uri
 from hdx.facades.keyword_arguments import facade
 from hdx.utilities.dateparse import now_utc
 from hdx.utilities.dictandlist import args_to_dict
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def main(
-    db_url: Optional[str] = None,
+    db_uri: Optional[str] = None,
     db_params: Optional[str] = None,
     gsheet_auth: Optional[str] = None,
     email_server: Optional[str] = None,
@@ -54,7 +55,7 @@ def main(
     datasets that have become delinquent, invalid maintainers and org admins etc.
 
     Args:
-        db_url (Optional[str]): Database connection string. Defaults to None.
+        db_uri (Optional[str]): Database connection URI. Defaults to None.
         db_params (Optional[str]): Database connection parameters. Defaults to None.
         gsheet_auth (Optional[str]): Google Sheets authorisation. Defaults to None.
         email_server (Optional[str]): Email server to use. Defaults to None.
@@ -89,10 +90,10 @@ def main(
         send_emails = None
     if db_params:  # Get freshness database server details
         params = args_to_dict(db_params)
-    elif db_url:
-        params = Database.get_params_from_sqlalchemy_url(db_url)
+    elif db_uri:
+        params = get_params_from_connection_uri(db_uri)
     else:
-        params = {"driver": "sqlite", "database": "freshness.db"}
+        params = {"dialect": "sqlite", "database": "freshness.db"}
     if sysadmin_emails:
         sysadmin_emails = sysadmin_emails.split(",")
     logger.info(f"> Database parameters: {params}")
@@ -153,7 +154,7 @@ def main(
                         freshness.process_datasets_noresources(
                             recipients=test_users
                         )
-                        # freshness.process_datasets_dataset_date(
+                        # freshness.process_datasets_reference_period(
                         #     recipients=test_users,
                         #     sysadmins=test_users
                         # )
@@ -169,8 +170,8 @@ def main(
                         freshness.process_maintainer_orgadmins()
                         # Check for datasets with no resources
                         freshness.process_datasets_noresources()
-                        # Check for datasets where the dataset date may need updating
-                        # freshness.process_datasets_dataset_date(
+                        # Check for datasets where the reference period may need updating
+                        # freshness.process_datasets_reference_period(
                         #     sysadmins=test_users
                         # )
                         # Check for candidates for the data grid

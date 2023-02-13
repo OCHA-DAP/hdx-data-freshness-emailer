@@ -648,7 +648,7 @@ class TestDataFreshnessStatus:
         except FileNotFoundError:
             pass
         shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
-        return {"driver": "sqlite", "database": dbpath}
+        return {"dialect": "sqlite", "database": dbpath}
 
     @pytest.fixture(scope="function")
     def database_status(self):
@@ -659,7 +659,7 @@ class TestDataFreshnessStatus:
         except FileNotFoundError:
             pass
         shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
-        return {"driver": "sqlite", "database": dbpath}
+        return {"dialect": "sqlite", "database": dbpath}
 
     @pytest.fixture(scope="function")
     def database_maintainer(self):
@@ -670,7 +670,7 @@ class TestDataFreshnessStatus:
         except FileNotFoundError:
             pass
         shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
-        return {"driver": "sqlite", "database": dbpath}
+        return {"dialect": "sqlite", "database": dbpath}
 
     @pytest.fixture(scope="function")
     def database_noresources(self):
@@ -681,7 +681,7 @@ class TestDataFreshnessStatus:
         except FileNotFoundError:
             pass
         shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
-        return {"driver": "sqlite", "database": dbpath}
+        return {"dialect": "sqlite", "database": dbpath}
 
     @pytest.fixture(scope="function")
     def database_datasets_modified_yesterday(self):
@@ -692,7 +692,7 @@ class TestDataFreshnessStatus:
         except FileNotFoundError:
             pass
         shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
-        return {"driver": "sqlite", "database": dbpath}
+        return {"dialect": "sqlite", "database": dbpath}
 
     def test_freshnessbroken(
         self, configuration, database_broken, users, organizations
@@ -1959,7 +1959,7 @@ class TestDataFreshnessStatus:
                 ],
             ]
 
-    # def test_dataset_date(self, configuration, database_datasets_modified_yesterday, users, organizations):
+    # def test_reference_period(self, configuration, database_datasets_modified_yesterday, users, organizations):
     #     site_url = 'http://lala'
     #     sysadmin_emails = ['blah3@blah.com']
     #     now = parse_date('2017-02-02 19:07:30.333492', include_microseconds=True)
@@ -1975,20 +1975,20 @@ class TestDataFreshnessStatus:
     #
     #         TestDataFreshnessStatus.email_users_result = list()
     #         TestDataFreshnessStatus.cells_result = None
-    #         freshness.process_datasets_dataset_date()
+    #         freshness.process_datasets_reference_period()
     #         expected_result = \
     #             [(['blah4@blah.com'],
-    #               'Check date of dataset for your datasets on HDX (02/02/2017)',
-    #               'Dear blah4disp,\n\nThe dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: Every year and date of dataset: 11/01/2015\n\nBest wishes,\nHDX Team',
-    #               '<html>\n  <head></head>\n  <body>\n    <span>Dear blah4disp,<br><br>The dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: Every year and date of dataset: 11/01/2015<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n',
+    #               'Check reference period for your datasets on HDX (02/02/2017)',
+    #               'Dear blah4disp,\n\nThe dataset(s) listed below have a reference period that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: Every year and reference period: 11/01/2015\n\nBest wishes,\nHDX Team',
+    #               '<html>\n  <head></head>\n  <body>\n    <span>Dear blah4disp,<br><br>The dataset(s) listed below have a reference period that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: Every year and reference period: 11/01/2015<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n',
     #               None, None),
-    #              (['blah5@blah.com'], 'Check date of dataset for your datasets on HDX (02/02/2017)',
-    #               'Dear blah5full,\n\nThe dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: Every year and date of dataset: 11/01/2015\n\nBest wishes,\nHDX Team',
-    #               '<html>\n  <head></head>\n  <body>\n    <span>Dear blah5full,<br><br>The dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: Every year and date of dataset: 11/01/2015<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n',
+    #              (['blah5@blah.com'], 'Check reference period for your datasets on HDX (02/02/2017)',
+    #               'Dear blah5full,\n\nThe dataset(s) listed below have a reference period that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: Every year and reference period: 11/01/2015\n\nBest wishes,\nHDX Team',
+    #               '<html>\n  <head></head>\n  <body>\n    <span>Dear blah5full,<br><br>The dataset(s) listed below have a reference period that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: Every year and reference period: 11/01/2015<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n',
     #               None, None),
-    #              (['sharon@lala.org'], 'All date of dataset emails (02/02/2017)',
-    #               'Dear Sharon,\n\nBelow are the emails which have been sent today to maintainers whose datasets have a date of dataset that has not been updated. You may wish to follow up with them.\n\nDear blah4disp,\n\nThe dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: Every year and date of dataset: 11/01/2015\nDear blah5full,\n\nThe dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: Every year and date of dataset: 11/01/2015\n\nBest wishes,\nHDX Team',
-    #               '<html>\n  <head></head>\n  <body>\n    <span>Dear Sharon,<br><br>Below are the emails which have been sent today to maintainers whose datasets have a date of dataset that has not been updated. You may wish to follow up with them.<br><br>Dear blah4disp,<br><br>The dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: Every year and date of dataset: 11/01/2015<br>Dear blah5full,<br><br>The dataset(s) listed below have a date of dataset that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: Every year and date of dataset: 11/01/2015<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n',
+    #              (['sharon@lala.org'], 'All reference period emails (02/02/2017)',
+    #               'Dear Sharon,\n\nBelow are the emails which have been sent today to maintainers whose datasets have a reference period that has not been updated. You may wish to follow up with them.\n\nDear blah4disp,\n\nThe dataset(s) listed below have a reference period that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: Every year and reference period: 11/01/2015\nDear blah5full,\n\nThe dataset(s) listed below have a reference period that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.\n\nYemen - Administrative Boundaries (http://lala/dataset/yemen-admin-boundaries) with expected update frequency: Every year and reference period: 11/01/2015\n\nBest wishes,\nHDX Team',
+    #               '<html>\n  <head></head>\n  <body>\n    <span>Dear Sharon,<br><br>Below are the emails which have been sent today to maintainers whose datasets have a reference period that has not been updated. You may wish to follow up with them.<br><br>Dear blah4disp,<br><br>The dataset(s) listed below have a reference period that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: Every year and reference period: 11/01/2015<br>Dear blah5full,<br><br>The dataset(s) listed below have a reference period that has not been updated for a while. Log into the HDX platform now to check and if necessary update each dataset.<br><br><a href="http://lala/dataset/yemen-admin-boundaries">Yemen - Administrative Boundaries</a> with expected update frequency: Every year and reference period: 11/01/2015<br><br>Best wishes,<br>HDX Team\n      <br/><br/>\n      <small>\n        <p>\n          <a href="http://data.humdata.org ">Humanitarian Data Exchange</a>\n        </p>\n        <p>\n          <a href="http://humdata.us14.list-manage.com/subscribe?u=ea3f905d50ea939780139789d&id=d996922315 ">            Sign up for our newsletter</a> |             <a href=" https://twitter.com/humdata ">Follow us on Twitter</a>             | <a href="mailto:hdx@un.org ">Contact us</a>\n        </p>\n      </small>\n    </span>\n  </body>\n</html>\n',
     #               ['blah3@blah.com'], None)]
     #
     #         expected_cells_result = \
@@ -2003,7 +2003,7 @@ class TestDataFreshnessStatus:
     #         assert TestDataFreshnessStatus.cells_result == expected_cells_result
     #         TestDataFreshnessStatus.email_users_result = list()
     #         TestDataFreshnessStatus.cells_result = None
-    #         freshness.process_datasets_dataset_date(sysadmins=['mike@lala.org'])
+    #         freshness.process_datasets_reference_period(sysadmins=['mike@lala.org'])
     #         restuple = expected_result[2]
     #         expected_result[2] = (['mike@lala.org'], restuple[1], restuple[2].replace('Sharon', 'system administrator'),
     #                               restuple[3].replace('Sharon', 'system administrator'), None, restuple[5])

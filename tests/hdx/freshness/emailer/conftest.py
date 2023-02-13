@@ -30,4 +30,4 @@ def database_failure():
     except FileNotFoundError:
         pass
     shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
-    return {"driver": "sqlite", "database": dbpath}
+    return {"dialect": "sqlite", "database": dbpath}

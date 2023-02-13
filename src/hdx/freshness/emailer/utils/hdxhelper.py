@@ -55,22 +55,23 @@ class HDXHelper:
             self.organizations[organization["id"]] = users_per_capacity
 
     @staticmethod
-    def get_dataset_dates(
+    def get_reference_period(
         dataset: Dict,
     ) -> Tuple[Optional[datetime], Optional[datetime]]:
-        """Return a tuple containing dataset start and end date or (None, None)
+        """Return a tuple containing dataset reference period start and end
+        or (None, None)
 
         Args:
             dataset (Dict): Dataset to examine
 
         Returns:
             Tuple[Optional[datetime], Optional[datetime]]:
-            Dataset start and end date or (None, None)
+            Reference period start and end or (None, None)
         """
-        dataset_date = dataset["dataset_date"]
-        if not dataset_date:
+        reference_period = dataset["dataset_date"]
+        if not reference_period:
             return None, None
-        date_info = DateHelper.get_date_info(dataset_date)
+        date_info = DateHelper.get_date_info(reference_period)
         return date_info["startdate"], date_info["enddate"]
 
     def get_maintainer(self, dataset: Dict) -> User:
@@ -208,7 +209,7 @@ class HDXHelper:
         sysadmin: bool = False,
         include_org: bool = True,
         include_freshness: bool = False,
-        include_datasetdate: bool = False,
+        include_reference_period: bool = False,
     ) -> Tuple[str, str]:
         """Create the string that will be output in an email, returning a plain text
         and HTML version, the latter including URL links
@@ -220,7 +221,7 @@ class HDXHelper:
             sysadmin (bool): Include additional info for sysadmins. Defaults to False.
             include_org (bool): Include additional org info in string. Defaults to True.
             include_freshness (bool): Include freshness status. Defaults to False.
-            include_datasetdate (bool): Include dataset date. Defaults to False.
+            include_reference_period (bool): Include reference period. Defaults to False.
 
         Returns:
             Tuple[str, str]: (plain text string, HTML string) for output in email
@@ -269,10 +270,10 @@ class HDXHelper:
             fresh = self.freshness_status.get(dataset["fresh"], "None")
             msg.append(f" and freshness: {fresh}")
             htmlmsg.append(f" and freshness: {fresh}")
-        if include_datasetdate:
-            datasetdate = dataset["dataset_date"]
-            msg.append(f" and date of dataset: {datasetdate}")
-            htmlmsg.append(f" and date of dataset: {datasetdate}")
+        if include_reference_period:
+            reference_period = dataset["dataset_date"]
+            msg.append(f" and reference period: {reference_period}")
+            htmlmsg.append(f" and reference period: {reference_period}")
         Email.output_newline(msg, htmlmsg)
 
         return "".join(msg), "".join(htmlmsg)
