@@ -37,7 +37,7 @@ def main(
     no_spreadsheet: bool = False,
     **ignore,
 ) -> None:
-    """Run freshness emailer. Either a database connection string (db_url) or database
+    """Run freshness emailer. Either a database connection string (db_uri) or database
     connection parameters (db_params) can be supplied. If neither is supplied, a local
     SQLite database with filename "freshness.db" is assumed. An optional email server
     can be supplied in the form:
@@ -189,13 +189,13 @@ if __name__ == "__main__":
         "-hs", "--hdx_site", default=None, help="HDX site to use"
     )
     parser.add_argument(
-        "-db", "--db_url", default=None, help="Database connection string"
+        "-db", "--db_uri", default=None, help="Database connection string"
     )
     parser.add_argument(
         "-dp",
         "--db_params",
         default=None,
-        help="Database connection parameters. Overrides --db_url.",
+        help="Database connection parameters. Overrides --db_uri.",
     )
     parser.add_argument(
         "-gs",
@@ -253,11 +253,11 @@ if __name__ == "__main__":
     hdx_site = args.hdx_site
     if hdx_site is None:
         hdx_site = getenv("HDX_SITE", "prod")
-    db_url = args.db_url
-    if db_url is None:
-        db_url = getenv("DB_URL")
-    if db_url and "://" not in db_url:
-        db_url = f"postgresql://{db_url}"
+    db_uri = args.db_uri
+    if db_uri is None:
+        db_uri = getenv("DB_URI")
+    if db_uri and "://" not in db_uri:
+        db_uri = f"postgresql://{db_uri}"
     gsheet_auth = args.gsheet_auth
     if gsheet_auth is None:
         gsheet_auth = getenv("GSHEET_AUTH")
@@ -280,7 +280,7 @@ if __name__ == "__main__":
         preprefix=preprefix,
         hdx_site=hdx_site,
         project_config_yaml=project_config_yaml,
-        db_url=db_url,
+        db_uri=db_uri,
         db_params=args.db_params,
         gsheet_auth=gsheet_auth,
         email_server=email_server,
