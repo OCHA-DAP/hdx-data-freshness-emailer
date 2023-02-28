@@ -3,9 +3,9 @@ Unit tests for the data freshness status code.
 
 """
 import copy
-import shutil
-from os import remove, getenv
+from os import getenv, remove
 from os.path import join
+from shutil import copyfile
 
 import pytest
 from hdx.data.dataset import Dataset
@@ -647,7 +647,7 @@ class TestDataFreshnessStatus:
             remove(dbpath)
         except FileNotFoundError:
             pass
-        shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
+        copyfile(join("tests", "fixtures", dbfile), dbpath)
         return {"dialect": "sqlite", "database": dbpath}
 
     @pytest.fixture(scope="function")
@@ -658,7 +658,7 @@ class TestDataFreshnessStatus:
             remove(dbpath)
         except FileNotFoundError:
             pass
-        shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
+        copyfile(join("tests", "fixtures", dbfile), dbpath)
         return {"dialect": "sqlite", "database": dbpath}
 
     @pytest.fixture(scope="function")
@@ -669,7 +669,7 @@ class TestDataFreshnessStatus:
             remove(dbpath)
         except FileNotFoundError:
             pass
-        shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
+        copyfile(join("tests", "fixtures", dbfile), dbpath)
         return {"dialect": "sqlite", "database": dbpath}
 
     @pytest.fixture(scope="function")
@@ -680,7 +680,7 @@ class TestDataFreshnessStatus:
             remove(dbpath)
         except FileNotFoundError:
             pass
-        shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
+        copyfile(join("tests", "fixtures", dbfile), dbpath)
         return {"dialect": "sqlite", "database": dbpath}
 
     @pytest.fixture(scope="function")
@@ -691,7 +691,7 @@ class TestDataFreshnessStatus:
             remove(dbpath)
         except FileNotFoundError:
             pass
-        shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
+        copyfile(join("tests", "fixtures", dbfile), dbpath)
         return {"dialect": "sqlite", "database": dbpath}
 
     def test_freshnessbroken(
