@@ -3,8 +3,8 @@ Unit tests for the data freshness status code.
 
 """
 import copy
-import os
 import shutil
+from os import remove, getenv
 from os.path import join
 
 import pytest
@@ -644,7 +644,7 @@ class TestDataFreshnessStatus:
         dbfile = "test_freshness_broken.db"
         dbpath = join("tests", dbfile)
         try:
-            os.remove(dbpath)
+            remove(dbpath)
         except FileNotFoundError:
             pass
         shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
@@ -655,7 +655,7 @@ class TestDataFreshnessStatus:
         dbfile = "test_freshness_status.db"
         dbpath = join("tests", dbfile)
         try:
-            os.remove(dbpath)
+            remove(dbpath)
         except FileNotFoundError:
             pass
         shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
@@ -666,7 +666,7 @@ class TestDataFreshnessStatus:
         dbfile = "test_freshness_maintainer.db"
         dbpath = join("tests", dbfile)
         try:
-            os.remove(dbpath)
+            remove(dbpath)
         except FileNotFoundError:
             pass
         shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
@@ -677,7 +677,7 @@ class TestDataFreshnessStatus:
         dbfile = "test_freshness_noresources.db"
         dbpath = join("tests", dbfile)
         try:
-            os.remove(dbpath)
+            remove(dbpath)
         except FileNotFoundError:
             pass
         shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
@@ -688,7 +688,7 @@ class TestDataFreshnessStatus:
         dbfile = "test_freshness_modified_yesterday.db"
         dbpath = join("tests", dbfile)
         try:
-            os.remove(dbpath)
+            remove(dbpath)
         except FileNotFoundError:
             pass
         shutil.copyfile(join("tests", "fixtures", dbfile), dbpath)
@@ -2026,7 +2026,7 @@ class TestDataFreshnessStatus:
         )
         sheet = Sheet(now)
         error = sheet.setup_gsheet(
-            configuration, os.getenv("GSHEET_AUTH"), True, False
+            configuration, getenv("GSHEET_AUTH"), True, False
         )
         assert error is None
         error = sheet.setup_input()
