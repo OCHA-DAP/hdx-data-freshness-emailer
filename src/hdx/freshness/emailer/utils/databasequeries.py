@@ -444,12 +444,12 @@ class DatabaseQueries:
                 DBDataset2.run_number == DBDataset.run_number - 1,
                 DBDataset.dataset_date != DBDataset2.dataset_date,
             ]
-            result = self.session.scalars(
+            result = self.session.scalar(
                 select(DBDataset.run_number)
                 .filter(and_(*filters))
                 .order_by(DBDataset.run_number.desc())
                 .limit(1)
-            ).first()
+            )
             delta = self.now - self.run_number_to_run_date[result.run_number]
             if delta > timedelta(
                 days=datasets[dataset_id]["update_frequency"]
