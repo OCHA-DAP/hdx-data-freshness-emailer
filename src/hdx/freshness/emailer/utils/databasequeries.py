@@ -90,17 +90,13 @@ class DatabaseQueries:
              Tuple[int, int]: (number of datasets today, number of datasets yesterday)
         """
         datasets_today = self.session.execute(
-            select(
-                func.count(DBDataset.id).filter(
-                    DBDataset.run_number == self.run_numbers[0][0]
-                )
+            select(func.count(DBDataset.id)).where(
+                DBDataset.run_number == self.run_numbers[0][0]
             )
         ).scalar_one()
         datasets_previous = self.session.execute(
-            select(
-                func.count(DBDataset.id).filter(
-                    DBDataset.run_number == self.run_numbers[1][0]
-                )
+            select(func.count(DBDataset.id)).where(
+                DBDataset.run_number == self.run_numbers[1][0]
             )
         ).scalar_one()
         return datasets_today, datasets_previous
@@ -138,7 +134,7 @@ class DatabaseQueries:
             DBResource.error.is_not(None),
             DBResource.when_checked > self.run_numbers[1][1],
         ]
-        results = self.session.execute(select(*columns).filter(and_(*filters)))
+        results = self.session.execute(select(*columns).where(and_(*filters)))
         norows = 0
         for norows, result in enumerate(results):
             row = dict()
@@ -227,7 +223,7 @@ class DatabaseQueries:
                     DBDataset2.run_number == self.run_numbers[1][0],
                 ]
             )
-        results = self.session.execute(select(*columns).filter(and_(*filters)))
+        results = self.session.execute(select(*columns).where(and_(*filters)))
         norows = 0
         for norows, result in enumerate(results):
             dataset = dict()
@@ -273,7 +269,7 @@ class DatabaseQueries:
             DBInfoDataset.organization_id == DBOrganization.id,
             DBDataset.run_number == self.run_numbers[0][0],
         ]
-        results = self.session.execute(select(*columns).filter(and_(*filters)))
+        results = self.session.execute(select(*columns).where(and_(*filters)))
         norows = 0
         for norows, result in enumerate(results):
             dataset = dict()
@@ -355,7 +351,7 @@ class DatabaseQueries:
             DBDataset.run_number == self.run_numbers[0][0],
             DBDataset.what_updated == "no resources",
         ]
-        results = self.session.execute(select(*columns).filter(and_(*filters)))
+        results = self.session.execute(select(*columns).where(and_(*filters)))
         norows = 0
         for norows, result in enumerate(results):
             dataset = dict()
@@ -397,7 +393,7 @@ class DatabaseQueries:
             DBDataset.run_number == self.run_numbers[0][0],
             DBDataset.latest_of_modifieds > self.run_numbers[1][1],
         ]
-        results = self.session.execute(select(*columns).filter(and_(*filters)))
+        results = self.session.execute(select(*columns).where(and_(*filters)))
         norows = 0
         for norows, result in enumerate(results):
             dataset = dict()
@@ -427,7 +423,7 @@ class DatabaseQueries:
             DBDataset.id.in_(dataset_ids),
             DBDataset.run_number == self.run_numbers[1][0],
         ]
-        results = self.session.execute(select(*columns).filter(and_(*filters)))
+        results = self.session.execute(select(*columns).where(and_(*filters)))
         norows = 0
         unchanged_dsdates_datasets = list()
         for norows, result in enumerate(results):
@@ -446,7 +442,7 @@ class DatabaseQueries:
             ]
             result = self.session.scalar(
                 select(DBDataset.run_number)
-                .filter(and_(*filters))
+                .where(and_(*filters))
                 .order_by(DBDataset.run_number.desc())
                 .limit(1)
             )
@@ -465,7 +461,7 @@ class DatabaseQueries:
                 DBDataset.what_updated != "nothing",
             ]
             results = self.session.execute(
-                select(*columns).filter(and_(*filters))
+                select(*columns).where(and_(*filters))
             )
             prevdate = self.now
             number_of_updates = 0
