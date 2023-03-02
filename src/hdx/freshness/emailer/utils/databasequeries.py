@@ -12,6 +12,7 @@ from hdx.freshness.database.dborganization import DBOrganization
 from hdx.freshness.database.dbresource import DBResource
 from hdx.freshness.database.dbrun import DBRun
 from hdx.freshness.utils.retrieval import Retrieval
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.sql.elements import and_
 
@@ -63,24 +64,23 @@ class DatabaseQueries:
              Tuple[Dict[int, datetime], List[Tuple]]:
              (run number to run date, list of run numbers an run dates)
         """
-        list_run_numbers = (
-            self.session.query(DBRun.run_number, DBRun.run_date)
+        list_run_numbers = self.session.execute(
+            select(DBRun.run_number, DBRun.run_date)
             .distinct()
             .order_by(DBRun.run_number.desc())
-            .all()
-        )
+        ).all()
         run_number_to_run_date = dict()
         run_numbers = list()
         last_ind = len(list_run_numbers) - 1
-        for i, run_number in enumerate(list_run_numbers):
-            run_no = run_number.run_number
-            run_date = run_number.run_date
+        for i, run_number_date in enumerate(list_run_numbers):
+            run_no = run_number_date[0]
+            run_date = run_number_date[1]
             run_number_to_run_date[run_no] = run_date
             if not run_numbers and run_date < self.now:
                 if i == last_ind:
-                    run_numbers = [run_number]
+                    run_numbers = [run_number_date]
                 else:
-                    run_numbers = [run_number, list_run_numbers[i + 1]]
+                    run_numbers = [run_number_date, list_run_numbers[i + 1]]
         return run_number_to_run_date, run_numbers
 
     def get_number_datasets(self) -> Tuple[int, int]:
@@ -89,16 +89,20 @@ class DatabaseQueries:
         Returns:
              Tuple[int, int]: (number of datasets today, number of datasets yesterday)
         """
-        datasets_today = (
-            self.session.query(DBDataset.id)
-            .filter(DBDataset.run_number == self.run_numbers[0][0])
-            .count()
-        )
-        datasets_previous = (
-            self.session.query(DBDataset.id)
-            .filter(DBDataset.run_number == self.run_numbers[1][0])
-            .count()
-        )
+        datasets_today = self.session.execute(
+            select(
+                func.count(DBDataset.id).filter(
+                    DBDataset.run_number == self.run_numbers[0][0]
+                )
+            )
+        ).scalar_one()
+        datasets_previous = self.session.execute(
+            select(
+                func.count(DBDataset.id).filter(
+                    DBDataset.run_number == self.run_numbers[1][0]
+                )
+            )
+        ).scalar_one()
         return datasets_today, datasets_previous
 
     def get_broken(self) -> Dict[str, Dict]:
@@ -134,9 +138,9 @@ class DatabaseQueries:
             DBResource.error.is_not(None),
             DBResource.when_checked > self.run_numbers[1][1],
         ]
-        query = self.session.query(*columns).filter(and_(*filters))
+        results = self.session.execute(select(*columns).filter(and_(*filters)))
         norows = 0
-        for norows, result in enumerate(query):
+        for norows, result in enumerate(results):
             row = dict()
             for i, column in enumerate(columns):
                 row[column.key] = result[i]
@@ -223,9 +227,9 @@ class DatabaseQueries:
                     DBDataset2.run_number == self.run_numbers[1][0],
                 ]
             )
-        query = self.session.query(*columns).filter(and_(*filters))
+        results = self.session.execute(select(*columns).filter(and_(*filters)))
         norows = 0
-        for norows, result in enumerate(query):
+        for norows, result in enumerate(results):
             dataset = dict()
             for i, column in enumerate(columns):
                 dataset[column.key] = result[i]
@@ -269,9 +273,9 @@ class DatabaseQueries:
             DBInfoDataset.organization_id == DBOrganization.id,
             DBDataset.run_number == self.run_numbers[0][0],
         ]
-        query = self.session.query(*columns).filter(and_(*filters))
+        results = self.session.execute(select(*columns).filter(and_(*filters)))
         norows = 0
-        for norows, result in enumerate(query):
+        for norows, result in enumerate(results):
             dataset = dict()
             for i, column in enumerate(columns):
                 dataset[column.key] = result[i]
@@ -351,9 +355,9 @@ class DatabaseQueries:
             DBDataset.run_number == self.run_numbers[0][0],
             DBDataset.what_updated == "no resources",
         ]
-        query = self.session.query(*columns).filter(and_(*filters))
+        results = self.session.execute(select(*columns).filter(and_(*filters)))
         norows = 0
-        for norows, result in enumerate(query):
+        for norows, result in enumerate(results):
             dataset = dict()
             for i, column in enumerate(columns):
                 dataset[column.key] = result[i]
@@ -393,9 +397,9 @@ class DatabaseQueries:
             DBDataset.run_number == self.run_numbers[0][0],
             DBDataset.latest_of_modifieds > self.run_numbers[1][1],
         ]
-        query = self.session.query(*columns).filter(and_(*filters))
+        results = self.session.execute(select(*columns).filter(and_(*filters)))
         norows = 0
-        for norows, result in enumerate(query):
+        for norows, result in enumerate(results):
             dataset = dict()
             for i, column in enumerate(columns):
                 dataset[column.key] = result[i]
@@ -423,10 +427,10 @@ class DatabaseQueries:
             DBDataset.id.in_(dataset_ids),
             DBDataset.run_number == self.run_numbers[1][0],
         ]
-        query = self.session.query(*columns).filter(and_(*filters))
+        results = self.session.execute(select(*columns).filter(and_(*filters)))
         norows = 0
         unchanged_dsdates_datasets = list()
-        for norows, result in enumerate(query):
+        for norows, result in enumerate(results):
             dataset_id = result.id
             if result.dataset_date == datasets[dataset_id]["dataset_date"]:
                 unchanged_dsdates_datasets.append(dataset_id)
@@ -440,12 +444,12 @@ class DatabaseQueries:
                 DBDataset2.run_number == DBDataset.run_number - 1,
                 DBDataset.dataset_date != DBDataset2.dataset_date,
             ]
-            result = (
-                self.session.query(DBDataset.run_number)
+            result = self.session.scalars(
+                select(DBDataset.run_number)
                 .filter(and_(*filters))
                 .order_by(DBDataset.run_number.desc())
-                .first()
-            )
+                .limit(1)
+            ).first()
             delta = self.now - self.run_number_to_run_date[result.run_number]
             if delta > timedelta(
                 days=datasets[dataset_id]["update_frequency"]
@@ -460,11 +464,13 @@ class DatabaseQueries:
                 DBDataset2.run_number == DBDataset.run_number - 1,
                 DBDataset.what_updated != "nothing",
             ]
-            query = self.session.query(*columns).filter(and_(*filters))
+            results = self.session.execute(
+                select(*columns).filter(and_(*filters))
+            )
             prevdate = self.now
             number_of_updates = 0
             number_of_updates_within_uf = 0
-            for number_of_updates, result in enumerate(query):
+            for number_of_updates, result in enumerate(results):
                 run_date = self.run_number_to_run_date[result.run_number]
                 delta = prevdate - run_date
                 if delta < timedelta(days=result.update_frequency):
