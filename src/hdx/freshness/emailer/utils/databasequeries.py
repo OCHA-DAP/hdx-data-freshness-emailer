@@ -14,7 +14,6 @@ from hdx.freshness.database.dbrun import DBRun
 from hdx.freshness.utils.retrieval import Retrieval
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy.sql.elements import and_
 
 from .hdxhelper import HDXHelper
 
@@ -134,7 +133,7 @@ class DatabaseQueries:
             DBResource.error.is_not(None),
             DBResource.when_checked > self.run_numbers[1][1],
         ]
-        results = self.session.execute(select(*columns).where(and_(*filters)))
+        results = self.session.execute(select(*columns).where(*filters))
         norows = 0
         for norows, result in enumerate(results):
             row = dict()
@@ -223,7 +222,7 @@ class DatabaseQueries:
                     DBDataset2.run_number == self.run_numbers[1][0],
                 ]
             )
-        results = self.session.execute(select(*columns).where(and_(*filters)))
+        results = self.session.execute(select(*columns).where(*filters))
         norows = 0
         for norows, result in enumerate(results):
             dataset = dict()
@@ -269,7 +268,7 @@ class DatabaseQueries:
             DBInfoDataset.organization_id == DBOrganization.id,
             DBDataset.run_number == self.run_numbers[0][0],
         ]
-        results = self.session.execute(select(*columns).where(and_(*filters)))
+        results = self.session.execute(select(*columns).where(*filters))
         norows = 0
         for norows, result in enumerate(results):
             dataset = dict()
@@ -351,7 +350,7 @@ class DatabaseQueries:
             DBDataset.run_number == self.run_numbers[0][0],
             DBDataset.what_updated == "no resources",
         ]
-        results = self.session.execute(select(*columns).where(and_(*filters)))
+        results = self.session.execute(select(*columns).where(*filters))
         norows = 0
         for norows, result in enumerate(results):
             dataset = dict()
@@ -393,7 +392,7 @@ class DatabaseQueries:
             DBDataset.run_number == self.run_numbers[0][0],
             DBDataset.latest_of_modifieds > self.run_numbers[1][1],
         ]
-        results = self.session.execute(select(*columns).where(and_(*filters)))
+        results = self.session.execute(select(*columns).where(*filters))
         norows = 0
         for norows, result in enumerate(results):
             dataset = dict()
@@ -423,7 +422,7 @@ class DatabaseQueries:
             DBDataset.id.in_(dataset_ids),
             DBDataset.run_number == self.run_numbers[1][0],
         ]
-        results = self.session.execute(select(*columns).where(and_(*filters)))
+        results = self.session.execute(select(*columns).where(*filters))
         norows = 0
         unchanged_dsdates_datasets = list()
         for norows, result in enumerate(results):
@@ -442,7 +441,7 @@ class DatabaseQueries:
             ]
             result = self.session.scalar(
                 select(DBDataset.run_number)
-                .where(and_(*filters))
+                .where(*filters)
                 .order_by(DBDataset.run_number.desc())
                 .limit(1)
             )
@@ -460,9 +459,7 @@ class DatabaseQueries:
                 DBDataset2.run_number == DBDataset.run_number - 1,
                 DBDataset.what_updated != "nothing",
             ]
-            results = self.session.execute(
-                select(*columns).where(and_(*filters))
-            )
+            results = self.session.execute(select(*columns).where(*filters))
             prevdate = self.now
             number_of_updates = 0
             number_of_updates_within_uf = 0
