@@ -16,4 +16,4 @@ The library has detailed API documentation which can be found in the menu at the
 
 # Usage
 
-    python run.py
+    python -m hdx.freshness.emailer.app
