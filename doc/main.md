@@ -1,3 +1,5 @@
+# DEPRECATED - code moved to https://github.com/OCHA-DAP/hdx-data-freshness
+
 # Summary
 
 The HDX freshness emailer reads the HDX data freshness database and finds datasets whose status has changed. 
@@ -16,4 +18,4 @@ The library has detailed API documentation which can be found in the menu at the
 
 # Usage
 
-    python -m hdx.freshness.emailer.app
+    python -m hdx.freshness.emailer.app [-db/--db_uri=] [-dp/--db_params=]
