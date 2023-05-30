@@ -3,6 +3,8 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 
+# DEPRECATED - code moved to https://github.com/OCHA-DAP/hdx-data-freshness
+
 The HDX freshness emailer reads the HDX data freshness database and finds datasets whose status has changed. 
 It sends emails to system administrators if the change is from overdue to delinquent or to maintainers if 
 from due to overdue. It also alerts when there are new candidates for the data grid and reports datasets that 
